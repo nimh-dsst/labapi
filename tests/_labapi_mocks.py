@@ -8,22 +8,23 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from mimetypes import guess_type
-from typing import IO, Any, ClassVar, Self, cast
+from typing import IO, Any, ClassVar, cast
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from cryptography.hazmat.primitives.hashes import SHA512
 from cryptography.hazmat.primitives.hmac import HMAC
 from lxml import etree
 from requests import Response
+from typing_extensions import Self
 
 import labapi as LA
 from labapi.client import StreamingResponse
 
-type XmlScalar = str | int | float | bool
-type BackendParams = dict[str, str]
-type BackendForm = dict[str, str]
-type BackendBodyInput = Mapping[str, str] | IO[bytes] | IO[str]
-type BackendBody = BackendForm | bytes
+XmlScalar = str | int | float | bool
+BackendParams = dict[str, str]
+BackendForm = dict[str, str]
+BackendBodyInput = Mapping[str, str] | IO[bytes] | IO[str]
+BackendBody = BackendForm | bytes
 
 _DEFAULT_TIMESTAMP = "2010-01-23T15:22:04Z"
 _DEFAULT_LAST_MODIFIED_BY = "Test User"
@@ -104,6 +105,24 @@ class XmlApi:
     def array(self, name: str, *children: etree._Element) -> XmlNode:
         return self.node(name).attr("type", "array").children(*children)
 
+    def user_access(
+        self,
+        access: tuple[bool, bool] = (True, True),
+        comments: tuple[bool, bool] | None = None,
+    ) -> XmlNode:
+        r, w = access
+        node = self.node("user-access").children(
+            self.boolean("can-read", r),
+            self.boolean("can-write", w),
+        )
+        if comments is not None:
+            cr, cw = comments
+            node.children(
+                self.boolean("can-read-comments", cr),
+                self.boolean("can-write-comments", cw),
+            )
+        return node
+
     def sig(
         self,
         *,
@@ -161,25 +180,11 @@ class TreeNodeRecord:
     child_ids: list[str] = field(default_factory=list)
 
     def xml(self, xml: XmlApi, *, tag: str) -> XmlNode:
-        user_access = xml.node("user-access").children(
-            xml.true("can-read-comments"),
-            xml.true("can-write-comments"),
-            xml.true("can-write"),
-            xml.true("can-read"),
-        )
-        if tag == "node":
-            return xml.node(tag).children(
-                user_access,
-                xml.text("display-text", self.display_text),
-                xml.text("tree-id", self.tree_id),
-                xml.boolean("is-page", self.is_page),
-            )
-
         return xml.node(tag).children(
             xml.boolean("is-page", self.is_page),
             xml.text("tree-id", self.tree_id),
             xml.text("display-text", self.display_text),
-            user_access,
+            xml.user_access(comments=(True, True)),
         )
 
 
@@ -190,46 +195,33 @@ class EntryRecord:
     page_tree_id: str
     part_type: str
     entry_data: str
-    version: int = 1
-    created_at: str = _DEFAULT_TIMESTAMP
-    updated_at: str = _DEFAULT_TIMESTAMP
-    last_modified_verb: str = "entry added via 3rd party app"
-    last_modified_by: str = _DEFAULT_LAST_MODIFIED_BY
-    last_modified_ip: str = _DEFAULT_LAST_MODIFIED_IP
-    caption: str = ""
     attach_file_name: str = ""
     attach_content_type: str = ""
     attach_file_size: int = 0
     change_description: str = ""
+    version: int = field(default=1, init=False)
+    updated_at: str = field(default=_DEFAULT_TIMESTAMP, init=False)
+    last_modified_verb: str = field(init=False)
+    last_modified_by: str = field(default=_DEFAULT_LAST_MODIFIED_BY, init=False)
+    last_modified_ip: str = field(default=_DEFAULT_LAST_MODIFIED_IP, init=False)
 
-    def xml(
-        self,
-        xml: XmlApi,
-        *,
-        include_entry_data: bool = False,
-        include_comments: bool = False,
-        attachment_response: bool = False,
-    ) -> XmlNode:
-        if attachment_response:
-            return xml.node("entry").children(
-                xml.text("eid", self.eid),
-                xml.text("last-modified-verb", self.last_modified_verb),
-                xml.datetime("updated-at", self.updated_at),
-                xml.text("attach-file-name", self.attach_file_name),
-                xml.integer("attach-file-size", self.attach_file_size),
-                xml.node("user-access").children(
-                    xml.true("can-read"),
-                    xml.true("can-write"),
-                ),
-                xml.text("caption", self.caption),
-                xml.text("part-type", self.part_type),
-                xml.integer("version", self.version),
-                xml.text("attach-content-type", self.attach_content_type),
-                xml.text("last-modified-by", self.last_modified_by),
-                xml.datetime("created-at", self.created_at),
-            )
+    def __post_init__(self) -> None:
+        self.last_modified_verb = (
+            "file uploaded via 3rd party app"
+            if self.part_type == "Attachment"
+            else "entry added via 3rd party app"
+        )
 
-        children: list[etree._Element] = [
+    @property
+    def created_at(self) -> str:
+        return _DEFAULT_TIMESTAMP
+
+    @property
+    def caption(self) -> str:
+        return self.entry_data if self.part_type == "Attachment" else ""
+
+    def xml(self, xml: XmlApi) -> XmlNode:
+        return xml.node("entry").children(
             xml.text("eid", self.eid),
             xml.datetime("created-at", self.created_at),
             xml.datetime("updated-at", self.updated_at),
@@ -242,24 +234,15 @@ class EntryRecord:
             xml.integer("attach-file-size", self.attach_file_size),
             xml.text("caption", self.caption),
             xml.text("attach-content-type", self.attach_content_type),
-            xml.node("user-access").children(
-                xml.true("can-read"),
-                xml.true("can-write"),
-                xml.true("can-read-comments"),
-                xml.true("can-write-comments"),
-            ),
+            xml.user_access(comments=(True, True)),
             xml.text("change-description", self.change_description),
             xml.text(
                 "thumb-info",
                 "generic" if self.part_type == "Attachment" else "none",
             ),
             xml.text("entry-url", f"https://test-labapi.test/share/{self.eid}"),
-        ]
-        if include_entry_data:
-            children.append(xml.text("entry-data", self.entry_data))
-        if include_comments:
-            children.append(xml.node("comments"))
-        return xml.node("entry").children(*children)
+            xml.text("entry-data", self.entry_data),
+        )
 
 
 @dataclass(slots=True)
@@ -1166,7 +1149,6 @@ def backend_get_entries_for_page(
     truthy_values = {"1", "true", "yes", "on"}
     if params["entry_data"].strip().lower() not in truthy_values:
         raise BackendError(400, 4529, "parameter contains invalid value")
-    include_entry_data = True
     include_comment_data = (
         params.get("comment_data", "").strip().lower() in truthy_values
     )
@@ -1178,6 +1160,13 @@ def backend_get_entries_for_page(
     ]
 
     xml = self.xml
+    response_entries: list[XmlNode] = []
+    for entry in entries:
+        entry_node = entry.xml(xml)
+        if include_comment_data:
+            entry_node.children(xml.node("comments"))
+        response_entries.append(entry_node)
+
     return BackendReply(
         xml.node("entries").children(
             request.children(
@@ -1187,14 +1176,7 @@ def backend_get_entries_for_page(
                 xml.text("entry-data", params["entry_data"]),
                 xml.text("comment-data", params.get("comment_data", "")),
             ),
-            *[
-                entry.xml(
-                    xml,
-                    include_entry_data=include_entry_data,
-                    include_comments=include_comment_data,
-                )
-                for entry in entries
-            ],
+            *response_entries,
         )
     )
 
@@ -1218,9 +1200,8 @@ def backend_add_entry(
         page_tree_id=page.tree_id,
         part_type=params["part_type"],
         entry_data=body["entry_data"],
-        last_modified_verb="entry added via 3rd party app",
-        last_modified_by=self.user_full_name,
     )
+    entry.last_modified_by = self.user_full_name
     self.entries[entry.eid] = entry
 
     xml = self.xml
@@ -1233,7 +1214,7 @@ def backend_add_entry(
                 xml.text("part-type", params["part_type"]),
                 xml.text("entry-data", body["entry_data"]),
             ),
-            entry.xml(xml, include_entry_data=True),
+            entry.xml(xml),
         )
     )
 
@@ -1265,7 +1246,7 @@ def backend_update_entry(
                 xml.text("eid", params["eid"]),
                 xml.text("entry-data", body["entry_data"]),
             ),
-            entry.xml(xml, include_entry_data=True),
+            entry.xml(xml),
         )
     )
 
@@ -1300,16 +1281,13 @@ def backend_add_attachment(
         page_tree_id=page.tree_id,
         part_type="Attachment",
         entry_data=caption,
-        version=1,
-        last_modified_verb="file uploaded via 3rd party app",
-        last_modified_by=self.user_full_name,
-        last_modified_ip=params.get("client_ip", _DEFAULT_LAST_MODIFIED_IP),
-        caption=caption,
         attach_file_name=filename,
         attach_content_type=mime_type,
         attach_file_size=len(body),
         change_description=params.get("change_description", ""),
     )
+    entry.last_modified_by = self.user_full_name
+    entry.last_modified_ip = params.get("client_ip", _DEFAULT_LAST_MODIFIED_IP)
     self.entries[entry.eid] = entry
     self.attachments[entry.eid] = AttachmentRecord(
         entry_id=entry.eid,
@@ -1330,7 +1308,7 @@ def backend_add_attachment(
                 xml.text("change-description", params["change_description"]),
                 xml.text("client-ip", params.get("client_ip", "")),
             ),
-            entry.xml(xml, attachment_response=True),
+            entry.xml(xml),
         )
     )
 
@@ -1362,7 +1340,6 @@ def backend_update_attachment(
     mime_type = guess_type(filename)[0] or "application/octet-stream"
 
     entry.entry_data = caption
-    entry.caption = caption
     entry.attach_file_name = filename
     entry.attach_content_type = mime_type
     entry.attach_file_size = len(body)
@@ -1391,7 +1368,7 @@ def backend_update_attachment(
                 xml.text("change-description", params["change_description"]),
                 xml.text("client-ip", params.get("client_ip", "")),
             ),
-            entry.xml(xml, attachment_response=True),
+            entry.xml(xml),
         )
     )
 
