@@ -47,28 +47,57 @@ Upload the sample JSON files included in the repository:
 
 .. code-block:: bash
 
-   uv run python examples/json_sync/json_sync.py upload examples/json_sync/sample_data "Experiments/2024/Data Analysis" --notebook "My Notebook"
+   uv run --project examples/json_sync python examples/json_sync/json_sync.py upload examples/json_sync/sample_data "Experiments/2024/Data Analysis" --notebook "My Notebook"
 
 Download JSON entries from a page into a local folder:
 
 .. code-block:: bash
 
-   uv run python examples/json_sync/json_sync.py download "Experiments/2024/Data Analysis" ./output --notebook "My Notebook"
+   uv run --project examples/json_sync python examples/json_sync/json_sync.py download "Experiments/2024/Data Analysis" ./output --notebook "My Notebook"
 
 How It Works
 ------------
 
 - JSON files are uploaded with
   :meth:`~labapi.entry.collection.Entries.create_json_entry`.
+- ``examples/json_sync/json_sync.py`` contains importable upload and download
+  functions plus a command-line ``main()`` guarded by the usual
+  ``if __name__ == "__main__"`` check.
 - Each upload creates a JSON attachment with ``application/json`` MIME type and
   a companion rich-text preview entry.
 - Download mode writes each JSON attachment back to a local ``.json`` file.
+
+Reusable API
+------------
+
+When building your own script, import the sync function and call it directly:
+
+.. code-block:: python
+
+   from pathlib import Path
+
+   from labapi import Client
+   from examples.json_sync.json_sync import upload_json_files
+
+   with Client() as client:
+       user = client.default_authenticate()
+       results = upload_json_files(
+           user,
+           notebook="My Notebook",
+           page="Experiments/2024/Data Analysis",
+           folder=Path("examples/json_sync/sample_data"),
+       )
+
+   uploaded = sum(result.success for result in results)
+   print(f"Uploaded {uploaded}/{len(results)} JSON files")
 
 Notes and Limitations
 ---------------------
 
 - Invalid JSON files are skipped with an error message.
 - The script creates the output folder if it does not exist during download.
+- The reusable functions return a ``FileResult`` for each file they try to sync.
+- The CLI handles terminal output and process exit codes.
 - The sample upload command uses the checked-in files under
   ``examples/json_sync/sample_data``.
 
