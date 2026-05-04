@@ -2,8 +2,6 @@ name: Docs
 
 on:
   push:
-    tags-ignore:
-      - "v*"
   pull_request:
 
 jobs:
