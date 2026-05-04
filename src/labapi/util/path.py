@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
 from enum import Enum
-from typing import TYPE_CHECKING, NamedTuple, overload
+from typing import TYPE_CHECKING, overload
 
 from typing_extensions import override
 
@@ -39,7 +39,7 @@ def _lexe(*paths: str) -> tuple[Sequence[str], bool]:
             case _, _LexerState.ESCAPE:
                 segment += char
                 lexe_state = _LexerState.BASE
-    
+
     if len(segment):
         segments.append(segment)
 
@@ -131,7 +131,9 @@ class NotebookPath(Sequence[str]):
         other_parts, _ = _lexe(*parts)
 
         if isinstance(part, NotebookPath):
-            self._parts = _canonicalize(*part._parts, *other_parts, from_root=part._absolute)
+            self._parts = _canonicalize(
+                *part._parts, *other_parts, from_root=part._absolute
+            )
             self._absolute = part._absolute
             self._parent = part._parent
         elif isinstance(part, str):
@@ -139,7 +141,9 @@ class NotebookPath(Sequence[str]):
             self._absolute = is_absolute and self._parent is None
             self._parts = _canonicalize(*lexed, *other_parts, from_root=self._absolute)
         else:
-            self._parts = _canonicalize(*NotebookPath._of_node(part), *other_parts, from_root=True)
+            self._parts = _canonicalize(
+                *NotebookPath._of_node(part), *other_parts, from_root=True
+            )
             self._absolute = True
 
     def __truediv__(self, other: str | NotebookPath) -> NotebookPath:
