@@ -55,16 +55,16 @@ All published examples assume:
 - Python 3.10+.
 - The recommended local interactive profile:
   ``labapi[dotenv,builtin-auth]``.
-- A repository-root working directory when you run ``uv run ...`` commands.
+- A repository-root working directory for the catalog commands below.
 - Notebook-relative page paths paired with ``--notebook "My Notebook"``.
 
 Use these sample commands as known-good starting points:
 
 .. code-block:: bash
 
-   uv run python examples/json_sync/json_sync.py upload examples/json_sync/sample_data "Experiments/2024/Data Analysis" --notebook "My Notebook"
-   uv run python examples/folder_download/folder_download.py ./backup --notebook "My Notebook" --path "Experiments/2024"
-   uv run --with beautifulsoup4 python examples/csv_table/csv_table.py upload examples/csv_table/sample_data.csv "Experiments/Results" --notebook "My Notebook"
+   uv run --project examples/json_sync python examples/json_sync/json_sync.py upload examples/json_sync/sample_data "Experiments/2024/Data Analysis" --notebook "My Notebook"
+   uv run --project examples/folder_download python examples/folder_download/folder_download.py ./backup --notebook "My Notebook" --path "Experiments/2024"
+   uv run --project examples/csv_table python examples/csv_table/csv_table.py upload examples/csv_table/sample_data.csv "Experiments/Results" --notebook "My Notebook"
 
 Additional Local Examples
 -------------------------
