@@ -40,6 +40,7 @@ from labapi.util import (
     extract_etree,
     to_bool,
 )
+from labapi.util.path import EscapedSegment
 
 if TYPE_CHECKING:
     from labapi.user import User
@@ -204,7 +205,9 @@ class AbstractBaseTreeNode(ABC, HasNameMixin):
                   at the specified path.
         :raises TraversalError: If traversal cannot continue through a segment.
         """
-        canonical = NotebookPath(path) if isinstance(path, str) else path
+        canonical = (
+            NotebookPath(EscapedSegment(path)) if isinstance(path, str) else path
+        )
         canonical = canonical.resolve(self.path)
 
         curr = self.root
@@ -743,7 +746,9 @@ class AbstractTreeContainer(
                                  ``InsertBehavior.Raise`` and the node already
                                  exists.
         """
-        normalized_name = NotebookPath(name) if isinstance(name, str) else name
+        normalized_name = (
+            NotebookPath(EscapedSegment(name)) if isinstance(name, str) else name
+        )
         path = normalized_name.resolve(self.path).relative_to(self)
 
         if len(path) == 0:
@@ -781,7 +786,7 @@ class AbstractTreeContainer(
             self._children.append(new_node)
             return new_node
         if parents:
-            next_node = self.dir(path[0])
+            next_node = self.dir(*NotebookPath.escape(path[0]))
 
             return next_node.create(
                 cls,

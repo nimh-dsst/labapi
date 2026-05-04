@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
 from enum import Enum
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, NewType, overload
 
 from typing_extensions import override
 
@@ -14,13 +14,17 @@ if TYPE_CHECKING:
     from labapi.tree.mixins import AbstractBaseTreeNode
 
 
+EscapedSegment = NewType("EscapedSegment", str)
+UnescapedSegment = NewType("UnescapedSegment", str)
+
+
 class _LexerState(Enum):
     BASE = 1
     ESCAPE = 2
 
 
-def _lexe(*paths: str) -> tuple[Sequence[str], bool]:
-    segments: list[str] = []
+def _lexe(*paths: str) -> tuple[Sequence[UnescapedSegment], bool]:
+    segments: list[UnescapedSegment] = []
     segment = ""
     lexe_state = _LexerState.BASE
 
@@ -32,7 +36,7 @@ def _lexe(*paths: str) -> tuple[Sequence[str], bool]:
                 lexe_state = _LexerState.ESCAPE
             case "/", _LexerState.BASE:
                 if len(segment) > 0:
-                    segments.append(segment)
+                    segments.append(UnescapedSegment(segment))
                     segment = ""
             case _, _LexerState.BASE:
                 segment += char
@@ -40,16 +44,21 @@ def _lexe(*paths: str) -> tuple[Sequence[str], bool]:
                 segment += char
                 lexe_state = _LexerState.BASE
 
+    if lexe_state == _LexerState.ESCAPE:
+        raise PathError("Path cannot end with an escape character", path=path)
+
     if len(segment):
-        segments.append(segment)
+        segments.append(UnescapedSegment(segment))
 
     return segments, path.startswith("/")
 
 
-def _canonicalize(*path: str, from_root: bool) -> Sequence[str]:
+def _canonicalize(
+    *path: UnescapedSegment, from_root: bool
+) -> Sequence[UnescapedSegment]:
     assert not isinstance(path, str)
 
-    canonical: list[str] = []
+    canonical: list[UnescapedSegment] = []
 
     for segment in path:
         match segment:
@@ -57,9 +66,9 @@ def _canonicalize(*path: str, from_root: bool) -> Sequence[str]:
                 continue
             case ".." if len(canonical) == 0:
                 if not from_root:
-                    canonical.append("..")
+                    canonical.append(segment)
             case ".." if canonical[-1] == "..":
-                canonical.append("..")
+                canonical.append(segment)
             case "..":
                 canonical.pop()
             case _:
@@ -68,16 +77,18 @@ def _canonicalize(*path: str, from_root: bool) -> Sequence[str]:
     return canonical
 
 
-class NotebookPath(Sequence[str]):
-    """A structured path referencing a location in the notebook tree.
+class NotebookPath(Sequence[UnescapedSegment]):
+    r"""A structured path referencing a location in the notebook tree.
 
-    Behaves like a sequence of path segments (strings) and supports Unix-style
-    path semantics including absolute/relative paths and ``..`` parent navigation.
+    Supports absolute and relative paths, plus ``..`` parent navigation.
 
-    Paths can be constructed from a tree node, another ``NotebookPath``, or raw
-    slash-separated strings. Segments are normalised on construction: empty
-    segments and ``.`` are discarded, and ``..`` collapses the preceding segment
-    (or is kept literally when at the root of a relative path).
+    Empty segments and ``.`` are discarded; ``..`` collapses the preceding
+    segment, or is kept at the root of a relative path.
+
+    If a node name contains a literal ``/``, write it as ``\/`` in a path
+    string, e.g. ``r"Reports\/2024"``. Iteration, indexing, :attr:`name`, and
+    :attr:`parts` return node names. ``str()`` adds escapes back so the result
+    can be parsed again.
 
     Examples::
 
@@ -94,27 +105,24 @@ class NotebookPath(Sequence[str]):
 
     def __init__(
         self,
-        part: NotebookPath | AbstractBaseTreeNode | str,
-        *parts: str,
+        part: NotebookPath | AbstractBaseTreeNode | EscapedSegment,
+        *parts: EscapedSegment,
         parent: NotebookPath | AbstractBaseTreeNode | None = None,
     ):
-        """Construct a ``NotebookPath``.
+        r"""Construct a ``NotebookPath``.
 
-        The first argument ``part`` sets the base of the path; any additional
-        positional ``parts`` are appended as extra segments.
+        Additional ``parts`` are appended to ``part``.
 
-        :param part: The base of the path. Pass a tree node to create an
-            absolute path rooted at that node's location, a ``NotebookPath``
-            to extend it, or a slash-separated string (absolute strings start
-            with ``/``; others are relative).
-        :param parts: Additional slash-separated path segments appended after
-            ``part``. Segments are split on ``/`` and normalised.
-        :param parent: An absolute path (or node) that anchors a relative
-            string path for later resolution. Must be absolute.
+        :param part: A tree node creates an absolute path, a ``NotebookPath``
+            is copied, and a string is parsed as path syntax.
+        :param parts: Additional path strings appended after ``part``. ``/``
+            separates segments unless it is escaped as ``\/``.
+        :param parent: Absolute path or node used later to resolve a relative
+            string path. Must be absolute.
         :raises PathError: If ``parent`` is not absolute.
         """
         self._parent: NotebookPath | None = None
-        self._parts: Sequence[str] = ()
+        self._parts: Sequence[UnescapedSegment] = ()
         self._absolute: bool = False
 
         if parent is not None:
@@ -157,21 +165,49 @@ class NotebookPath(Sequence[str]):
         :returns: A new ``NotebookPath`` with ``other`` appended or resolved.
         """
         if isinstance(other, str):
-            return NotebookPath(self, other)
+            return NotebookPath(self, EscapedSegment(other))
         return other.resolve(self)
 
-    def to_string(self) -> str:
-        """Return the path as a slash-separated string.
+    @staticmethod
+    def escape(*parts: UnescapedSegment) -> tuple[EscapedSegment, ...]:
+        """Add path escapes."""
+        return tuple(
+            EscapedSegment(part.replace("\\", "\\\\").replace("/", r"\/"))
+            for part in parts
+        )
 
-        Absolute paths are prefixed with ``/``; relative paths are not.
+    @staticmethod
+    def unescape(part: EscapedSegment) -> UnescapedSegment:
+        """Remove path escapes."""
+        segment = ""
+        lexe_state = _LexerState.BASE
 
-        :returns: The string representation of this path (e.g.
-            ``"/Experiments/2024"`` or ``"2024/Results"``).
+        for char in part:
+            match char, lexe_state:
+                case "\\", _LexerState.BASE:
+                    lexe_state = _LexerState.ESCAPE
+                case _, _LexerState.BASE:
+                    segment += char
+                case _, _LexerState.ESCAPE:
+                    segment += char
+                    lexe_state = _LexerState.BASE
+
+        return UnescapedSegment(segment)
+
+    def to_string(self, escape=False) -> str:
+        r"""Return the path as a slash-separated string.
+
+        By default, names are joined as-is. Pass ``escape=True`` to match
+        ``str(path)``.
+
+        :returns: Examples include ``"/Experiments/2024"`` and
+            ``"2024/Results"``.
         """
+        parts = self.escape(*self._parts) if escape else self._parts
         if self._absolute:
-            return f"/{'/'.join(self._parts)}"
+            return f"/{'/'.join(parts)}"
 
-        return "/".join(self._parts)
+        return "/".join(parts)
 
     def is_absolute(self) -> bool:
         """Return whether this path is absolute.
@@ -204,7 +240,8 @@ class NotebookPath(Sequence[str]):
         if self._parent is None:
             if parent is not None:
                 return NotebookPath(
-                    parent.resolve() if recurse else parent, *self._parts
+                    parent.resolve() if recurse else parent,
+                    *self.escape(*self._parts),
                 )
 
             raise PathError(
@@ -212,7 +249,7 @@ class NotebookPath(Sequence[str]):
                 path=str(self),
             )
 
-        return NotebookPath(self._parent, *self._parts)
+        return NotebookPath(self._parent, *self.escape(*self._parts))
 
     def startswith(self, other: NotebookPath) -> bool:
         """Return whether this path starts with another path's segments.
@@ -271,41 +308,35 @@ class NotebookPath(Sequence[str]):
             )
 
         if not other._absolute and other._parent is None:
-            return NotebookPath(*self[len(other) :])
+            return NotebookPath(*self.escape(*self[len(other) :]))
 
         p_origin = other.resolve()
         p_endpoint = self.resolve(other)
 
         remaining = list(p_endpoint[len(p_origin) :])
         return (
-            NotebookPath(*remaining, parent=p_origin)
+            NotebookPath(*self.escape(*remaining), parent=p_origin)
             if remaining
-            else NotebookPath("", parent=p_origin)
+            else NotebookPath(EscapedSegment(""), parent=p_origin)
         )
 
     @property
-    def name(self) -> str:
-        """The final segment of the path.
+    def name(self) -> UnescapedSegment:
+        """The final node name.
 
-        Equivalent to the node's display name when the path was built from a
-        tree node. Returns ``"."`` for an empty path.
-
-        :returns: The last path segment, or ``"."`` if the path is empty.
+        Returns ``"."`` for an empty path.
         """
         if len(self._parts):
             return self._parts[-1]
-        return "."
+        return UnescapedSegment(".")
 
     @property
-    def parts(self) -> Sequence[str]:
-        """All path segments except the last one.
+    def parts(self) -> Sequence[UnescapedSegment]:
+        """All node names except the last one.
 
         Analogous to the parent directory in a file path.
-
-        :returns: A sequence of segment strings, empty if the path has only
-            one segment.
         """
-        return self._parts[:-1]
+        return tuple(self._parts[:-1])
 
     @property
     def parent(self) -> NotebookPath:
@@ -318,8 +349,8 @@ class NotebookPath(Sequence[str]):
         return self.resolve() / ".."
 
     @override
-    def __iter__(self) -> Iterator[str]:
-        """Iterate over the path segments in order."""
+    def __iter__(self) -> Iterator[UnescapedSegment]:
+        """Iterate over node names in order."""
         return iter(self._parts)
 
     @override
@@ -328,14 +359,16 @@ class NotebookPath(Sequence[str]):
         return len(self._parts)
 
     @overload
-    def __getitem__(self, idx: int) -> str: ...
+    def __getitem__(self, idx: int) -> UnescapedSegment: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> Sequence[str]: ...
+    def __getitem__(self, idx: slice) -> Sequence[UnescapedSegment]: ...
 
     @override
-    def __getitem__(self, idx: int | slice) -> str | Sequence[str]:
-        """Return the segment at ``idx``, or a sub-sequence for a slice."""
+    def __getitem__(
+        self, idx: int | slice
+    ) -> UnescapedSegment | Sequence[UnescapedSegment]:
+        """Return node name(s)."""
         return self._parts[idx]
 
     @override
@@ -363,15 +396,15 @@ class NotebookPath(Sequence[str]):
     @override
     def __repr__(self) -> str:
         """Return a developer-readable representation, e.g. ``NotebookPath('/a/b')``."""
-        return f"{type(self).__name__}({self.to_string()!r})"
+        return f"{type(self).__name__}({self.to_string(escape=True)!r})"
 
     @override
     def __str__(self) -> str:
-        """Return the slash-separated string form of the path."""
-        return self.to_string()
+        """Return a reusable path string; use ``to_string()`` for raw names."""
+        return self.to_string(escape=True)
 
     @staticmethod
-    def _of_node(a: AbstractBaseTreeNode) -> Sequence[str]:
+    def _of_node(a: AbstractBaseTreeNode) -> Sequence[UnescapedSegment]:
         """Return the ordered list of ancestor names from the notebook root to ``a``.
 
         Walks ``a.parent`` until the root is reached, building the segment list
@@ -381,12 +414,12 @@ class NotebookPath(Sequence[str]):
         :returns: A sequence of name strings representing the path from root to
             ``a``, not including the root notebook itself.
         """
-        stack: list[str] = []
+        stack: list[UnescapedSegment] = []
 
         curr = a
 
         while curr is not curr.root:
-            stack.append(curr.name)
+            stack.append(UnescapedSegment(curr.name))
             curr = curr.parent
 
         return stack[::-1]
