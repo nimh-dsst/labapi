@@ -41,7 +41,7 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/nimh-dsst/labapi/tree/main/docs/source"
+Documentation = "https://nimh-dsst.github.io/labapi/"
 Issues = "https://github.com/nimh-dsst/labapi/issues"
 Source = "https://github.com/nimh-dsst/labapi"
 
@@ -67,6 +67,7 @@ dev = [
     "sphinx-breeze-theme>=0.13.1",
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1,<0.7",
+    "sphinx-multiversion>=0.2.4,<0.3",
     "ty>=0.0.29",
 ]
 

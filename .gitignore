@@ -11,7 +11,6 @@ wheels/
 .venv
 
 .env
-.python-version
 .ruff_cache/
 .mypy_cache/
 
