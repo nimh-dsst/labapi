@@ -30,8 +30,7 @@ It also requires ``beautifulsoup4`` for HTML table parsing during download.
 Configuration
 -------------
 
-For the local interactive workflow, create a ``.env`` file in the repository
-root:
+For local interactive use, create a ``.env`` file in the repository root:
 
 .. code-block:: toml
 
@@ -44,6 +43,10 @@ You can also provide the same values through shell environment variables. See
 
 How It Works
 ------------
+
+The example is a single script. ``examples/csv_table/csv_table.py`` defines
+small typed option objects, uses LabArchives page and entry APIs, and keeps
+CSV/HTML conversion details inside the script.
 
 Upload Flow
 ~~~~~~~~~~~
@@ -62,29 +65,36 @@ Download Flow
 Common Commands
 ---------------
 
+Set up the example project:
+
+.. code-block:: bash
+
+   cd examples/csv_table
+   uv sync
+
 Upload the checked-in sample CSV file:
 
 .. code-block:: bash
 
-   uv run --with beautifulsoup4 python examples/csv_table/csv_table.py upload examples/csv_table/sample_data.csv "Experiments/Results" --notebook "My Notebook"
+   uv run python csv_table.py upload sample_data.csv "Experiments/Results" --notebook "My Notebook"
 
-Upload a CSV file that does not include a header row:
+Upload a CSV file with every row treated as table data:
 
 .. code-block:: bash
 
-   uv run --with beautifulsoup4 python examples/csv_table/csv_table.py upload examples/csv_table/sample_data.csv "Experiments/Results" --notebook "My Notebook" --no-header
+   uv run python csv_table.py upload sample_data.csv "Experiments/Results" --notebook "My Notebook" --no-header
 
 Download the most recent table from a page:
 
 .. code-block:: bash
 
-   uv run --with beautifulsoup4 python examples/csv_table/csv_table.py download "Experiments/Results" ./output/results.csv --notebook "My Notebook"
+   uv run python csv_table.py download "Experiments/Results" results.csv --notebook "My Notebook"
 
 Download a specific table entry by index:
 
 .. code-block:: bash
 
-   uv run --with beautifulsoup4 python examples/csv_table/csv_table.py download "Experiments/Results" ./output/results.csv --notebook "My Notebook" --entry-index 2
+   uv run python csv_table.py download "Experiments/Results" results.csv --notebook "My Notebook" --entry-index 2
 
 Example CSV Input
 -----------------
@@ -160,8 +170,8 @@ Ways to Extend It
 5. Generate charts from CSV data and upload them as images.
 6. Support HTML table captions.
 
-Source Code
------------
+Source
+------
 
 .. literalinclude:: ../../../examples/csv_table/csv_table.py
    :language: python

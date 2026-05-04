@@ -1,10 +1,8 @@
 [project]
 name = "example-csv-table"
 version = "0.1.0"
+requires-python = ">=3.10"
 dependencies = [
     "beautifulsoup4>=4.12.3",
     "labapi[dotenv,builtin-auth]",
 ]
-
-[tool.uv.sources]
-labapi = { path = "../../", editable = true }

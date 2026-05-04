@@ -1,239 +1,240 @@
 #!/usr/bin/env python3
-"""Upload and download LabArchives HTML table entries as CSV."""
+"""Upload and download LabArchives rich-text tables as CSV.
+
+This example keeps the LabArchives API usage deliberately visible:
+
+- A :class:`labapi.Client` owns the HTTP session.
+- ``client.default_authenticate()`` returns a :class:`labapi.User`.
+- ``user.notebooks[name]`` selects a notebook by name.
+- ``notebook.page(path)`` ensures an upload page exists.
+- ``notebook.traverse(path).as_page()`` finds an existing download page.
+- ``page.entries.create(TextEntry, html)`` creates a rich-text entry.
+
+LabArchives rich-text entries can contain simple HTML, so this script converts
+CSV rows into a ``<table>`` before upload and parses the first ``<table>`` from
+a text entry when downloading.
+"""
+
+from __future__ import annotations
 
 import argparse
 import csv
 import sys
+from collections.abc import Sequence
+from dataclasses import dataclass
+from html import escape
 from pathlib import Path
+from typing import Final, TypeAlias
 
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 
-from labapi import (
-    AbstractTreeContainer,
-    Client,
-    InsertBehavior,
-    NotebookPage,
-    TextEntry,
-    TraversalError,
-    User,
-)
+from labapi import Client, NotebookPath, TextEntry, User
+from labapi.entry import Entries
 
+_CsvRow: TypeAlias = tuple[str, ...]
+_CsvRows: TypeAlias = tuple[_CsvRow, ...]
+_NotebookLocation: TypeAlias = str | NotebookPath
+_TagNames: TypeAlias = str | Sequence[str]
 
-def get_or_create_page(container: AbstractTreeContainer, path: str) -> NotebookPage:
-    """Return an existing page at ``path`` or create it with missing parents."""
-    try:
-        node = container.traverse(path)
-    except TraversalError as err:
-        if err.available_children is None:
-            raise
-        return container.create(
-            NotebookPage,
-            path,
-            parents=True,
-            if_exists=InsertBehavior.Retain,
-        )
-
-    if node.is_dir():
-        raise TypeError(f"'{path}' refers to a directory, but a page is required")
-
-    return node.as_page()
+_RECENT_TABLE_ENTRY: Final = -1
 
 
-def csv_to_html_table(csv_file: Path, has_header: bool = True) -> str:
-    """Convert a CSV file to an HTML table.
+@dataclass(frozen=True)
+class _CsvTable:
+    """CSV-shaped data shared by the CSV reader, HTML renderer, and writer.
 
-    :param csv_file: Path to the CSV file
-    :param has_header: Whether the first row is a header
-    :returns: HTML string containing the table
+    ``headers`` is ``None`` when every CSV row should be treated as data.
+    ``rows`` always contains body rows only.
     """
-    with csv_file.open("r", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        rows = list(reader)
+
+    headers: _CsvRow | None
+    rows: _CsvRows
+
+    @property
+    def row_count(self) -> int:
+        """Return the number of body rows."""
+        return len(self.rows)
+
+    @property
+    def column_count(self) -> int:
+        """Return the widest row width, including headers."""
+        widths = [len(row) for row in self.rows]
+        if self.headers is not None:
+            widths.append(len(self.headers))
+        return max(widths, default=0)
+
+
+@dataclass(frozen=True)
+class UploadTableOptions:
+    """Inputs needed to upload one CSV file into one LabArchives page.
+
+    ``page_path`` is a LabArchives notebook path such as ``"Results/Table 1"``.
+    The upload path is created by ``notebook.page(...)`` if needed.
+    """
+
+    notebook_name: str
+    csv_file: Path
+    page_path: _NotebookLocation
+    has_header: bool = True
+
+
+@dataclass(frozen=True)
+class _UploadTableResult:
+    """Small result object used by the CLI success message."""
+
+    entry_id: str
+    row_count: int
+    column_count: int
+
+
+@dataclass(frozen=True)
+class DownloadTableOptions:
+    """Inputs needed to download one table entry from one LabArchives page.
+
+    ``entry_index`` is zero-based. The default selects the most recent text
+    entry on the page that contains an HTML ``<table>``.
+    """
+
+    notebook_name: str
+    page_path: _NotebookLocation
+    output_file: Path
+    entry_index: int = _RECENT_TABLE_ENTRY
+
+
+@dataclass(frozen=True)
+class _DownloadTableResult:
+    """Small result object used by the CLI success message."""
+
+    entry_index: int
+    row_count: int
+    column_count: int
+
+
+def upload_table(user: User, options: UploadTableOptions) -> _UploadTableResult:
+    """Upload a CSV file as a LabArchives rich-text table entry.
+
+    The core labapi calls are:
+
+    1. ``user.notebooks[name]`` to choose the notebook.
+    2. ``notebook.page(path)`` to get or create the destination page.
+    3. ``page.entries.create(TextEntry, html)`` to add the rich-text table.
+    """
+    table = _read_csv_table(options.csv_file, has_header=options.has_header)
+
+    # Notebooks behave like mappings. A string key selects the first notebook
+    # with that name, matching the common quick-start style used in the docs.
+    page = user.notebooks[options.notebook_name].page(options.page_path)
+
+    # TextEntry is LabArchives' rich-text entry type. Passing HTML here lets the
+    # table render in the web UI instead of appearing as plain text.
+    entry = page.entries.create(TextEntry, _render_html_table(table))
+    return _UploadTableResult(entry.id, table.row_count, table.column_count)
+
+
+def download_table(user: User, options: DownloadTableOptions) -> _DownloadTableResult:
+    """Download a LabArchives rich-text table entry as a CSV file.
+
+    Download uses ``traverse(...).as_page()`` instead of ``page(...)`` so it
+    reads from an existing page and lets labapi report path mistakes normally.
+    """
+    # ``traverse`` returns a generic tree node. ``as_page`` narrows it to a page
+    # and raises TypeError if the path points at a folder.
+    page = user.notebooks[options.notebook_name].traverse(options.page_path).as_page()
+    entry_index, entry = _select_table_entry(page.entries, options.entry_index)
+    table = _parse_html_table(entry.content)
+    _write_csv_table(table, options.output_file)
+    return _DownloadTableResult(entry_index, table.row_count, table.column_count)
+
+
+def _read_csv_table(csv_file: Path, *, has_header: bool = True) -> _CsvTable:
+    """Read a CSV file into the internal table shape.
+
+    This intentionally uses Python's ``csv`` module so quoted commas, newlines,
+    and other CSV details are handled by the standard library.
+    """
+    with csv_file.open("r", newline="", encoding="utf-8") as handle:
+        rows: _CsvRows = tuple(tuple(row) for row in csv.reader(handle))
 
     if not rows:
+        return _CsvTable(None, ())
+    if has_header:
+        return _CsvTable(rows[0], rows[1:])
+    return _CsvTable(None, rows)
+
+
+def _render_html_table(table: _CsvTable) -> str:
+    """Render table data as simple HTML accepted by LabArchives rich text.
+
+    Cell values are escaped before insertion so input such as ``<ok>`` is shown
+    as text instead of becoming markup.
+    """
+    if table.headers is None and not table.rows:
         return "<p>Empty CSV file</p>"
 
-    html_parts = ["<table>"]
+    html = ["<table>"]
+    if table.headers is not None:
+        html.extend(["  <thead>", "    <tr>"])
+        html.extend(f"      <th>{escape(cell)}</th>" for cell in table.headers)
+        html.extend(["    </tr>", "  </thead>"])
 
-    # Process header row
-    if has_header and rows:
-        html_parts.append("  <thead>")
-        html_parts.append("    <tr>")
-        for cell in rows[0]:
-            html_parts.append(f"      <th>{cell}</th>")
-        html_parts.append("    </tr>")
-        html_parts.append("  </thead>")
-        rows = rows[1:]  # Remove header from data rows
+    if table.rows:
+        html.append("  <tbody>")
+        for row in table.rows:
+            html.append("    <tr>")
+            html.extend(f"      <td>{escape(cell)}</td>" for cell in row)
+            html.append("    </tr>")
+        html.append("  </tbody>")
 
-    # Process data rows
-    if rows:
-        html_parts.append("  <tbody>")
-        for row in rows:
-            html_parts.append("    <tr>")
-            for cell in row:
-                html_parts.append(f"      <td>{cell}</td>")
-            html_parts.append("    </tr>")
-        html_parts.append("  </tbody>")
-
-    html_parts.append("</table>")
-
-    return "\n".join(html_parts)
+    html.append("</table>")
+    return "\n".join(html)
 
 
-def html_table_to_csv(html: str, output_file: Path) -> bool:
-    """Extract HTML tables from HTML content and save as CSV.
+def _parse_html_table(html: str) -> _CsvTable:
+    """Parse the first HTML table from a rich-text entry.
 
-    :param html: HTML content containing tables
-    :param output_file: Path to save the CSV file
+    LabArchives stores rich-text entry content as HTML. BeautifulSoup gives this
+    example a forgiving parser for markup copied from existing entries.
     """
-    soup = BeautifulSoup(html, "html.parser")
-    tables = soup.find_all("table")
+    table_node = BeautifulSoup(html, "html.parser").find("table")
+    if not isinstance(table_node, Tag):
+        raise ValueError("No tables found in HTML content")
 
-    if not tables:
-        print("No tables found in HTML content")
-        return False
+    # Prefer an explicit table header when present. Tables without ``thead`` are
+    # still supported by treating every row as body data.
+    thead = table_node.find("thead")
+    header_row = thead.find("tr") if isinstance(thead, Tag) else None
+    headers = _cell_texts(_find_tags(header_row, "th")) if header_row else None
 
-    if len(tables) > 1:
-        print(f"Warning: Found {len(tables)} tables, using the first one")
+    rows: list[_CsvRow] = []
+    data_rows = table_node.find("tbody")
+    source_node = data_rows if isinstance(data_rows, Tag) else table_node
+    header_rows = _find_tags(thead, "tr") if isinstance(thead, Tag) else ()
+    for tr in _find_tags(source_node, "tr"):
+        # When there is no ``tbody``, ``source_node`` is the whole table. Skip
+        # header rows we already collected so they are not written twice.
+        if any(tr is header for header in header_rows):
+            continue
+        row = _cell_texts(_find_tags(tr, ["td", "th"]))
+        if row:
+            rows.append(row)
 
-    table = tables[0]
-    rows: list[list[str]] = []
-
-    # Extract header if present
-    thead = table.find("thead")
-    if thead:
-        header_row = thead.find("tr")
-        if header_row:
-            headers = [th.get_text(strip=True) for th in header_row.find_all("th")]
-            rows.append(headers)
-
-    # Extract body rows
-    tbody = table.find("tbody")
-    if tbody:
-        for tr in tbody.find_all("tr"):
-            cells = [td.get_text(strip=True) for td in tr.find_all("td")]
-            rows.append(cells)
-    else:
-        # No tbody, just get all tr elements after thead
-        for tr in table.find_all("tr"):
-            # Skip if this is the header row we already processed
-            if thead and tr in thead.find_all("tr"):
-                continue
-            cells = [td.get_text(strip=True) for td in tr.find_all(["td", "th"])]
-            if cells:
-                rows.append(cells)
-
-    # Write to CSV
-    with output_file.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerows(rows)
-
-    return True
+    return _CsvTable(headers or None, tuple(rows))
 
 
-def upload_csv_as_table(
-    user: User,
-    notebook_name: str,
-    csv_file: Path,
-    page_path: str,
-    has_header: bool = True,
-) -> None:
-    """Upload a CSV file as an HTML table to a LabArchives page."""
-    if not csv_file.exists():
-        print(f"Error: CSV file '{csv_file}' does not exist")
-        sys.exit(1)
+def _write_csv_table(table: _CsvTable, output_file: Path) -> None:
+    """Write the internal table shape to a UTF-8 CSV file."""
+    rows: list[_CsvRow] = []
+    if table.headers is not None:
+        rows.append(table.headers)
+    rows.extend(table.rows)
 
-    notebooks = user.notebooks
-    try:
-        notebook = notebooks[notebook_name]
-        print(f"Ensuring page path exists: {page_path}")
-        page = get_or_create_page(notebook, page_path)
-    except (KeyError, TraversalError, TypeError, ValueError) as e:
-        print(f"Error: Could not access or create path '{page_path}': {e}")
-        sys.exit(1)
-
-    print(f"Converting '{csv_file}' to HTML table...")
-    html_table = csv_to_html_table(csv_file, has_header=has_header)
-
-    print(f"Uploading table to '{page_path}'...")
-    try:
-        entry = page.entries.create(TextEntry, html_table)
-        print(f"✓ Table uploaded successfully (Entry ID: {entry.id})")
-    except Exception as e:
-        print(f"✗ Error uploading table: {e}")
-        sys.exit(1)
+    with output_file.open("w", newline="", encoding="utf-8") as handle:
+        csv.writer(handle).writerows(rows)
 
 
-def download_table_as_csv(
-    user: User,
-    notebook_name: str,
-    page_path: str,
-    output_file: Path,
-    entry_index: int = -1,
-) -> None:
-    """Download an HTML table from a LabArchives page as a CSV file."""
-    notebooks = user.notebooks
-    try:
-        notebook = notebooks[notebook_name]
-    except KeyError as e:
-        print(f"Error: Could not find notebook '{notebook_name}': {e}")
-        print(f"Available notebooks: {list(notebooks.keys())}")
-        sys.exit(1)
-    try:
-        page = notebook.traverse(page_path).as_page()
-    except TraversalError as e:
-        print(
-            f"Error: Could not find page '{page_path}' in notebook '{notebook_name}': {e}"
-        )
-        sys.exit(1)
-    except TypeError:
-        print(f"Error: '{page_path}' refers to a directory, but a page is required")
-        sys.exit(1)
-
-    entries = page.entries
-
-    # Find text entries that contain tables
-    table_entries: list[tuple[int, TextEntry]] = [
-        (i, e)
-        for i, e in enumerate(entries)
-        if isinstance(e, TextEntry) and "<table" in e.content.lower()
-    ]
-
-    if not table_entries:
-        print(f"No table entries found on page '{page_path}'")
-        print("Note: Only text entries containing <table> tags are considered")
-        sys.exit(1)
-
-    print(f"Found {len(table_entries)} entry/entries with tables")
-
-    # Select entry
-    if entry_index == -1:
-        # Use the most recent table entry
-        entry_idx, entry = table_entries[-1]
-        print(f"Using most recent table entry (entry {entry_idx + 1})")
-    else:
-        if entry_index >= len(entries):
-            print(
-                f"Error: Entry index {entry_index} out of range (page has {len(entries)} entries)"
-            )
-            sys.exit(1)
-        entry = entries[entry_index]
-        if not isinstance(entry, TextEntry):
-            print(f"Error: Entry {entry_index} is not a text entry")
-            sys.exit(1)
-
-    print("Extracting table from entry...")
-    success = html_table_to_csv(entry.content, output_file)
-
-    if success:
-        print(f"✓ Table saved to '{output_file}'")
-    else:
-        print("✗ Failed to extract table")
-        sys.exit(1)
-
-
-def main() -> None:
-    """Run the CSV table example CLI."""
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the command-line argument parser."""
     parser = argparse.ArgumentParser(
         description="Upload CSV files as HTML tables or download HTML tables as CSV"
     )
@@ -255,44 +256,101 @@ def main() -> None:
     parser.add_argument(
         "--entry-index",
         type=int,
-        default=-1,
-        help="Entry index to download (default: most recent table entry)",
+        default=_RECENT_TABLE_ENTRY,
+        help="Zero-based page entry index to download (default: latest table entry)",
     )
     parser.add_argument(
-        "--no-header", action="store_true", help="CSV file has no header row"
+        "--no-header", action="store_true", help="Treat every CSV row as table data"
     )
+    return parser
 
-    args = parser.parse_args()
 
-    print("Connecting to LabArchives...")
+def _run(argv: Sequence[str] | None = None) -> int:
+    """Run the command-line script and return a process exit code.
+
+    The CLI owns authentication, printing, and error-to-exit-code conversion.
+    The upload/download helpers stay quiet so they are easy to test.
+    """
+    args = _build_parser().parse_args(argv)
+
     try:
+        # Client is a context manager so the HTTP session is closed even when an
+        # API call raises an exception.
         with Client() as client:
-            print("Authenticating...")
+            # default_authenticate reads the usual labapi credential settings
+            # documented in the quick start, including dotenv support when the
+            # extra is installed.
             user = client.default_authenticate()
-            print("✓ Authenticated successfully")
 
             if args.action == "upload":
-                csv_file = Path(args.file)
-                page_path = args.target
-                upload_csv_as_table(
-                    user,
-                    args.notebook,
-                    csv_file,
-                    page_path,
+                options = UploadTableOptions(
+                    notebook_name=args.notebook,
+                    csv_file=Path(args.file),
+                    page_path=args.target,
                     has_header=not args.no_header,
                 )
-            else:  # download
-                page_path = args.file
-                output_file = Path(args.target)
-                download_table_as_csv(
-                    user, args.notebook, page_path, output_file, args.entry_index
+                result = upload_table(user, options)
+                print(
+                    f"Uploaded {result.row_count} rows x {result.column_count} columns "
+                    f"as entry {result.entry_id}"
                 )
-    except Exception as e:
-        print(f"Authentication error: {e}")
-        print("\nMake sure you have a .env file with your credentials:")
-        print("  ACCESS_KEYID=your_access_key_id")
-        print("  ACCESS_PWD=your_password")
-        sys.exit(1)
+            else:
+                options = DownloadTableOptions(
+                    notebook_name=args.notebook,
+                    page_path=args.file,
+                    output_file=Path(args.target),
+                    entry_index=args.entry_index,
+                )
+                result = download_table(user, options)
+                print(
+                    f"Saved {result.row_count} rows x {result.column_count} columns "
+                    f"from entry {result.entry_index + 1} to {options.output_file}"
+                )
+
+        return 0
+    except Exception as err:
+        print(f"Error: {err}", file=sys.stderr)
+        return 1
+
+
+def _select_table_entry(
+    entries: Entries, entry_index: int = _RECENT_TABLE_ENTRY
+) -> tuple[int, TextEntry]:
+    """Return the requested text entry that contains an HTML table."""
+    if entry_index == _RECENT_TABLE_ENTRY:
+        # Entries is a labapi sequence. Reversing it checks the newest entries
+        # first while preserving the original page index for user-facing output.
+        for offset, entry in enumerate(reversed(entries), start=1):
+            if isinstance(entry, TextEntry) and "<table" in entry.content.lower():
+                return len(entries) - offset, entry
+        raise ValueError("No text entries containing <table> tags were found")
+
+    if entry_index < 0:
+        raise ValueError(
+            f"Entry index {entry_index} is invalid; use {_RECENT_TABLE_ENTRY} for latest"
+        )
+
+    entry = entries[entry_index]
+    if not isinstance(entry, TextEntry):
+        raise TypeError(f"Entry {entry_index} is not a text entry")
+    if "<table" not in entry.content.lower():
+        raise ValueError(f"Entry {entry_index} does not contain a table")
+    return entry_index, entry
+
+
+def _find_tags(node: Tag, names: _TagNames) -> tuple[Tag, ...]:
+    """Find child tags and discard non-tag BeautifulSoup nodes."""
+    return tuple(tag for tag in node.find_all(names) if isinstance(tag, Tag))
+
+
+def _cell_texts(cells: Sequence[Tag]) -> _CsvRow:
+    """Return stripped visible text from table cell tags."""
+    return tuple(cell.get_text(strip=True) for cell in cells)
+
+
+def main() -> None:
+    """Run the CSV table example as a process."""
+    raise SystemExit(_run())
 
 
 if __name__ == "__main__":
