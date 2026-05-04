@@ -67,6 +67,17 @@ Use ``..`` to navigate to the parent container.
     parent = page.traverse("..")
     grandparent = page.traverse("../..")
 
+Escaping Path Separators
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use a backslash to keep ``/`` as part of a path segment instead of treating it
+as a separator.
+
+.. code-block:: python
+
+    figure = notebook.traverse(r"Experiments/Figure\/1")
+    page = notebook.page(r"Reports\/2024")
+
 .. note::
    To inspect duplicate child names under a container, use explicit indexing
    on that container (for example, ``container[Index.Name: "Results"]``)
@@ -74,8 +85,8 @@ Use ``..`` to navigate to the parent container.
    (see :ref:`index_access`).
 
 .. warning::
-   Nodes with the literal name ``".."`` cannot be accessed via ``traverse``, as ``..`` is
-   reserved for parent navigation.
+   Nodes with the literal name ``".."`` cannot be accessed via ``traverse``,
+   as ``..`` is reserved for parent navigation.
 
 Enumerating Descendants
 -----------------------
