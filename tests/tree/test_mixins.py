@@ -18,6 +18,7 @@ from labapi.tree.mixins import (
     AbstractTreeContainer,
 )
 from labapi.util import InsertBehavior, NotebookPath
+from labapi.util.path import EscapedSegment
 
 
 def expect_dir(node: object) -> NotebookDirectory:
@@ -50,6 +51,29 @@ class TestTreeMixinsIntegration:
         page_a = notebook_tree.traverse("/Test Folder A/Dir1 Test Page A")
         assert page_a.name == "Dir1 Test Page A"
         assert page_a.id == "page-1-1"
+
+    def test_traverse_escaped_separator_in_node_names(self, notebook_tree: Notebook):
+        """Test traversing to nodes whose names contain literal slashes."""
+        slash_dir = NotebookDirectory(
+            "slash-dir",
+            "Reports/2024",
+            notebook_tree,
+            notebook_tree,
+            notebook_tree.user,
+        )
+        slash_page = NotebookPage(
+            "slash-page",
+            "Summary/Final",
+            notebook_tree,
+            slash_dir,
+            notebook_tree.user,
+        )
+        slash_dir._children.append(slash_page)  # pyright: ignore[reportPrivateUsage]
+        slash_dir._populated = True  # pyright: ignore[reportPrivateUsage]
+        notebook_tree._children.append(slash_dir)  # pyright: ignore[reportPrivateUsage]
+
+        assert notebook_tree.traverse(r"/Reports\/2024/Summary\/Final") is slash_page
+        assert slash_dir.traverse(r"Summary\/Final") is slash_page
 
     def test_traverse_parent(self, notebook_tree: Notebook):
         """Test traversing with '..'."""
@@ -474,6 +498,47 @@ class TestTreeMixinsIntegration:
         assert api_call[1]["display_text"] == "New Folder"
         assert api_call[1]["is_folder"] == "true"
 
+    def test_create_escaped_separator_as_literal_child_name(
+        self, client, notebook_tree: Notebook
+    ):
+        """Test creating a direct child whose name contains a literal slash."""
+        client.api_response = client.tree_node_response("slash-page-id")
+
+        new_page = notebook_tree.create(NotebookPage, r"Reports\/2024")
+
+        assert isinstance(new_page, NotebookPage)
+        assert new_page.name == "Reports/2024"
+        assert new_page.parent is notebook_tree
+
+        api_call = client.pop_api_call()
+        assert api_call[0] == "tree_tools/insert_node"
+        assert api_call[1]["display_text"] == "Reports/2024"
+        assert api_call[1]["is_folder"] == "false"
+
+    def test_page_creates_parents_with_escaped_separator_segments(
+        self, client, notebook_tree: Notebook
+    ):
+        """Test parent creation preserves literal slashes in path segments."""
+        client.api_response = client.tree_node_response("slash-dir-id")
+        client.api_response = client.tree_node_response("slash-page-id")
+
+        new_page = notebook_tree.page(r"Reports\/2024/Summary\/Final")
+
+        assert isinstance(new_page, NotebookPage)
+        assert new_page.name == "Summary/Final"
+        assert new_page.parent.name == "Reports/2024"
+        assert new_page.parent.parent is notebook_tree
+
+        dir_call = client.pop_api_call()
+        assert dir_call[0] == "tree_tools/insert_node"
+        assert dir_call[1]["display_text"] == "Reports/2024"
+        assert dir_call[1]["is_folder"] == "true"
+
+        page_call = client.pop_api_call()
+        assert page_call[0] == "tree_tools/insert_node"
+        assert page_call[1]["display_text"] == "Summary/Final"
+        assert page_call[1]["is_folder"] == "false"
+
     def test_create_page_subclass_uses_page_semantics(
         self, client, notebook_tree: Notebook
     ):
@@ -597,7 +662,8 @@ class TestTreeMixinsIntegration:
         client.api_response = client.tree_node_response("absolute-dir-id")
 
         new_dir = folder_a.create(
-            NotebookDirectory, NotebookPath("/Test Folder A/Absolute String Dir")
+            NotebookDirectory,
+            NotebookPath(EscapedSegment("/Test Folder A/Absolute String Dir")),
         )
 
         assert isinstance(new_dir, NotebookDirectory)

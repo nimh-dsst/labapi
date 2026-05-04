@@ -55,7 +55,8 @@ All published examples assume:
 - Python 3.10+.
 - The recommended local interactive profile:
   ``labapi[dotenv,builtin-auth]``.
-- A repository-root working directory for the catalog commands below.
+- A repository-root working directory when you run the ``uv run --project ...``
+  commands below.
 - Notebook-relative page paths paired with ``--notebook "My Notebook"``.
 
 Use these sample commands as known-good starting points:

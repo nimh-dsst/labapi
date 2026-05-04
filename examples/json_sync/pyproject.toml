@@ -4,6 +4,3 @@ version = "0.1.0"
 dependencies = [
     "labapi[dotenv,builtin-auth]",
 ]
-
-[tool.uv.sources]
-labapi = { path = "../../", editable = true }
