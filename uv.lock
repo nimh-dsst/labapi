@@ -921,6 +921,7 @@ dev = [
     { name = "sphinx-breeze-theme" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-design" },
+    { name = "sphinx-multiversion" },
     { name = "ty" },
     { name = "types-lxml" },
 ]
@@ -949,6 +950,7 @@ dev = [
     { name = "sphinx-breeze-theme", specifier = ">=0.13.1" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-design", specifier = ">=0.6.1,<0.7" },
+    { name = "sphinx-multiversion", specifier = ">=0.2.4,<0.3" },
     { name = "ty", specifier = ">=0.0.29" },
     { name = "types-lxml", specifier = ">=2026.1.1" },
 ]
@@ -1930,6 +1932,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2b/69/b34e0cb5336f09c6866d53b4a19d76c227cdec1bbc7ac4de63ca7d58c9c7/sphinx_design-0.6.1.tar.gz", hash = "sha256:b44eea3719386d04d765c1a8257caca2b3e6f8421d7b3a5e742c0fd45f84e632", size = 2193689, upload-time = "2024-08-02T13:48:44.277Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c6/43/65c0acbd8cc6f50195a3a1fc195c404988b15c67090e73c7a41a9f57d6bd/sphinx_design-0.6.1-py3-none-any.whl", hash = "sha256:b11f37db1a802a183d61b159d9a202314d4d2fe29c163437001324fe2f19549c", size = 2215338, upload-time = "2024-08-02T13:48:42.106Z" },
+]
+
+[[package]]
+name = "sphinx-multiversion"
+version = "0.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9a/10/25231164a97a9016bdc73a3530af8f4a6846bdc564af1460af2ff3e59a50/sphinx-multiversion-0.2.4.tar.gz", hash = "sha256:5cd1ca9ecb5eed63cb8d6ce5e9c438ca13af4fa98e7eb6f376be541dd4990bcb", size = 7024, upload-time = "2020-08-12T15:48:20.566Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/51/203bb30b3ce76373237288e92cb71fb66f80ee380473f36bfe8a9d299c5d/sphinx_multiversion-0.2.4-py2.py3-none-any.whl", hash = "sha256:5c38d5ce785a335d8c8d768b46509bd66bfb9c6252b93b700ca8c05317f207d6", size = 9597, upload-time = "2024-10-03T21:45:52.754Z" },
+    { url = "https://files.pythonhosted.org/packages/05/ad/4989e6be165805694e93d09bc57425aa1368273b7de4fe3083fe4310803a/sphinx_multiversion-0.2.4-py3-none-any.whl", hash = "sha256:dec29f2a5890ad68157a790112edc0eb63140e70f9df0a363743c6258fbeb478", size = 9642, upload-time = "2020-08-12T15:48:19.649Z" },
 ]
 
 [[package]]

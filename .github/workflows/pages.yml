@@ -19,6 +19,9 @@ jobs:
   build:
     name: Build docs site
     runs-on: ubuntu-latest
+    env:
+      # Older release tags import typing.Self and typing.override.
+      UV_PYTHON: "3.12"
 
     steps:
       - name: Checkout code
@@ -36,13 +39,38 @@ jobs:
           version: "latest"
 
       - name: Set up Python
-        run: uv python install 3.10
+        run: uv python install
 
       - name: Install dependencies
         run: uv sync --all-groups
 
-      - name: Build Sphinx docs
-        run: uv run sphinx-build -b html docs/source docs/_build/html
+      - name: Build versioned Sphinx docs
+        run: uv run sphinx-multiversion docs/source docs/_build/html
+
+      - name: Add Pages root files
+        run: |
+          set -eu
+          latest="$(find docs/_build/html -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+          if [ -z "$latest" ]; then
+            echo "No versioned docs directories found." >&2
+            exit 1
+          fi
+
+          touch docs/_build/html/.nojekyll
+          cat > docs/_build/html/index.html <<EOF
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=./${latest}/index.html">
+            <link rel="canonical" href="./${latest}/index.html">
+            <title>Redirecting...</title>
+          </head>
+          <body>
+            <p>Redirecting to <a href="./${latest}/index.html">${latest}</a>.</p>
+          </body>
+          </html>
+          EOF
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
