@@ -19,13 +19,24 @@ Build an :class:`~labapi.entry.attachment.Attachment` from a filename or path:
    attachment = Attachment.from_file("my_file.txt")
 
 .. note::
-   :meth:`~labapi.entry.attachment.Attachment.from_file` requires a
-   random-access binary file object so it can rewind the stream before
-   copying it. Standard file handles opened with ``"rb"`` or ``"rb+"`` should work
-   well.
+   :meth:`~labapi.entry.attachment.Attachment.from_file` accepts a filesystem
+   path or a random-access binary file object. When a path is provided,
+   ``labapi`` opens the file in binary mode automatically. File objects must
+   support random access so the library can rewind the stream before copying.
 
 If the MIME type cannot be determined from the filename, ``labapi`` falls back
 to ``application/octet-stream``.
+
+Check Upload Limits
+-------------------
+
+Before uploading large files, you can check your account's maximum allowed
+upload size:
+
+.. code-block:: python
+
+   max_size_bytes = user.get_max_upload_size()
+   print(f"Max upload size: {max_size_bytes / 1024 / 1024:.1f} MB")
 
 Upload the Attachment
 ---------------------

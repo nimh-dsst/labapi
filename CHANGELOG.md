@@ -12,18 +12,22 @@ details that affect development workflows.
 
 ### Added
 
-- Support for Python 3.10 and 3.11 across package metadata, README/docs,
-  GitHub issue templates, reusable CI matrices, `ruff`, and `ty`.
+- `Attachment.from_file()` now accepts filesystem `str` or `Path` objects in
+  addition to file-like objects.
+- Support for escaped separators (`\/`) in notebook paths, enabling access to
+  and creation of notebook nodes with literal slashes in their names.
+- Official support for Python 3.10 and 3.11.
 - `typing-extensions` as a runtime dependency so code can use backported typing
   helpers such as `Self`, `override`, and `Buffer` while supporting Python 3.10.
 - Lazy environment-variable loading through `labapi.util.env.getenv()`. When
   `python-dotenv` is installed, `.env` is loaded on first credential lookup
   instead of during `labapi.client` import.
-- Broader GitHub Actions coverage for normal pushes and pull requests, with
-  reusable Python checks defaulting to Python 3.10 through 3.13.
 
 ### Changed
 
+- Refactored the `json_sync` example into a reusable utility with
+  comprehensive tests.
+- Rewrote the `csv_table` example for improved clarity and usability.
 - Reworked entry factory fallback handling. Unknown upstream LabArchives part
   types now load as `UnknownEntry`, while recognized but unimplemented part
   types load as `UnimplementedEntry`; both still reject unsupported updates.
@@ -32,26 +36,13 @@ details that affect development workflows.
   `seekable()` method.
 - Kept spooled attachment buffers open after `Attachment.from_file()` returns,
   while still preserving the caller's original file cursor position.
-- Refactored `MockClient` test support around XML builder helpers and
-  `RecordedApiCall`, making fixture data less dependent on raw XML strings.
-- Refreshed example setup instructions to use repository-root editable
-  installs, documented the `dotenv`/`builtin-auth` extras, and normalized file
-  path handling in the notebook logging example.
-- Pinned the docs and publish workflows to a Python 3.10-compatible toolchain
-  for the `1.1` release line.
 
 ### Fixed
 
+- Fixed runtime typing in `Attachment.from_file()` to support both file-like
+  and path-like inputs correctly.
 - Improved `Attachment.from_file()` support for random-access binary streams
   that do not expose `seekable()`.
-- Fixed dotenv cache handling in client initialization tests so tests can
-  exercise missing-environment and `.env`-backfilled credential paths
-  independently.
-
-### Removed
-
-- Removed absolute `datetime` expiration inputs from URL signing helpers. Pass
-  a relative `timedelta` to `Client.construct_url()` or `_sign_url()` instead.
 
 ## 1.0.4 - 2026-04-24
 

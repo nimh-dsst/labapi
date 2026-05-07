@@ -71,12 +71,40 @@ Escaping Path Separators
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use a backslash to keep ``/`` as part of a path segment instead of treating it
-as a separator.
+as a separator. This escaping is supported by all methods that accept path
+strings, including ``traverse()``, ``create()``, ``dir()``, and ``page()``.
 
 .. code-block:: python
 
+    # Literal name "Figure / 1"
     figure = notebook.traverse(r"Experiments/Figure\/1")
+
+    # Literal name "Reports / 2024"
     page = notebook.page(r"Reports\/2024")
+
+Programmatic Escaping
+^^^^^^^^^^^^^^^^^^^^^
+
+If you are building paths from variables that might contain slashes, use
+:meth:`~labapi.util.path.NotebookPath.escape` to safely prepare the segments:
+
+.. code-block:: python
+
+    from labapi import NotebookPath
+
+    raw_name = "Results / Final"
+    # Escapes / and \ to prevent accidental traversal
+    safe_name = NotebookPath.escape(raw_name)[0]
+
+    # Now safe to use in a path string
+    page = notebook.page(f"Experiments/{safe_name}")
+
+Use :meth:`~labapi.util.path.NotebookPath.unescape` to remove escapes from a
+segment string:
+
+.. code-block:: python
+
+    print(NotebookPath.unescape(r"Results\/Final")) # "Results / Final"
 
 .. note::
    To inspect duplicate child names under a container, use explicit indexing

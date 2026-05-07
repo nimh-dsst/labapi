@@ -118,11 +118,11 @@ You can also create an attachment directly from a file on disk:
 
    from labapi import Attachment, AttachmentEntry
 
-   with open("data.csv", "rb") as f:
-       attachment = Attachment.from_file(f)
+   attachment = Attachment.from_file("data.csv")
    page.entries.create(AttachmentEntry, attachment)
 
-``Attachment.from_file()`` requires a random-access file object or file path.
+``Attachment.from_file()`` accepts a filesystem path (string or ``Path``) or a
+random-access binary file object.
 
 Working with JSON Data
 ----------------------
