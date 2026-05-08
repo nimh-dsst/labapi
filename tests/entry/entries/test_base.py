@@ -46,21 +46,22 @@ class TestEntryUnit:
         assert Entry.is_registered("unimplemented entry") is False
 
     @pytest.mark.parametrize(
-        "part_type",
+        ("part_type", "expected_class"),
         [
-            "text entry",
-            "plain text entry",
-            "heading",
-            "Attachment",
+            ("text entry", TextEntry),
+            ("plain text entry", PlainTextEntry),
+            ("heading", HeaderEntry),
+            ("Attachment", AttachmentEntry),
+            ("sketch entry", UnimplementedEntry),
+            ("equation entry", UnimplementedEntry),
+            ("reference entry", UnimplementedEntry),
+            ("assignment entry", UnimplementedEntry),
         ],
     )
-    def test_current_unimplemented_entry_types_are_registered(self, part_type: str):
-        """Test the current fallback registration set."""
+    def test_current_entry_types_are_registered(self, part_type: str, expected_class: type):
+        """Test the current registration set."""
         assert Entry.is_registered(part_type) is True
-
-    def test_sketch_entry_is_not_registered(self):
-        """Test sketch entries currently fall through to the unknown fallback."""
-        assert Entry.is_registered("sketch entry") is False
+        assert Entry.class_of(part_type) is expected_class
 
     def test_widget_entry_is_registered_for_backwards_compat(self):
         """Test widget entries stay registered to WidgetEntry for compatibility."""
@@ -71,23 +72,31 @@ class TestEntryIntegration:
     """Integration tests with real objects and mocked API."""
 
     @pytest.mark.parametrize(
-        "part_type",
+        ("part_type", "expected_class"),
         [
-            "text entry",
-            "plain text entry",
-            "heading",
-            "Attachment",
+            ("text entry", TextEntry),
+            ("plain text entry", PlainTextEntry),
+            ("heading", HeaderEntry),
+            ("Attachment", AttachmentEntry),
+            ("sketch entry", UnimplementedEntry),
+            ("equation entry", UnimplementedEntry),
+            ("reference entry", UnimplementedEntry),
+            ("assignment entry", UnimplementedEntry),
         ],
     )
-    def test_entry_from_part_type_current_unimplemented_mappings(
-        self, part_type: str, user: User
+    def test_entry_from_part_type_resolves_correctly(
+        self, part_type: str, expected_class: type, user: User
     ):
-        """Test current registered part types resolve to UnimplementedEntry."""
+        """Test registered part types resolve to their expected classes."""
         entry = Entry.from_part_type(part_type, "eid_123", "data", user)
 
-        assert isinstance(entry, UnimplementedEntry)
+        assert isinstance(entry, expected_class)
         assert entry.content_type == part_type
-        assert entry.content == "data"
+
+        # Attachment content is an object that triggers a download;
+        # others are just strings.
+        if not isinstance(entry, AttachmentEntry):
+            assert entry.content == "data"
 
     def test_entry_from_part_type_widget_entry_returns_widget_entry(self, user: User):
         """Test widget entries resolve to the backward-compatible WidgetEntry class."""
@@ -103,12 +112,4 @@ class TestEntryIntegration:
 
         assert isinstance(entry, UnknownEntry)
         assert entry.content_type == "unknown_type"
-        assert entry.content == "Data"
-
-    def test_entry_from_part_type_sketch_entry_returns_unknown(self, user: User):
-        """Test sketch entries currently fall back to UnknownEntry."""
-        entry = Entry.from_part_type("sketch entry", "eid_999", "Data", user)
-
-        assert isinstance(entry, UnknownEntry)
-        assert entry.content_type == "sketch entry"
         assert entry.content == "Data"

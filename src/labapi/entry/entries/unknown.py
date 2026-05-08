@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from labapi.user import User
 
 _UNKNOWN_ENTRY_REGISTRY_SENTINEL = "__labapi_internal_unknown_entry__"
-_UNIMPLEMENTED_ENTRY_REGISTRY_SENTINEL = "__labapi_internal_unknown_entry__"
+_UNIMPLEMENTED_ENTRY_REGISTRY_SENTINEL = "__labapi_internal_unimplemented_entry__"
 
 
 class UnknownEntry(Entry[str], part_type=_UNKNOWN_ENTRY_REGISTRY_SENTINEL):
@@ -48,10 +48,10 @@ class UnimplementedEntry(
     UnknownEntry,
     part_type=_UNIMPLEMENTED_ENTRY_REGISTRY_SENTINEL,
     meta_part_types={
-        "Attachment",
-        "plain text entry",
-        "heading",
-        "text entry",
+        "sketch entry",
+        "equation entry",
+        "reference entry",
+        "assignment entry",
     },
 ):
     """Fallback entry wrapper for known upstream part types not yet implemented."""

@@ -36,7 +36,6 @@ def _parse_detectable(string: str | None) -> _DetectableBrowser | Literal[False]
 
 
 def _get_env_browser() -> _ChoosableBrowser | None:
-    # TODO put the load dotenv here
     browser = getenv("LA_AUTH_BROWSER", "").strip().lower()
 
     if browser == "":
