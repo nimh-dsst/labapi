@@ -44,24 +44,6 @@ details that affect development workflows.
 - Improved `Attachment.from_file()` support for random-access binary streams
   that do not expose `seekable()`.
 
-## 1.0.4 - 2026-04-24
-
-### Added
-
-- This changelog, including backfilled release notes for `1.0.0` through
-  `1.0.3` and an unreleased `1.1.0` section.
-- Zenodo DOI badge in the README, linking the package repository to its
-  archived citation record (`#138`).
-
-### Changed
-
-- Switched the release workflow from TestPyPI to production PyPI publishing via
-  `uv publish --trusted-publishing always` (`#139`).
-- Updated the publish environment metadata and release URL from TestPyPI to the
-  production PyPI project page (`#139`).
-- Refreshed the lockfile for `lxml` 6.1.0 and `python-dotenv` 1.2.2 on the
-  `1.0` maintenance branch.
-
 ## 1.0.3 - 2026-04-15
 
 ### Changed
