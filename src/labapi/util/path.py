@@ -124,19 +124,18 @@ class NotebookPath(Sequence[UnescapedSegment]):
         self._parent: NotebookPath | None = None
         self._parts: Sequence[UnescapedSegment] = ()
         self._absolute: bool = False
+        other_parts, _ = _lexe(*parts)
 
         if parent is not None:
-            self._parent = NotebookPath(parent)
-            if not self._parent.is_absolute():
+            _parent = NotebookPath(parent)
+            if not _parent.is_absolute():
                 raise PathError(
                     "Parent path must be absolute",
                     path=str(part),
-                    parent=str(self._parent),
+                    parent=str(_parent),
                 )
         else:
-            self._parent = None
-
-        other_parts, _ = _lexe(*parts)
+            _parent = None
 
         if isinstance(part, NotebookPath):
             self._parts = _canonicalize(
@@ -146,13 +145,16 @@ class NotebookPath(Sequence[UnescapedSegment]):
             self._parent = part._parent
         elif isinstance(part, str):
             lexed, is_absolute = _lexe(part)
-            self._absolute = is_absolute and self._parent is None
+            self._absolute = is_absolute and parent is None
             self._parts = _canonicalize(*lexed, *other_parts, from_root=self._absolute)
         else:
             self._parts = _canonicalize(
                 *NotebookPath._of_node(part), *other_parts, from_root=True
             )
             self._absolute = True
+
+        if _parent is not None:
+            self._parent = _parent
 
     def __truediv__(self, other: str | NotebookPath) -> NotebookPath:
         """Append a segment or another path using the ``/`` operator.
@@ -235,9 +237,10 @@ class NotebookPath(Sequence[UnescapedSegment]):
         :raises PathError: If the path is relative and no parent is available
             to resolve against.
         """
-        if self.is_absolute():
-            return self
         if self._parent is None:
+            if self.is_absolute():
+                return self
+
             if parent is not None:
                 return NotebookPath(
                     parent.resolve() if recurse else parent,
@@ -249,7 +252,9 @@ class NotebookPath(Sequence[UnescapedSegment]):
                 path=str(self),
             )
 
-        return NotebookPath(self._parent, *self.escape(*self._parts))
+        return NotebookPath(self._parent, *self.escape(*self._parts)).resolve(
+            parent, recurse
+        )
 
     def startswith(self, other: NotebookPath) -> bool:
         """Return whether this path starts with another path's segments.
@@ -346,7 +351,9 @@ class NotebookPath(Sequence[UnescapedSegment]):
 
         :returns: An absolute ``NotebookPath`` pointing to the parent location.
         """
-        return self.resolve() / ".."
+        if len(self) == 0 and self._absolute:
+            return self.resolve() / ".."
+        return self / ".."
 
     @override
     def __iter__(self) -> Iterator[UnescapedSegment]:
@@ -387,11 +394,12 @@ class NotebookPath(Sequence[UnescapedSegment]):
             return True
         if not isinstance(other, NotebookPath):
             return False
-        return (
-            self._absolute == other._absolute
-            and self._parts == other._parts
-            and self._parent == other._parent
-        )
+        try:
+            a = self.resolve()
+            b = other.resolve()
+            return a._absolute == b._absolute and a._parts == b._parts
+        except PathError:
+            return False
 
     @override
     def __repr__(self) -> str:

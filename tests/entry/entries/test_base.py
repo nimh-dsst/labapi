@@ -58,7 +58,9 @@ class TestEntryUnit:
             ("assignment entry", UnimplementedEntry),
         ],
     )
-    def test_current_entry_types_are_registered(self, part_type: str, expected_class: type):
+    def test_current_entry_types_are_registered(
+        self, part_type: str, expected_class: type
+    ):
         """Test the current registration set."""
         assert Entry.is_registered(part_type) is True
         assert Entry.class_of(part_type) is expected_class

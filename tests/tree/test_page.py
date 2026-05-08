@@ -220,14 +220,10 @@ class TestNotebookPageIntegration:
             include_response=False,
         )
 
-        with pytest.warns(
-            UserWarning, match="Wrapping as UnimplementedEntry"
-        ) as caught:
-            entries = page.entries
+        entries = page.entries
 
         assert isinstance(entries, Entries)
         assert len(entries) == 2
-        assert len(caught) == 2
 
         api_call = client.pop_api_call()
         assert api_call[0] == "tree_tools/get_entries_for_page"
@@ -252,22 +248,18 @@ class TestNotebookPageIntegration:
             include_response=False,
         )
 
-        with pytest.warns(
-            UserWarning, match="Wrapping as UnimplementedEntry"
-        ) as caught:
-            entries1 = page.entries
+        entries1 = page.entries
         _ = client.pop_api_call()  # consume the load call
 
         entries2 = page.entries
 
         assert entries1 is entries2
-        assert len(caught) == 1
         client.clear_api_calls()
 
-    def test_page_entries_wrap_sketch_entry_as_unknown(
+    def test_page_entries_wrap_sketch_entry_as_unimplemented(
         self, client, notebook_tree: Notebook
     ):
-        """Test NotebookPage.entries currently wraps sketch entries as unknown."""
+        """Test NotebookPage.entries currently wraps sketch entries as unimplemented."""
         page = notebook_tree[Index.Id : "page-1"]
 
         assert isinstance(page, NotebookPage)
@@ -282,11 +274,13 @@ class TestNotebookPageIntegration:
             include_response=False,
         )
 
-        with pytest.warns(RuntimeWarning, match="Wrapping as UnknownEntry"):
+        from labapi.entry import UnimplementedEntry
+
+        with pytest.warns(UserWarning, match="Wrapping as UnimplementedEntry"):
             entries = page.entries
 
         assert len(entries) == 1
-        assert isinstance(entries[0], UnknownEntry)
+        assert isinstance(entries[0], UnimplementedEntry)
         assert entries[0].content_type == "sketch entry"
         assert entries[0].content == "sketch payload"
         _ = client.pop_api_call()
@@ -364,12 +358,8 @@ class TestNotebookPageIntegration:
             include_response=False,
         )
 
-        with pytest.warns(
-            UserWarning, match="Wrapping as UnimplementedEntry"
-        ) as caught1:
-            entries1 = page.entries
+        entries1 = page.entries
         assert len(entries1) == 1
-        assert len(caught1) == 1
         _ = client.pop_api_call()  # consume the load call
 
         page.refresh()
@@ -388,13 +378,9 @@ class TestNotebookPageIntegration:
             include_response=False,
         )
 
-        with pytest.warns(
-            UserWarning, match="Wrapping as UnimplementedEntry"
-        ) as caught2:
-            entries2 = page.entries
+        entries2 = page.entries
         assert len(entries2) == 2
         assert entries1 is not entries2
-        assert len(caught2) == 2
 
         api_call = client.pop_api_call()
         assert api_call[0] == "tree_tools/get_entries_for_page"

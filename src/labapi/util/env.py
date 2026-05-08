@@ -2,7 +2,7 @@
 
 import contextlib
 from os import getenv as _getenv
-from typing import Any, TypeVar, overload
+from typing import TypeVar, overload
 
 _loaded = False
 T = TypeVar("T")
@@ -13,16 +13,14 @@ def getenv(key: str) -> str | None: ...
 
 
 @overload
-def getenv(key: str, default: None, *args: Any, **kwargs: Any) -> str | None: ...
+def getenv(key: str, default: None) -> str | None: ...
 
 
 @overload
-def getenv(key: str, default: T, *args: Any, **kwargs: Any) -> str | T: ...
+def getenv(key: str, default: T) -> str | T: ...
 
 
-def getenv(
-    key: str, default: T | None = None, *args: Any, **kwargs: Any
-) -> str | T | None:
+def getenv(key: str, default: T | None = None) -> str | T | None:
     """Return an environment variable, loading ``.env`` on first use.
 
     If ``python-dotenv`` is installed, this wrapper calls ``load_dotenv()``
@@ -42,4 +40,4 @@ def getenv(
             load_dotenv()
             _loaded = True
 
-    return _getenv(key, default, *args, **kwargs)
+    return _getenv(key, default)
