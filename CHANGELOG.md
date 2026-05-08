@@ -43,6 +43,8 @@ details that affect development workflows.
   and path-like inputs correctly.
 - Improved `Attachment.from_file()` support for random-access binary streams
   that do not expose `seekable()`.
+- Fixed relative path resolution bugs when using the `/` operator with absolute
+  and relative `NotebookPath` objects.
 
 ## 1.0.4 - 2026-04-24
 
