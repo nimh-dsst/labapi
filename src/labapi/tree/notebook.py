@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from typing_extensions import override
 
 from .mixins import AbstractTreeContainer, HasNameMixin
+from .search import EntrySearch
 
 if TYPE_CHECKING:
     from labapi.user import User
@@ -69,3 +70,16 @@ class Notebook(AbstractTreeContainer):
         :returns: True if the notebook is the default, False otherwise.
         """
         return self._is_default
+
+    def search(self, query: str, *, page_size: int = 25) -> EntrySearch:
+        """Search entries in this notebook.
+
+        Search itself is read-only. The returned pages contain normal entry
+        objects, so setting ``entry.content`` still uses the existing entry
+        update behavior.
+
+        :param query: LabArchives search query expression.
+        :param page_size: Number of entries to request per result page.
+        :returns: A lazy iterable over search result pages.
+        """
+        return EntrySearch(self, query, page_size=page_size)
