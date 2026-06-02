@@ -9,37 +9,16 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 from labapi import (
-    AbstractTreeContainer,
     Client,
-    InsertBehavior,
-    NotebookPage,
     TextEntry,
     TraversalError,
     User,
 )
 
 
-def get_or_create_page(container: AbstractTreeContainer, path: str) -> NotebookPage:
-    """Return an existing page at ``path`` or create it with missing parents."""
-    try:
-        node = container.traverse(path)
-    except TraversalError as err:
-        if err.available_children is None:
-            raise
-        return container.create(
-            NotebookPage,
-            path,
-            parents=True,
-            if_exists=InsertBehavior.Retain,
-        )
-
-    if node.is_dir():
-        raise TypeError(f"'{path}' refers to a directory, but a page is required")
-
-    return node.as_page()
-
-
-def csv_to_html_table(csv_file: Path, has_header: bool = True) -> str:
+def csv_to_html_table(
+    csv_file: Path, has_header: bool = True
+) -> str:  # TODO block injection
     """Convert a CSV file to an HTML table.
 
     :param csv_file: Path to the CSV file
@@ -147,7 +126,7 @@ def upload_csv_as_table(
     try:
         notebook = notebooks[notebook_name]
         print(f"Ensuring page path exists: {page_path}")
-        page = get_or_create_page(notebook, page_path)
+        page = notebook.page(page_path)
     except (KeyError, TraversalError, TypeError, ValueError) as e:
         print(f"Error: Could not access or create path '{page_path}': {e}")
         sys.exit(1)

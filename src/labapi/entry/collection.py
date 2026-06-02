@@ -179,8 +179,8 @@ class Entries(Sequence["Entry[Any]"]):
                     f"{type(data).__name__}"
                 )
 
-            if data._backing.seekable():  # pyright: ignore[reportPrivateUsage]
-                data._backing.seek(0)  # pyright: ignore[reportPrivateUsage]
+            if data.seekable():
+                data.seek(0)
 
             upload_kwargs = {
                 "filename": data.filename,
