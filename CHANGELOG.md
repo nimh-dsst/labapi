@@ -8,12 +8,14 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
-## 1.1.0 - Unreleased
+## 1.1.0 - 2026-06-02
 
 ### Added
 
 - `Attachment.from_file()` now accepts filesystem `str` or `Path` objects in
   addition to file-like objects.
+- `Notebook.search()` for paginated LabArchives entry search results using
+  normal entry objects.
 - Support for escaped separators (`\/`) in notebook paths, enabling access to
   and creation of notebook nodes with literal slashes in their names.
 - Official support for Python 3.10 and 3.11.
@@ -28,6 +30,8 @@ details that affect development workflows.
 - Refactored the `json_sync` example into a reusable utility with
   comprehensive tests.
 - Rewrote the `csv_table` example for improved clarity and usability.
+- Refactored the `folder_download` example into clearer reusable download
+  logic.
 - Reworked entry factory fallback handling. Unknown upstream LabArchives part
   types now load as `UnknownEntry`, while recognized but unimplemented part
   types load as `UnimplementedEntry`; both still reject unsupported updates.
