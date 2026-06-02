@@ -24,6 +24,28 @@ You can access the entries of a :class:`~labapi.tree.page.NotebookPage` through 
    # Access an entry by index
    first_entry = page.entries[0]
 
+Searching Entries
+-----------------
+
+Use :meth:`~labapi.tree.notebook.Notebook.search` to search entries in a
+notebook. Search returns an iterable of result pages, and each page contains
+normal entry objects.
+
+.. code-block:: python
+
+   from labapi import TextEntry
+
+   for result_page in notebook.search('"brown rat"', page_size=100):
+       for entry in result_page.entries:
+           if isinstance(entry, TextEntry):
+               entry.content = entry.content.replace(
+                   "brown rat",
+                   "Rattus norvegicus",
+               )
+
+The search request itself is read-only. Returned entries use the same
+``content`` accessors and setters as entries loaded from ``page.entries``.
+
 Entry Types
 -----------
 
