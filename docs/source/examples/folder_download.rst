@@ -48,22 +48,26 @@ Download an entire notebook:
 
 .. code-block:: bash
 
-   uv run python examples/folder_download/folder_download.py ./backup --notebook "My Notebook"
+   uv run --project examples/folder_download python examples/folder_download/folder_download.py ./backup --notebook "My Notebook"
 
 Download only a specific subtree:
 
 .. code-block:: bash
 
-   uv run python examples/folder_download/folder_download.py ./2024_experiments --notebook "My Notebook" --path "Experiments/2024"
+   uv run --project examples/folder_download python examples/folder_download/folder_download.py ./2024_experiments --notebook "My Notebook" --path "Experiments/2024"
 
 Overwrite an existing output directory:
 
 .. code-block:: bash
 
-   uv run python examples/folder_download/folder_download.py ./backup --notebook "My Notebook" --overwrite
+   uv run --project examples/folder_download python examples/folder_download/folder_download.py ./backup --notebook "My Notebook" --overwrite
 
 How It Works
 ------------
+
+``examples/folder_download/folder_download.py`` contains importable download
+functions plus a command-line wrapper. The reusable layer takes an authenticated
+``User`` and returns a ``DownloadResult`` instead of printing or exiting.
 
 The script mirrors the LabArchives structure:
 
@@ -126,6 +130,36 @@ Notes
 - Large notebooks may take significant time to download.
 - The script creates a ``_metadata.txt`` file for each page with additional
   information.
+
+Reusable API
+------------
+
+When building your own script, import the download function and call it
+directly. Most scripts only need ``DownloadFolderOptions`` and
+``download_notebook_or_folder``.
+
+.. code-block:: python
+
+   from pathlib import Path
+
+   from labapi import Client
+   from examples.folder_download.folder_download import (
+       DownloadFolderOptions,
+       download_notebook_or_folder,
+   )
+
+   with Client() as client:
+       user = client.default_authenticate()
+       result = download_notebook_or_folder(
+           user,
+           DownloadFolderOptions(
+               notebook_name="My Notebook",
+               output_dir=Path("notebook_export"),
+               path="Experiments/2024",
+           ),
+       )
+
+   print(f"Downloaded {result.page_count} pages and {result.entry_count} entries")
 
 Ways to Extend It
 -----------------
