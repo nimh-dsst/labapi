@@ -8,8 +8,8 @@ high-level wrapper in ``labapi``. The examples below assume you already have an
 authenticated ``user`` object; see :ref:`first_calls` or :ref:`auth` if you
 need to establish a session first.
 
-Choose an API Access Level
---------------------------
+Choose a Call Path
+------------------
 
 .. list-table::
    :header-rows: 1
@@ -33,11 +33,11 @@ Choose an API Access Level
 Use the User Object
 -------------------
 
-The easiest way to make arbitrary calls is through
-:class:`~labapi.user.User`. Its
-:meth:`~labapi.user.User.api_get` and
-:meth:`~labapi.user.User.api_post` methods automatically include your User ID
-(``uid``) and handle request signing.
+For XML endpoints that need the current user ID, call
+:meth:`~labapi.user.User.api_get` or
+:meth:`~labapi.user.User.api_post` on :class:`~labapi.user.User`. These
+methods automatically include your User ID (``uid``) and handle request
+signing.
 
 .. code-block:: python
 
@@ -47,7 +47,7 @@ The easiest way to make arbitrary calls is through
 Parsing XML Responses
 ---------------------
 
-Because the LabArchives API returns XML, ``labapi`` uses ``lxml`` for parsing.
+For XML API responses, ``labapi`` uses ``lxml`` for parsing.
 You can work with the returned element directly or use
 :func:`~labapi.util.extract.extract_etree` for structured extraction.
 
@@ -75,7 +75,7 @@ Using ``extract_etree``
 Raw and Streaming Responses
 ---------------------------
 
-For more control, or when dealing with non-XML data, use the lower-level
+When you need response metadata, raw bytes, or streaming, use the lower-level
 :class:`~labapi.client.Client` methods directly.
 
 Raw Responses
@@ -114,8 +114,9 @@ iterable and a context manager:
 Constructing Signed URLs
 ------------------------
 
-Use :meth:`~labapi.client.Client.construct_url` when you need a signed URL for
-another tool, such as a browser download or a service-to-service handoff.
+Use :meth:`~labapi.client.Client.construct_url` when code outside ``labapi``
+needs to make the signed request, such as a browser download or a
+service-to-service handoff.
 
 .. code-block:: python
 

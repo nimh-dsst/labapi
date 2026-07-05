@@ -1,8 +1,7 @@
-"""XML Extraction Utilities Module.
+"""Utilities for extracting data from ``lxml.etree.Element`` objects.
 
-This module provides utility functions for extracting data from `lxml.etree.Element`
-objects, including flattening dictionaries for easier processing, converting
-strings to booleans, and a general-purpose XML extraction function.
+Includes flattening nested extractor dictionaries, converting strings to
+booleans, and a general-purpose XML extraction function.
 """
 
 from __future__ import annotations

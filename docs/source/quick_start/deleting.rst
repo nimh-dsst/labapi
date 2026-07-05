@@ -4,8 +4,9 @@ Deleting Pages and Directories
 ==============================
 
 Use :meth:`~labapi.tree.mixins.AbstractTreeNode.delete` to move pages and
-directories into the notebook's ``API Deleted Items`` folder. This is a safe
-delete workflow rather than a permanent erase.
+directories into the notebook's ``API Deleted Items`` folder. ``delete()``
+renames the item and moves it to ``API Deleted Items``; it does not
+permanently erase the item.
 
 How Deletion Works
 ------------------
@@ -14,8 +15,6 @@ When you delete a page or directory:
 
 1. The item is renamed with a deletion timestamp.
 2. The item is moved to ``API Deleted Items`` under the notebook root.
-
-This preserves the content so you can recover it later.
 
 Delete a Page
 -------------
@@ -39,10 +38,8 @@ Delete a Directory
    directory = notebook.traverse("Old Project")
    directory.delete()
 
-.. warning::
-   Deleting a directory moves all of its pages and subdirectories together.
-   Confirm that you want to relocate the entire subtree before you call
-   ``delete()``.
+Deleting a directory moves the directory itself — including all of its pages
+and subdirectories — into ``API Deleted Items``.
 
 Recover Deleted Items
 ---------------------
@@ -65,11 +62,13 @@ Entry Deletion
 
 .. note::
    Individual entries such as text entries, attachments, and headers cannot be
-   deleted through the API at this time.
+   deleted through the API.
 
 Related Pages
 -------------
 
-- :ref:`entries` for current entry-type capabilities.
-- :ref:`limitations` for the broader capability summary.
-- :ref:`copying` if you want duplication rather than move-to-trash behavior.
+- :ref:`entries` for which entry types can be read or updated.
+- :ref:`limitations` for known API operations that ``labapi`` does not
+  implement.
+- :ref:`copying` if you want duplication rather than moving content to
+  ``API Deleted Items``.

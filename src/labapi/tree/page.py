@@ -33,9 +33,8 @@ class NotebookPage(AbstractTreeNode):
     """Represents a single page within a LabArchives notebook.
 
     A `NotebookPage` is a leaf node in the tree structure and contains
-    a collection of :class:`~labapi.entry.entries.base.Entry` objects. It
-    provides
-    functionalities to access and manage these entries.
+    a collection of :class:`~labapi.entry.entries.base.Entry` objects.
+    Entries are accessed through the :attr:`entries` property.
     """
 
     def __init__(
@@ -68,10 +67,7 @@ class NotebookPage(AbstractTreeNode):
 
     @property
     def entries(self) -> Entries:
-        """Return this page's entries, loading them on first access.
-
-        This property lazily loads the entries from the LabArchives API if they
-        have not been loaded yet.
+        """Return this page's entries, loading them from the API on first access.
 
         .. note::
            Slicing on the returned collection provides snapshots.
@@ -150,15 +146,11 @@ class NotebookPage(AbstractTreeNode):
         :param destination: The target container to copy the page to.
         :returns: A new instance of the copied page in the destination.
 
-        Copy behavior for attachments is explicit:
+        Attachment handling during copy:
 
         - attachment payloads are copied by reading and re-uploading the attachment content,
         - attachment resources opened during copy are always released,
         - any per-entry copy failure is reported via warning and that entry is skipped.
-
-        .. note::
-           This method is best-effort and may produce partial copies if one or more
-           entries fail while others succeed.
 
         :raises RuntimeWarning: Emitted when an individual entry fails to copy.
         """
@@ -206,8 +198,8 @@ class NotebookPage(AbstractTreeNode):
         to re-fetch its entries from the LabArchives API on the next access.
 
         .. note::
-           Currently only clears the entries cache. Future implementation should
-           properly invalidate all entry objects before clearing.
+           Entry objects obtained before the refresh are not invalidated and
+           may be stale.
         """
         # TODO: Properly invalidate all entry objects before clearing
         self._entries = None
