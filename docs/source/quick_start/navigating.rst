@@ -15,8 +15,7 @@ you already have a ``notebook`` object from :ref:`first_calls`.
 Traversing the Tree with Paths
 ------------------------------
 
-The most common way to navigate is with
-:meth:`~labapi.tree.mixins.AbstractBaseTreeNode.traverse`, which accepts a
+Use :meth:`~labapi.tree.mixins.AbstractBaseTreeNode.traverse`, which accepts a
 slash-separated path string.
 
 .. code-block:: python
@@ -29,7 +28,7 @@ slash-separated path string.
 Fluent Navigation with ``dir()`` and ``page()``
 -----------------------------------------------
 
-For a more concise style, use
+To create or retrieve nodes while chaining calls, use
 :meth:`~labapi.tree.mixins.AbstractTreeContainer.dir` and
 :meth:`~labapi.tree.mixins.AbstractTreeContainer.page`.
 
@@ -41,8 +40,8 @@ missing.
    page = notebook.dir("Experiments").dir("Project A").page("Results")
    page = notebook.dir("Experiments/Project A").page("Results")
 
-See :meth:`~labapi.tree.mixins.AbstractTreeContainer.create` for more control
-over duplicate handling and parent creation.
+See :meth:`~labapi.tree.mixins.AbstractTreeContainer.create` to set
+duplicate-handling and parent-creation behavior.
 
 Accessing Children by Name
 --------------------------
@@ -61,7 +60,8 @@ Use dictionary-style indexing to get the first child with a matching name:
 Accessing Children by ID or Name
 --------------------------------
 
-For more explicit lookups, use :class:`~labapi.util.types.Index`.
+Use :class:`~labapi.util.types.Index` when you need to choose ID or name
+lookup explicitly.
 
 Access by ID
 ~~~~~~~~~~~~
@@ -99,24 +99,21 @@ List All Children
    experiments = notebook["Experiments"]
    experiment_items = experiments.enumerate_all(depth=2)
 
-.. note::
-   The ``depth`` parameter controls how many levels deep ``labapi`` walks the
-   tree.
+``depth`` limits how many levels of the tree are walked. Given this tree
+structure::
 
-   Given this tree structure::
+   Notebook/
+   |-- Experiments/
+   |   |-- 2024/
+   |   |   `-- Results
+   |   `-- Archive
+   `-- Notes
 
-      Notebook/
-      |-- Experiments/
-      |   |-- 2024/
-      |   |   `-- Results
-      |   `-- Archive
-      `-- Notes
-
-   - ``depth=1`` returns ``["Experiments", "Notes"]``.
-   - ``depth=2`` returns
-     ``["Experiments", "Experiments/2024", "Experiments/Archive", "Notes"]``.
-   - ``depth=3`` returns
-     ``["Experiments", "Experiments/2024", "Experiments/2024/Results", "Experiments/Archive", "Notes"]``.
+- ``depth=1`` returns ``["Experiments", "Notes"]``.
+- ``depth=2`` returns
+  ``["Experiments", "Experiments/2024", "Experiments/Archive", "Notes"]``.
+- ``depth=3`` returns
+  ``["Experiments", "Experiments/2024", "Experiments/2024/Results", "Experiments/Archive", "Notes"]``.
 
 List Only Directories
 ~~~~~~~~~~~~~~~~~~~~~
@@ -176,5 +173,5 @@ Related Pages
 -------------
 
 - :ref:`first_calls` for getting the initial ``notebook`` object.
-- :ref:`paths` for deeper path-resolution rules.
+- :ref:`paths` for how paths are parsed and resolved.
 - :ref:`index_access` for duplicate-name and explicit lookup behavior.

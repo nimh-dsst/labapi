@@ -57,6 +57,8 @@ jobs:
           fi
 
           touch docs/_build/html/.nojekyll
+          # Stable alias so deep links (e.g. from the README) survive releases.
+          cp -r "docs/_build/html/${latest}" docs/_build/html/latest
           cat > docs/_build/html/index.html <<EOF
           <!doctype html>
           <html lang="en">

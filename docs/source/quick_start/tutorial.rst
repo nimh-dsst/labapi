@@ -3,8 +3,7 @@
 First Success Tutorial
 ======================
 
-This page is the shortest copy/paste path for first-time users. Follow the
-steps below and you should end up with one visible text entry in LabArchives.
+These steps create one visible text entry in LabArchives.
 
 Install ``labapi``
 ------------------
@@ -43,8 +42,8 @@ Replace the values with your own LabArchives API credentials.
 Run a Minimal Script
 --------------------
 
-Copy this script into ``first_success.py``. It automatically uses the first
-notebook in your account.
+Copy this script into ``first_success.py``. It uses the first notebook in
+your account.
 
 .. code-block:: python
 
@@ -75,17 +74,14 @@ Confirm the Result
 
 After the script finishes:
 
-- You should see a new page in your selected notebook named
+- The selected notebook contains a new page named
   ``API tutorial - <timestamp>``.
-- Opening that page should show one text entry with the message
+- Opening that page shows one text entry with the message
   ``Hello from labapi!``.
-
-If this worked, you have completed a full installation, authentication, and
-write path.
 
 Related Pages
 -------------
 
-- :ref:`installation` for the broader install matrix.
+- :ref:`installation` for all install profiles.
 - :ref:`first_calls` for more detail on credentials and authentication options.
-- :ref:`creating_pages` for follow-up tree and entry operations.
+- :ref:`creating_pages` for creating directories, pages, and entries.

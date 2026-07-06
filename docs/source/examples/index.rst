@@ -3,9 +3,9 @@
 Example Applications
 ====================
 
-These runnable examples show end-to-end workflows built on top of the core
-``labapi`` APIs. Start with :ref:`installation` if you still need to set up the
-recommended local interactive profile.
+These examples show complete scripts for JSON sync, folder export, and CSV
+table conversion. Start with :ref:`installation` if you still need to set up
+the recommended local interactive profile.
 
 .. toctree::
    :maxdepth: 1
@@ -25,27 +25,16 @@ Example Matrix
      - Best For
      - Extra Packages
    * - :doc:`json_sync`
-     - Syncing JSON attachments and previews between a local folder and a
-       LabArchives page
+     - Uploading JSON files to a page and downloading JSON attachments back to
+       disk
      - none
    * - :doc:`folder_download`
-     - Exporting notebook structure to local files for backup, review, or
-       archival
+     - Exporting notebook pages and entries to local files for backup or
+       review
      - none
    * - :doc:`csv_table`
-     - Converting CSV data to LabArchives HTML tables and round-tripping back
-       to CSV
+     - Converting CSV data to LabArchives HTML tables and back to CSV
      - ``beautifulsoup4``
-
-Published Examples
-------------------
-
-- :doc:`json_sync` synchronizes JSON files between a local folder and a single
-  LabArchives page.
-- :doc:`folder_download` mirrors a notebook subtree to local files while
-  preserving page and directory structure.
-- :doc:`csv_table` uploads CSV data as HTML tables and downloads those tables
-  back to CSV.
 
 Getting Started
 ---------------
@@ -55,11 +44,11 @@ All published examples assume:
 - Python 3.10+.
 - The recommended local interactive profile:
   ``labapi[dotenv,builtin-auth]``.
-- A repository-root working directory when you run the ``uv run --project ...``
-  commands below.
-- Notebook-relative page paths paired with ``--notebook "My Notebook"``.
+- Run the ``uv run --project ...`` commands below from the repository root.
+- Use page paths relative to the notebook root, together with
+  ``--notebook "My Notebook"``.
 
-Use these sample commands as known-good starting points:
+Use these sample commands as starting points:
 
 .. code-block:: bash
 
@@ -71,8 +60,8 @@ Additional Local Examples
 -------------------------
 
 The repository also includes ``examples/model_logging`` and
-``examples/notebook_logging``. They are maintained alongside the published
-examples above, but do not yet have dedicated Sphinx pages.
+``examples/notebook_logging``. They are maintained in the repository but are
+not covered by these Sphinx example pages.
 
 Related Pages
 -------------

@@ -3,8 +3,7 @@
 Integration Design Guide
 ========================
 
-This page ties together the behavior described elsewhere in the guide and turns
-it into practical rules of thumb for long-running integrations.
+Use these guidelines when designing long-running integrations.
 
 Integration Cost Model
 ----------------------
@@ -12,7 +11,7 @@ Integration Cost Model
 Cheap Operations
 ~~~~~~~~~~~~~~~~
 
-These are usually in-memory:
+These operations use already-loaded local state:
 
 - Reading fields on objects you already loaded.
 - Reusing materialized ``children`` and ``entries`` collections.
@@ -21,7 +20,7 @@ These are usually in-memory:
 Expensive Operations
 ~~~~~~~~~~~~~~~~~~~~
 
-These usually trigger remote work:
+These operations issue API calls or can cause many API calls:
 
 - First access to lazy collections such as ``children`` and ``entries``.
 - Calling ``refresh()`` and then reading the same objects again.
@@ -31,29 +30,21 @@ These usually trigger remote work:
 Design Guidelines
 -----------------
 
-- Prefer ID-first state in your integration model. Names and paths are best
-  treated as discovery and presentation data.
+- Store LabArchives IDs as the primary references in integration state. Names
+  and paths are best treated as discovery and presentation data.
 - Keep traversal bounded by scope and depth, and favor incremental scans over
   full rescans.
-- Place ``refresh()`` at synchronization boundaries where outside mutation is
-  plausible.
+- Place ``refresh()`` before reads that must include changes made by another
+  user, the web UI, or another API session.
 - After ``refresh()``, reacquire child objects from the refreshed parent before
-  trusting child fields.
-- After failures, re-resolve from a stable anchor such as a known parent plus
-  stored ID metadata.
+  reading child fields.
+- After failures, look up the parent by stored ID, then re-read the child by
+  ID.
 
 Suggested Reading Order
 -----------------------
 
-1. :ref:`index_access`
-2. :ref:`paths`
-3. :ref:`clearing_cache`
-4. :ref:`api_calls`
-
-Related Pages
--------------
-
-- :ref:`index_access` for duplicate-name and explicit lookup behavior.
-- :ref:`paths` for traversal and enumeration rules.
-- :ref:`clearing_cache` for cache invalidation and stale-reference behavior.
-- :ref:`api_calls` for low-level request access patterns.
+1. :ref:`index_access` for duplicate-name and explicit lookup behavior.
+2. :ref:`paths` for traversal and enumeration rules.
+3. :ref:`clearing_cache` for cache invalidation and stale-reference behavior.
+4. :ref:`api_calls` for low-level request access patterns.

@@ -3,21 +3,14 @@
 CSV Table Upload/Download
 =========================
 
-This example uploads CSV data as rich-text HTML tables in LabArchives and can
-download those tables back to CSV later. It is a good fit when you want
-readable tables in the notebook UI without losing a machine-friendly export
-path.
+This example uploads a CSV file as a LabArchives rich-text HTML table and
+downloads table entries back to CSV.
 
 When to Use It
 --------------
 
-This is useful for:
-
-- Uploading experimental data tables for visual display in notebooks.
-- Creating formatted data tables that stay readable in the web interface.
-- Extracting tabular data back to CSV for downstream analysis.
-- Documenting datasets with consistent structure.
-- Sharing tables with collaborators in a readable format.
+Use it to publish CSV results in notebook pages and retrieve table entries for
+downstream analysis.
 
 Requirements
 ------------
@@ -44,9 +37,8 @@ You can also provide the same values through shell environment variables. See
 How It Works
 ------------
 
-The example is a single script. ``examples/csv_table/csv_table.py`` defines
-small typed option objects, uses LabArchives page and entry APIs, and keeps
-CSV/HTML conversion details inside the script.
+``examples/csv_table/csv_table.py`` defines typed upload/download options,
+converts CSV rows to HTML table markup, and parses table entries back to CSV.
 
 Upload Flow
 ~~~~~~~~~~~
@@ -78,19 +70,19 @@ Upload the checked-in sample CSV file:
 
    uv run python csv_table.py upload sample_data.csv "Experiments/Results" --notebook "My Notebook"
 
-Upload a CSV file with every row treated as table data:
+Upload a CSV file without treating the first row as a header:
 
 .. code-block:: bash
 
    uv run python csv_table.py upload sample_data.csv "Experiments/Results" --notebook "My Notebook" --no-header
 
-Download the most recent table from a page:
+Download the newest text entry on a page that contains an HTML table:
 
 .. code-block:: bash
 
    uv run python csv_table.py download "Experiments/Results" results.csv --notebook "My Notebook"
 
-Download a specific table entry by index:
+Download a table from a specific zero-based page entry index:
 
 .. code-block:: bash
 
@@ -143,20 +135,17 @@ The script will generate this HTML table:
      </tbody>
    </table>
 
-The table is displayed with LabArchives' default styling.
-
 Notes and Limitations
 ---------------------
 
-- Tables are uploaded as rich-text entries, making them readable in the
-  LabArchives web interface.
 - Tables are rendered with LabArchives' default styling and no inline CSS.
-- The script preserves table structure and can round-trip CSV to HTML and back
-  to CSV.
-- Multiple tables on one page are supported; by default, the download uses the
-  most recent table.
+- For simple tables, rows and columns are preserved when converting CSV to
+  HTML and back; leading and trailing whitespace inside cells is stripped on
+  download.
+- Multiple table entries on one page are supported; by default, download
+  selects the newest text entry containing a table.
 - Empty cells in CSV files are preserved in the HTML table.
-- CSV files with special characters should use UTF-8 encoding.
+- Save non-ASCII CSV files as UTF-8.
 - Complex nested tables are not supported.
 - Only the first table is extracted if an entry contains multiple tables.
 
@@ -170,8 +159,8 @@ Ways to Extend It
 5. Generate charts from CSV data and upload them as images.
 6. Support HTML table captions.
 
-Source
-------
+Source Code
+-----------
 
 .. literalinclude:: ../../../examples/csv_table/csv_table.py
    :language: python

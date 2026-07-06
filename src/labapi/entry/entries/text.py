@@ -20,9 +20,9 @@ if TYPE_CHECKING:
 class PlainTextEntry(Entry[str], part_type="plain text entry"):
     """Represents a plain text entry on a LabArchives page.
 
-    This class is used for entries containing unformatted, raw text.
-    Additionally, it provides common functionalities for entries whose content is
-    represented as a string, including methods for getting and setting the content.
+    This class is used for entries containing unformatted text.
+    It also serves as the base class for string-content entries, providing the
+    ``content`` getter and setter.
     """
 
     def __init__(self, eid: str, data: str, user: User):

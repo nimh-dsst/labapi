@@ -2,7 +2,6 @@
 
 This module defines the :class:`~labapi.tree.collection.Notebooks` class,
 which acts as a collection manager for a user's LabArchives notebooks.
-It provides methods for accessing, iterating over, and creating notebooks.
 """
 
 from __future__ import annotations
@@ -25,8 +24,7 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
     """A collection of LabArchives notebooks accessible to a user.
 
     This class provides dictionary-like access to notebooks by their ID or name,
-    and supports creating new notebooks. It manages a list of :class:`~labapi.tree.notebook.Notebook`
-    objects.
+    and supports creating new notebooks.
     """
 
     def __init__(self, notebooks: Sequence[NotebookInit], user: User):
@@ -56,7 +54,8 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
     def __getitem__(self, key: IdOrNameIndex) -> Notebook | list[Notebook]:
         """Look up notebooks by name or indexed selector.
 
-        - If `key` is a string, it attempts to find a single notebook with that name.
+        - If `key` is a string, returns the first notebook with that name
+          (raises :exc:`KeyError` if none match).
         - If `key` is a slice with start of :attr:`~labapi.util.Index.Id`
           (e.g., ``Index.Id:"some_id"``),
           it returns the notebook with the matching ID.

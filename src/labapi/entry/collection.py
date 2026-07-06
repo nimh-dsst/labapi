@@ -94,9 +94,8 @@ class Entries(Sequence["Entry[Any]"]):
     ) -> tuple[AttachmentEntry, TextEntry]:
         """Create a JSON attachment plus a companion reference text entry.
 
-        This method uploads JSON data as an attachment file and creates a
-        companion text entry that references the attachment and displays
-        a formatted preview of the JSON data.
+        The companion text entry references the attachment's ID and displays a
+        formatted preview of the JSON data.
 
         :param data: The JSON-serializable data to upload.
         :param filename: Optional stable filename for the uploaded JSON attachment.
