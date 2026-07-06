@@ -13,8 +13,8 @@ A Python client for the LabArchives API.
 
 ## Start Here
 
-- New to `labapi`? Follow the [First Success Tutorial](https://nimh-dsst.github.io/labapi/quick_start/tutorial.html) for the fastest path from install to a visible change in LabArchives.
-- Already using `labapi`? Jump to the [Quick Start](https://nimh-dsst.github.io/labapi/quick_start/index.html), [User Guide](https://nimh-dsst.github.io/labapi/guide/index.html), [Examples](https://nimh-dsst.github.io/labapi/examples/index.html), or [FAQ](https://nimh-dsst.github.io/labapi/faq.html).
+- New to `labapi`? Follow the [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html) for the fastest path from install to a visible change in LabArchives.
+- Already using `labapi`? Jump to the [Quick Start](https://nimh-dsst.github.io/labapi/latest/quick_start/index.html), [User Guide](https://nimh-dsst.github.io/labapi/latest/guide/index.html), [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html), or [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html).
 - Working on the package itself? Start with [CONTRIBUTING.md](https://github.com/nimh-dsst/labapi/blob/main/CONTRIBUTING.md).
 
 ## Install
@@ -139,12 +139,12 @@ page = notebook.traverse("Experiments/2026/Results")
 
 ## Documentation Map
 
-- [First Success Tutorial](https://nimh-dsst.github.io/labapi/quick_start/tutorial.html): shortest path from install to a successful write.
-- [Quick Start](https://nimh-dsst.github.io/labapi/quick_start/index.html): setup, navigation, page creation, uploads, and basic write operations.
-- [Authentication Guide](https://nimh-dsst.github.io/labapi/guide/auth.html): local browser auth, manual flows, and callback-based integration patterns.
-- [User Guide](https://nimh-dsst.github.io/labapi/guide/index.html): paths, entries, API behavior, exceptions, limits, and architecture notes.
-- [Examples](https://nimh-dsst.github.io/labapi/examples/index.html): end-to-end scripts for real workflows.
-- [FAQ](https://nimh-dsst.github.io/labapi/faq.html): troubleshooting and environment questions.
+- [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html): shortest path from install to a successful write.
+- [Quick Start](https://nimh-dsst.github.io/labapi/latest/quick_start/index.html): setup, navigation, page creation, uploads, and basic write operations.
+- [Authentication Guide](https://nimh-dsst.github.io/labapi/latest/guide/auth.html): local browser auth, manual flows, and callback-based integration patterns.
+- [User Guide](https://nimh-dsst.github.io/labapi/latest/guide/index.html): paths, entries, API behavior, exceptions, limits, and architecture notes.
+- [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html): end-to-end scripts for real workflows.
+- [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html): troubleshooting and environment questions.
 
 ## Development
 
