@@ -13,8 +13,8 @@ A Python client for the LabArchives API.
 
 ## Start Here
 
-- New to `labapi`? Follow the [First Success Tutorial](https://nimh-dsst.github.io/labapi/quick_start/tutorial.html) to install `labapi`, authenticate, and create your first LabArchives entry.
-- Already using `labapi`? Jump to the [Quick Start](https://nimh-dsst.github.io/labapi/quick_start/index.html), [User Guide](https://nimh-dsst.github.io/labapi/guide/index.html), [Examples](https://nimh-dsst.github.io/labapi/examples/index.html), or [FAQ](https://nimh-dsst.github.io/labapi/faq.html).
+- New to `labapi`? Follow the [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html) to install `labapi`, authenticate, and create your first LabArchives entry.
+- Already using `labapi`? Jump to the [Quick Start](https://nimh-dsst.github.io/labapi/latest/quick_start/index.html), [User Guide](https://nimh-dsst.github.io/labapi/latest/guide/index.html), [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html), or [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html).
 - Working on the package itself? Start with [CONTRIBUTING.md](https://github.com/nimh-dsst/labapi/blob/main/CONTRIBUTING.md).
 
 ## Install
@@ -134,12 +134,12 @@ page = notebook.traverse("Experiments/2026/Results")
 
 ## Documentation Map
 
-- [First Success Tutorial](https://nimh-dsst.github.io/labapi/quick_start/tutorial.html): install, authenticate, and create a first entry.
-- [Quick Start](https://nimh-dsst.github.io/labapi/quick_start/index.html): setup, navigation, page creation, uploads, and basic write operations.
-- [Authentication Guide](https://nimh-dsst.github.io/labapi/guide/auth.html): browser authentication, terminal/manual authentication, and callback URL authentication.
-- [User Guide](https://nimh-dsst.github.io/labapi/guide/index.html): paths, entries, API behavior, exceptions, limits, and architecture notes.
-- [Examples](https://nimh-dsst.github.io/labapi/examples/index.html): scripts for JSON sync, folder export, and CSV table updates.
-- [FAQ](https://nimh-dsst.github.io/labapi/faq.html): authentication, certificate, and environment troubleshooting.
+- [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html): install, authenticate, and create a first entry.
+- [Quick Start](https://nimh-dsst.github.io/labapi/latest/quick_start/index.html): setup, navigation, page creation, uploads, and basic write operations.
+- [Authentication Guide](https://nimh-dsst.github.io/labapi/latest/guide/auth.html): browser authentication, terminal/manual authentication, and callback URL authentication.
+- [User Guide](https://nimh-dsst.github.io/labapi/latest/guide/index.html): paths, entries, API behavior, exceptions, limits, and architecture notes.
+- [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html): scripts for JSON sync, folder export, and CSV table updates.
+- [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html): authentication, certificate, and environment troubleshooting.
 
 ## Development
 
