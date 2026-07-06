@@ -69,8 +69,8 @@ successful API calls.
 Utility Layer Boundary
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The ``labapi.util`` package provides shared primitives that keep core modules
-small and predictable:
+The ``labapi.util`` package provides primitives that are shared by tree,
+entry, and client modules:
 
 * :class:`~labapi.util.path.NotebookPath` path normalization/resolution
 * typed index markers (``Index.Id``/``Index.Name``)
@@ -94,8 +94,8 @@ first access:
   ``_children`` and resets ``_populated=False``.
 
 .. note::
-   While ``_populated`` is true, read APIs for that container should be served
-   from local ``_children`` without another tree-level API call.
+   While ``_populated`` is true, read APIs for that container use local
+   ``_children`` without another tree-level API call.
 
 Page Entries Cache (``_entries``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,7 +109,7 @@ Page Entries Cache (``_entries``)
   ``None``.
 
 .. note::
-   Repeated ``page.entries`` access should return the same
+   Repeated ``page.entries`` access returns the same
    :class:`~labapi.entry.collection.Entries` object until refresh.
 
 Path Cache (``_has_path``)
@@ -201,8 +201,9 @@ When to Call Refresh
 ~~~~~~~~~~~~~~~~~~~~
 
 Use :meth:`~labapi.tree.mixins.AbstractTreeContainer.refresh` (or
-:meth:`~labapi.tree.page.NotebookPage.refresh` for page entries) when external
-changes may have occurred or when you need to force a re-fetch.
+:meth:`~labapi.tree.page.NotebookPage.refresh` for page entries) before reading
+changes made by another user, the web UI, or another API session, or when you
+need to force a re-fetch.
 
 Current behavior is intentionally shallow:
 
@@ -215,22 +216,18 @@ Other Entry Types
 -----------------
 
 
-When page entries are loaded, recognized-but-unimplemented and fully unknown types are
-wrapped as :class:`~labapi.entry.entries.unknown.UnknownEntry` with warnings in
+When page entries are loaded, unrecognized part types are wrapped as
+:class:`~labapi.entry.entries.unknown.UnknownEntry` and
+recognized-but-unimplemented types as
+:class:`~labapi.entry.entries.unknown.UnimplementedEntry`, with warnings in
 :attr:`~labapi.tree.page.NotebookPage.entries`.
 
-Known Shortcuts and TODO Areas
-------------------------------
+Known Limitations and TODOs
+---------------------------
 
-These are current incomplete areas that contributors should treat carefully:
-
-* container refresh clears the owner's child cache, but detached child objects
-  held elsewhere are not reconciled in place
-* page refresh clears the page-level entries cache, but existing entry objects
-  are not invalidated in place
 * individual entry deletion is not implemented
-* ``create_json_entry()`` still creates two concrete entries and does not yet
-  model that pair as one logical unit
+* ``create_json_entry()`` creates an ``AttachmentEntry`` and a ``TextEntry``;
+  no wrapper object represents the pair
 
 Contributor Checklist for Internal Changes
 ------------------------------------------

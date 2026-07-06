@@ -7,13 +7,13 @@ A Python client for the LabArchives API.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19599400.svg)](https://doi.org/10.5281/zenodo.19599400)
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://creativecommons.org/publicdomain/zero/1.0/)
 
-`labapi` helps you authenticate with LabArchives, navigate notebook trees, and create or update notebook content from Python.
+`labapi` authenticates with LabArchives, navigates notebook trees, and creates or updates notebook content from Python.
 
 [Source](https://github.com/nimh-dsst/labapi) | [Docs](https://nimh-dsst.github.io/labapi/) | [Issues](https://github.com/nimh-dsst/labapi/issues)
 
 ## Start Here
 
-- New to `labapi`? Follow the [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html) for the fastest path from install to a visible change in LabArchives.
+- New to `labapi`? Follow the [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html) to install `labapi`, authenticate, and create your first LabArchives entry.
 - Already using `labapi`? Jump to the [Quick Start](https://nimh-dsst.github.io/labapi/latest/quick_start/index.html), [User Guide](https://nimh-dsst.github.io/labapi/latest/guide/index.html), [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html), or [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html).
 - Working on the package itself? Start with [CONTRIBUTING.md](https://github.com/nimh-dsst/labapi/blob/main/CONTRIBUTING.md).
 
@@ -52,6 +52,8 @@ Extras:
 - `builtin-auth` enables `default_authenticate()` to open the LabArchives login flow in a local browser.
 
 ## Configure Credentials
+
+LabArchives issues API keys on request. Ask your institution's LabArchives site administrator or Enterprise Success Team contact to request API access, or contact [support@labarchives.com](mailto:support@labarchives.com). LabArchives provides the Access Key ID, Access Password, and the API base URL for your region.
 
 Add your LabArchives API credentials to a `.env` file:
 
@@ -96,13 +98,6 @@ with Client() as client:
     page.entries.create(TextEntry, "<p>Hello from labapi!</p>")
 ```
 
-This is the recommended local workflow:
-
-1. Install `labapi[dotenv,builtin-auth]`.
-2. Set `API_URL`, `ACCESS_KEYID`, and `ACCESS_PWD`.
-3. Call `default_authenticate()` once the client is open.
-4. Start creating or updating notebooks, folders, pages, and entries through the object model.
-
 ## Common Tasks
 
 Authenticate in a service or callback-based app:
@@ -139,12 +134,12 @@ page = notebook.traverse("Experiments/2026/Results")
 
 ## Documentation Map
 
-- [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html): shortest path from install to a successful write.
+- [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html): install, authenticate, and create a first entry.
 - [Quick Start](https://nimh-dsst.github.io/labapi/latest/quick_start/index.html): setup, navigation, page creation, uploads, and basic write operations.
-- [Authentication Guide](https://nimh-dsst.github.io/labapi/latest/guide/auth.html): local browser auth, manual flows, and callback-based integration patterns.
+- [Authentication Guide](https://nimh-dsst.github.io/labapi/latest/guide/auth.html): browser authentication, terminal/manual authentication, and callback URL authentication.
 - [User Guide](https://nimh-dsst.github.io/labapi/latest/guide/index.html): paths, entries, API behavior, exceptions, limits, and architecture notes.
-- [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html): end-to-end scripts for real workflows.
-- [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html): troubleshooting and environment questions.
+- [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html): scripts for JSON sync, folder export, and CSV table updates.
+- [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html): authentication, certificate, and environment troubleshooting.
 
 ## Development
 

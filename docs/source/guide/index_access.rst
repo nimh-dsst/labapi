@@ -22,8 +22,8 @@ Supported Collection Types
   :class:`~labapi.tree.directory.NotebookDirectory`
 
 .. warning::
-   Page ``Entries`` do not support ``Index``. Access entries by integer index
-   or iteration instead.
+   Page ``Entries`` do not support ``Index`` slicing. Access entries by
+   integer index, iteration, or entry ID string.
 
 .. note::
    Iterating over ``user.notebooks`` or a tree container yields names. Use
@@ -39,14 +39,14 @@ By default, a string key looks up the first item with that name:
    notebook = user.notebooks["My Research Notebook"]
    experiments = notebook["Experiments"]
 
-If you need duplicate-preserving results, use ``all_keys()``, ``all_items()``,
-and ``all_values()`` on the collection instead of plain mapping helpers.
+If you need duplicate-preserving results, call ``all_keys()``, ``all_items()``,
+or ``all_values()`` instead of ``keys()``, ``items()``, or ``values()``.
 
 Explicit Indexing with ``Index``
 --------------------------------
 
-Use :class:`~labapi.util.types.Index` when you want to say whether you are
-looking up by ID or by name.
+Use :class:`~labapi.util.types.Index` to choose ID lookup or name lookup
+explicitly.
 
 Access by ID
 ~~~~~~~~~~~~

@@ -62,8 +62,7 @@ class Attachment:
     """Represents an attachment file with associated metadata.
 
     This class wraps a file-like object (such as BytesIO or TemporaryFile) along
-    with metadata like MIME type, filename, and caption. It provides a convenient
-    interface for working with file attachments in LabArchives.
+    with metadata like MIME type, filename, and caption.
 
     .. note::
        Write operations to the backing buffer need explicit syncing with the server.
@@ -102,8 +101,8 @@ class Attachment:
         cloning it. The MIME type is automatically guessed from the local file
         name. If the MIME type cannot be determined, it defaults to
         ``"application/octet-stream"``. File-like inputs must support random
-        access so ``labapi`` can rewind them, typically via ``seekable()`` or
-        working ``seek()`` and ``tell()`` methods.
+        access so ``labapi`` can rewind them, checked via ``seekable()`` when
+        present, otherwise via working ``seek()`` and ``tell()`` methods.
 
         :param file: The filesystem path or file object to create an
                      attachment from.
