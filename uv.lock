@@ -928,7 +928,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cryptography", specifier = ">=46.0.3" },
+    { name = "cryptography", specifier = ">=48.0.1" },
     { name = "installed-browsers", marker = "extra == 'builtin-auth'", specifier = ">=0.1.5" },
     { name = "lxml", specifier = ">=6.0.2" },
     { name = "python-dotenv", marker = "extra == 'dotenv'", specifier = ">=1.2.1" },
