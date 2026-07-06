@@ -8,6 +8,33 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
+## 1.1.1 - 2026-07-05
+
+### Fixed
+
+- Fixed README documentation links that returned 404 by publishing a stable
+  `latest/` docs alias alongside the versioned directories.
+- Corrected documentation errors: the `enumerate_all()` depth example,
+  `create(parents=False)` raising `ValueError` for any multi-segment path, the
+  exception hierarchy (`PathError`, `ExtractionError`, `TreeChildParseError`),
+  `User.notebooks` caching, the scope of `strict_cert=False` (relaxes strict
+  X.509 validation only, not certificate verification), the folder-download
+  output layout diagram, and `UnknownEntry` vs `UnimplementedEntry` wrapping.
+
+### Changed
+
+- Expanded documentation: full `Notebook.search()` coverage (lazy
+  `EntrySearch`, zero-based `page()` access, result-page metadata) and a new
+  "Obtain API Keys" section.
+- Copy-edited the documentation and public docstrings for precision and
+  concision.
+
+### Security
+
+- Raised the minimum `cryptography` requirement to 48.0.1 and updated the
+  locked version, dropping wheels that bundle a vulnerable OpenSSL
+  (Dependabot alert 15).
+
 ## 1.1.0 - 2026-06-02
 
 ### Added
