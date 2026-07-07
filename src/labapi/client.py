@@ -161,7 +161,6 @@ class _AuthResponseCollector:
                 self.end_headers()
                 self.wfile.write(message.encode("utf-8"))
 
-            @override
             def do_GET(self) -> None:
                 _scheme, _netloc, path, querystring, _fragment = urlsplit(self.path)
 
