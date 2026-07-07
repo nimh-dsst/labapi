@@ -12,7 +12,7 @@ from base64 import b64encode
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import suppress
 from datetime import datetime, timedelta
-from http.server import SimpleHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler
 from operator import itemgetter
 from secrets import token_urlsafe
 from socketserver import TCPServer
@@ -154,7 +154,7 @@ class _AuthResponseCollector:
         collector = self
         callback_path = self._callback_path
 
-        class AuthRequestHandler(SimpleHTTPRequestHandler):
+        class AuthRequestHandler(BaseHTTPRequestHandler):
             def _write_response(self, status_code: int, message: str) -> None:
                 self.send_response(status_code)
                 self.send_header("Content-type", "text/html")

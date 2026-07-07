@@ -686,6 +686,34 @@ class TestClientUnit:
         assert result["user"] is login.return_value
         login.assert_called_once_with("user@example.com", "good-code")
 
+    def test_collect_auth_response_rejects_head_request(self):
+        """Test auth callback collector rejects HEAD requests with 501."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        port = reserve_local_port()
+        errors: list[BaseException] = []
+
+        def run_collect_auth_response() -> None:
+            try:
+                with client.collect_auth_response(port=port, timeout=1.0) as collector:
+                    collector.wait()
+            except BaseException as exc:
+                errors.append(exc)
+
+        thread = Thread(target=run_collect_auth_response, daemon=True)
+        thread.start()
+        wait_for_local_listener(port)
+
+        connection = HTTPConnection("127.0.0.1", port, timeout=2)
+        try:
+            connection.request("HEAD", "/pyproject.toml")
+            response = connection.getresponse()
+            assert response.status == 501
+            response.read()
+        finally:
+            connection.close()
+
+        thread.join(timeout=2)
+
     def test_stream_api_get_yields_chunks_and_returns_response(self):
         """Test stream_api_get yields streamed chunks and returns the response."""
         client = Client("https://api.test.com", "test_akid", "test_password")
