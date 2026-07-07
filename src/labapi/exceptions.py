@@ -87,7 +87,9 @@ class PartialEntryCreateError(LabArchivesError):
     has already been added to the local collection and remote server.
     """
 
-    def __init__(self, message: str, partial_entry: "labapi.entry.entries.base.BaseEntry") -> None:
+    def __init__(
+        self, message: str, partial_entry: "labapi.entry.entries.base.BaseEntry"
+    ) -> None:
         """Initialize a partial entry create error."""
         super().__init__(message)
         self.partial_entry = partial_entry
