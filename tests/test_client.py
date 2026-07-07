@@ -349,6 +349,24 @@ class TestClientUnit:
         with pytest.raises(ApiError, match="API request failed with status code 404"):
             Client._handle_request_status(response)
 
+    def test_client_handle_request_status_sanitizes_url(self):
+        """Test Client._handle_request_status sanitizes sensitive query params."""
+        response = Mock(spec=Response)
+        response.status_code = 500
+        response.url = "https://api.test.com/endpoint?akid=secret&password=pass&sig=123&normal=true"
+        response.text = "Internal Error"
+
+        with pytest.raises(ApiError) as exc_info:
+            Client._handle_request_status(response)
+
+        error_msg = str(exc_info.value)
+        assert "akid=%2A%2A%2A" in error_msg
+        assert "password=%2A%2A%2A" in error_msg
+        assert "sig=%2A%2A%2A" in error_msg
+        assert "normal=true" in error_msg
+        assert "=secret" not in error_msg
+        assert "=pass" not in error_msg
+
     def test_raw_api_get_returns_response(self):
         """Test raw_api_get returns the raw response and calls session.get directly."""
         client = Client("https://api.test.com", "test_akid", "test_password")
