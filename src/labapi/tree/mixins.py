@@ -499,7 +499,7 @@ class AbstractTreeContainer(
         :returns: True if the key is found and not empty, False otherwise.
         """
         try:
-            return bool(self[key])  # type: ignore[index]
+            return bool(self[key])  # type: ignore  # pyright: ignore[reportArgumentType]
         except (KeyError, TypeError):
             return False
 
