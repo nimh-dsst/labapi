@@ -45,7 +45,7 @@ _AUTH_ERROR_CODES: frozenset[int] = frozenset(
 
 _DEFAULT_AUTH_CALLBACK_HOST = "127.0.0.1"
 _DEFAULT_AUTH_CALLBACK_PORT = 8089
-_DEFAULT_AUTH_CALLBACK_PATH = "/"
+
 _DEFAULT_AUTH_CALLBACK_TIMEOUT = 300.0
 
 
@@ -136,13 +136,13 @@ class _AuthResponseCollector:
         client: Client,
         *,
         port: int = _DEFAULT_AUTH_CALLBACK_PORT,
-        callback_path: str = _DEFAULT_AUTH_CALLBACK_PATH,
+        callback_path: str | None = None,
         timeout: float | None = _DEFAULT_AUTH_CALLBACK_TIMEOUT,
     ):
         """Initialize a loopback auth callback collector."""
         self._client = client
         self._port = port
-        self._callback_path = callback_path
+        self._callback_path = callback_path or f"/auth/{token_urlsafe(24)}/"
         self._timeout = timeout
         self._error: str | None = None
         self._email: str | None = None
@@ -683,7 +683,7 @@ class Client:
         self,
         *,
         port: int = _DEFAULT_AUTH_CALLBACK_PORT,
-        callback_path: str = _DEFAULT_AUTH_CALLBACK_PATH,
+        callback_path: str | None = None,
         timeout: float | None = _DEFAULT_AUTH_CALLBACK_TIMEOUT,
     ) -> _AuthResponseCollector:
         """Return a context manager for collecting a loopback auth callback.
@@ -699,7 +699,7 @@ class Client:
         :returns: An enterable collector with a ``wait()`` method for the authentication callback.
         """
         self._ensure_open()
-        if not callback_path.startswith("/"):
+        if callback_path is not None and not callback_path.startswith("/"):
             callback_path = f"/{callback_path}"
 
         return _AuthResponseCollector(
