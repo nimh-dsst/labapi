@@ -305,6 +305,13 @@ class Client:
                 "'https://api.labarchives.com'."
             )
 
+        if parsed_base_url.query:
+            warnings.warn(
+                f"Query parameters in base URL will be ignored: ?{parsed_base_url.query}",
+                UserWarning,
+                stacklevel=2,
+            )
+
         self._base_url = normalized_base_url
         self._akid = akid
         self._hmac = HMAC(
@@ -767,7 +774,8 @@ class Client:
 
         path += "/".join(method_parts)
 
-        url = urlunsplit((scheme, netloc, path, urlencode(query), _f))
+        # LabArchives API does not use fragments in API requests
+        url = urlunsplit((scheme, netloc, path, urlencode(query), ""))
 
         if expires_in:
             return self._sign_url(url, api_method, expires_in)
