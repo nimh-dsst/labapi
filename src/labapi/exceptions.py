@@ -1,5 +1,10 @@
 """Custom exception types raised by ``labapi``."""
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from labapi.entry.entries.base import Entry
+
 
 class LabArchivesError(Exception):
     """Base for all ``labapi`` exceptions."""
@@ -78,3 +83,16 @@ class ExtractionError(LabArchivesError, ValueError):
 
 class TreeChildParseError(ExtractionError):
     """A tree child node could not be parsed from a tree-level response."""
+
+
+class PartialEntryCreateError(LabArchivesError):
+    """An entry was partially created but subsequent operations failed.
+
+    ``partial_entry`` contains the successfully created entry object, which
+    has already been added to the local collection and remote server.
+    """
+
+    def __init__(self, message: str, partial_entry: "Entry[Any]") -> None:
+        """Initialize a partial entry create error."""
+        super().__init__(message)
+        self.partial_entry = partial_entry

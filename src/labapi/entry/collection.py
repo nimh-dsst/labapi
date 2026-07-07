@@ -119,16 +119,24 @@ class Entries(Sequence["Entry[Any]"]):
             ),
         )
 
-        text_entry = self.create(
-            TextEntry,
-            f"""
+        try:
+            text_entry = self.create(
+                TextEntry,
+                f"""
 <p>Reference Attachment: {escape(display_caption)}</p>
 <p>Entry ID: {escape(file_entry.id)}</p>
 <pre>
 {preview_json}
 </pre>
 """,
-        )
+            )
+        except Exception as e:
+            from labapi.exceptions import PartialEntryCreateError
+
+            raise PartialEntryCreateError(
+                f"Failed to create companion text entry for attachment {file_entry.id}",
+                partial_entry=file_entry,
+            ) from e
         return file_entry, text_entry
 
     @overload
