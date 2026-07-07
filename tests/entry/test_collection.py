@@ -169,6 +169,36 @@ class TestEntriesUnit:
         with pytest.raises(StopIteration):
             next(iterator)
 
+    def test_create_json_entry_raises_partial_error_on_text_failure(self):
+        """Test create_json_entry raises PartialEntryCreateError if text entry fails."""
+        from labapi.exceptions import PartialEntryCreateError
+        from lxml.etree import fromstring
+
+        mock_user = Mock(spec=User)
+        mock_page = Mock()
+        mock_page.id = "pid"
+        mock_page.root.id = "nbid"
+
+        def mock_api_post(method, *args, **kwargs):
+            if method == "entries/add_attachment":
+                return fromstring(
+                    b"<response><entry><eid>att-1</eid></entry></response>"
+                )
+            if method == "entries/add_entry":
+                raise RuntimeError("API failure")
+            raise AssertionError(f"Unexpected API call: {method}")
+
+        mock_user.api_post.side_effect = mock_api_post
+
+        entries = Entries([], mock_user, mock_page)
+
+        with pytest.raises(PartialEntryCreateError) as exc_info:
+            entries.create_json_entry({"data": "val"}, filename="data.json")
+
+        assert "Failed to create companion text entry" in str(exc_info.value)
+        assert exc_info.value.partial_entry.id == "att-1"
+        assert exc_info.value.partial_entry in entries
+
 
 class TestEntriesIntegration:
     """Integration tests with real objects and mocked API."""
