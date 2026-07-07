@@ -52,6 +52,9 @@ class PlainTextEntry(Entry[str], part_type="plain text entry"):
 
         :param value: The new text content for the entry.
         """
+        if not isinstance(value, str):
+            raise TypeError(f"content must be a str, got {type(value).__name__}")
+
         self._user.api_post("entries/update_entry", {"entry_data": value}, eid=self.id)
 
         self._data = value
