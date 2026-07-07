@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
+import pytest
+
 from labapi.entry.entries.text import HeaderEntry, PlainTextEntry, TextEntry
 from labapi.user import User
 
@@ -52,6 +54,28 @@ class TestTextEntryUnit:
         entry = PlainTextEntry("eid_plain", "This is plain text", mock_user)
 
         assert entry.content == "This is plain text"
+
+    def test_content_setter_rejects_none(self):
+        """Test that setting content to None raises TypeError."""
+        mock_user = Mock(spec=User)
+        entry = TextEntry("eid_text", "original", mock_user)
+
+        with pytest.raises(TypeError, match="content must be a str, got NoneType"):
+            entry.content = None  # type: ignore[assignment]  # intentional bad type
+
+        mock_user.api_post.assert_not_called()
+        assert entry.content == "original"
+
+    def test_content_setter_rejects_non_str(self):
+        """Test that setting content to a non-str raises TypeError."""
+        mock_user = Mock(spec=User)
+        entry = PlainTextEntry("eid_plain", "original", mock_user)
+
+        with pytest.raises(TypeError, match="content must be a str, got int"):
+            entry.content = 42  # type: ignore[assignment]  # intentional bad type
+
+        mock_user.api_post.assert_not_called()
+        assert entry.content == "original"
 
 
 class TestTextEntryIntegration:
