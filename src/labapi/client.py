@@ -419,7 +419,7 @@ class Client:
             error_code: int | None = None
             error_desc: str | None = None
             try:
-                tree = fromstring(bytes(response.text, encoding="utf-8"))
+                tree = fromstring(response.content)
                 code_text = tree.findtext("./error-code")
                 if code_text is not None:
                     error_code = int(code_text)
