@@ -820,16 +820,30 @@ class TestClientUnit:
         with client.stream_api_get("attachments/download", eid="123") as stream:
             assert list(stream) == [b"chunk-1"]
             assert stream.response is response
-
         # Closing is idempotent even though both iterator and context manager clean up.
         response.close.assert_called_once()
 
     def test_client_initialization_with_params(self):
-        """Test Client initialization stores parameters correctly."""
-        client = Client("https://custom.api.com", "my_akid", "my_password")
+        """Test Client initializes correctly with explicit parameters."""
+        client = Client("https://test.api/", "test_akid", "test_akpass")
+        assert client._akid == "test_akid"  # pyright: ignore[reportPrivateUsage]
+        assert client._base_url == "https://test.api/"  # pyright: ignore[reportPrivateUsage]
 
-        assert client._base_url == "https://custom.api.com"
-        assert client._akid == "my_akid"
+    def test_client_initialization_warns_on_query_parameters(self):
+        """Test Client warns when initialized with a base_url containing query parameters."""
+        with pytest.warns(
+            UserWarning,
+            match=r"Query parameters in base URL will be ignored: \?drop=me",
+        ):
+            client = Client("https://test.api/api?drop=me", "test_akid", "test_akpass")
+        assert client._base_url == "https://test.api/api?drop=me"  # pyright: ignore[reportPrivateUsage]
+
+    def test_construct_url_drops_fragments(self):
+        """Test construct_url strips fragments from the base URL."""
+        client = Client("https://test.api/api#fragment", "test_akid", "test_akpass")
+        url = client.construct_url("test_method", {"param": "val"})
+        assert "#fragment" not in url
+        assert url.startswith("https://test.api/api/api/test_method?")
 
     def test_client_initialization_rejects_non_http_scheme(self):
         """Test Client initialization rejects unsupported base URL schemes."""
