@@ -492,23 +492,30 @@ class AbstractTreeContainer(
         """
         return iter(node.name for node in self.children)
 
+    def _mapping_view_dict(self) -> dict[str, AbstractBaseTreeNode]:
+        d: dict[str, AbstractBaseTreeNode] = {}
+        for node in self.children:
+            if node.name not in d:
+                d[node.name] = node
+        return d
+
     @override
     def keys(self) -> KeysView[str]:
         """Return a mapping-compatible view of child names."""
         self._ensure_populated()
-        return KeysView({node.name: node for node in self.children})
+        return KeysView(self._mapping_view_dict())
 
     @override
     def items(self) -> ItemsView[str, AbstractBaseTreeNode]:
         """Return a mapping-compatible view of ``(name, child)`` pairs."""
         self._ensure_populated()
-        return ItemsView({node.name: node for node in self.children})
+        return ItemsView(self._mapping_view_dict())
 
     @override
     def values(self) -> ValuesView[AbstractBaseTreeNode]:
         """Return a mapping-compatible view of child nodes."""
         self._ensure_populated()
-        return ValuesView({node.name: node for node in self.children})
+        return ValuesView(self._mapping_view_dict())
 
     def all_keys(self) -> Sequence[str]:
         """Return child names in container order, preserving duplicates."""
