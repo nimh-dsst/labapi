@@ -648,25 +648,34 @@ class Client:
             timeout=timeout,
         ) as auth_response_collector:
             try:
-                match detect_default_browser():
-                    case "chrome":
-                        import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                try:
+                    match detect_default_browser():
+                        case "chrome":
+                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
 
-                        driver = webdriver.Chrome(options=webdriver.ChromeOptions())
-                        print("Opening Chrome for authentication...")
-                    case "firefox":
-                        import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                            driver = webdriver.Chrome(options=webdriver.ChromeOptions())
+                            print("Opening Chrome for authentication...")
+                        case "firefox":
+                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
 
-                        driver = webdriver.Firefox(options=webdriver.FirefoxOptions())
-                        print("Opening Firefox for authentication...")
-                    case "edge":
-                        import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                            driver = webdriver.Firefox(
+                                options=webdriver.FirefoxOptions()
+                            )
+                            print("Opening Firefox for authentication...")
+                        case "edge":
+                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
 
-                        driver = webdriver.Edge(options=webdriver.EdgeOptions())
-                        print("Opening Edge for authentication...")
-                    case "terminal":
-                        print("Open authentication URL in your browser:")
-                        print(auth_url)
+                            driver = webdriver.Edge(options=webdriver.EdgeOptions())
+                            print("Opening Edge for authentication...")
+                        case "terminal":
+                            print("Open authentication URL in your browser:")
+                            print(auth_url)
+                except ImportError as e:
+                    raise ImportError(
+                        "The builtin-auth dependencies are required for automatic browser-based authentication. "
+                        "Install with: pip install labapi[builtin-auth]\n"
+                        "Alternatively, use manual authentication with LA_AUTH_BROWSER=terminal."
+                    ) from e
 
                 if driver is not None:
                     driver.get(auth_url)
@@ -675,12 +684,6 @@ class Client:
                     )
 
                 return auth_response_collector.wait()
-            except ImportError as e:
-                raise ImportError(
-                    "The builtin-auth dependencies are required for automatic browser-based authentication. "
-                    "Install with: pip install labapi[builtin-auth]\n"
-                    "Alternatively, use manual authentication with LA_AUTH_BROWSER=terminal."
-                ) from e
             finally:
                 if driver is not None:
                     driver.quit()
