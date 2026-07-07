@@ -652,7 +652,9 @@ class Client:
                         case "firefox":
                             import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
 
-                            driver = webdriver.Firefox(options=webdriver.FirefoxOptions())
+                            driver = webdriver.Firefox(
+                                options=webdriver.FirefoxOptions()
+                            )
                             print("Opening Firefox for authentication...")
                         case "edge":
                             import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
