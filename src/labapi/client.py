@@ -433,9 +433,16 @@ class Client:
                     raise AuthenticationError(message, error_code)
                 raise ApiError(message, error_code)
 
+            parts = urlsplit(response.url)
+            query = dict(parse_qsl(parts.query, keep_blank_values=True))
+            for key in {"akid", "sig", "expires", "password", "login_or_email"}:
+                if key in query:
+                    query[key] = "***"
+            clean_url = urlunsplit(parts._replace(query=urlencode(query)))
+
             raise ApiError(
                 f"API request failed with status code {response.status_code} "
-                f"for URL {response.url}: {response.text}"
+                f"for URL {clean_url}: {response.text}"
             )
 
     def stream_api_get(
