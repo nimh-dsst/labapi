@@ -492,6 +492,17 @@ class AbstractTreeContainer(
         """
         return iter(node.name for node in self.children)
 
+    def __contains__(self, key: object) -> bool:
+        """Return whether the container contains the given key.
+
+        :param key: The key or indexed selector to check for.
+        :returns: True if the key is found and not empty, False otherwise.
+        """
+        try:
+            return bool(self[key])  # type: ignore[index]
+        except (KeyError, TypeError):
+            return False
+
     @override
     def keys(self) -> KeysView[str]:
         """Return a mapping-compatible view of child names."""

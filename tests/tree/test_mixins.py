@@ -285,6 +285,17 @@ class TestTreeMixinsIntegration:
         _ = client.pop_api_call()  # update_node for name
         _ = client.pop_api_call()  # update_node for move
 
+    def test_contains(self, notebook_tree: Notebook):
+        """Test __contains__ handles strings and indexed slices properly."""
+        assert "Test Folder A" in notebook_tree
+        assert "Missing Folder" not in notebook_tree
+
+        assert slice(Index.Id, "dir-1") in notebook_tree
+        assert slice(Index.Id, "missing-id") not in notebook_tree
+
+        assert slice(Index.Name, "Test Folder A") in notebook_tree
+        assert slice(Index.Name, "Missing Folder") not in notebook_tree
+
     def test_mapping_methods(self, notebook_tree: Notebook):
         """Test keys(), values(), and items() on a container."""
         keys = notebook_tree.keys()
