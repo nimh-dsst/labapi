@@ -157,7 +157,7 @@ class _AuthResponseCollector:
         class AuthRequestHandler(SimpleHTTPRequestHandler):
             def _write_response(self, status_code: int, message: str) -> None:
                 self.send_response(status_code)
-                self.send_header("Content-type", "text/html")
+                self.send_header("Content-type", "text/plain")
                 self.end_headers()
                 self.wfile.write(message.encode("utf-8"))
 
