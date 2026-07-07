@@ -1,9 +1,9 @@
 """Custom exception types raised by ``labapi``."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from labapi.entry.entries.base import BaseEntry
+    from labapi.entry.entries.base import Entry
 
 
 class LabArchivesError(Exception):
@@ -92,7 +92,7 @@ class PartialEntryCreateError(LabArchivesError):
     has already been added to the local collection and remote server.
     """
 
-    def __init__(self, message: str, partial_entry: "BaseEntry") -> None:
+    def __init__(self, message: str, partial_entry: "Entry[Any]") -> None:
         """Initialize a partial entry create error."""
         super().__init__(message)
         self.partial_entry = partial_entry
