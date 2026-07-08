@@ -785,6 +785,40 @@ class TestClientUnit:
 
         thread.join(timeout=2)
 
+    def test_collect_auth_response_returns_text_plain_to_prevent_xss(self):
+        """Test auth callback collector responds with text/plain to prevent XSS."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        login = Mock(return_value=Mock(spec=User))
+        port = reserve_local_port()
+
+        def run_collect_auth_response() -> None:
+            try:
+                with client.collect_auth_response(
+                    port=port,
+                    callback_path="/expected/",
+                    timeout=2.0,
+                ) as auth_response_collector:
+                    auth_response_collector.wait()
+            except BaseException:
+                pass
+
+        with patch.object(client, "login", login):
+            thread = Thread(target=run_collect_auth_response, daemon=True)
+            thread.start()
+            wait_for_local_listener(port)
+
+            connection = HTTPConnection("127.0.0.1", port, timeout=2)
+            connection.request("GET", "/expected/?error=<script>alert('xss')</script>")
+            response = connection.getresponse()
+
+            assert response.status == 200
+            assert response.getheader("Content-Type") == "text/plain"
+            body = response.read().decode("utf-8")
+            assert "<script>alert('xss')</script>" in body
+
+            connection.close()
+            thread.join(timeout=5)
+
     def test_stream_api_get_yields_chunks_and_returns_response(self):
         """Test stream_api_get yields streamed chunks and returns the response."""
         client = Client("https://api.test.com", "test_akid", "test_password")
