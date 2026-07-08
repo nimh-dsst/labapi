@@ -99,13 +99,20 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
         """Return the number of notebooks in this collection."""
         return len(self._notebooks)
 
+    def _mapping_view_dict(self) -> dict[str, Notebook]:
+        d: dict[str, Notebook] = {}
+        for n in self._notebooks:
+            if n.name not in d:
+                d[n.name] = n
+        return d
+
     @override
     def keys(self) -> KeysView[str]:
         """Return a mapping-compatible view of notebook names.
 
         :returns: A keys view of notebook names.
         """
-        return KeysView({n.name: n for n in self._notebooks})
+        return KeysView(self._mapping_view_dict())
 
     @override
     def items(self) -> ItemsView[str, Notebook]:
@@ -113,7 +120,7 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
 
         :returns: An items view of ``(name, notebook)`` pairs.
         """
-        return ItemsView({n.name: n for n in self._notebooks})
+        return ItemsView(self._mapping_view_dict())
 
     @override
     def values(self) -> ValuesView[Notebook]:
@@ -121,7 +128,7 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
 
         :returns: A values view of notebook objects.
         """
-        return ValuesView({n.name: n for n in self._notebooks})
+        return ValuesView(self._mapping_view_dict())
 
     def all_keys(self) -> Sequence[str]:
         """Return notebook names in collection order, preserving duplicates."""

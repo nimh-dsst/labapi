@@ -124,13 +124,39 @@ class TestNotebooksUnit:
         assert set(keys) == {"Shared", "Unique"}
 
         values = notebooks.values()
-        assert [notebook.id for notebook in values] == ["nb2", "nb3"]
+        assert [notebook.id for notebook in values] == ["nb1", "nb3"]
 
         items = notebooks.items()
         assert [(name, notebook.id) for name, notebook in items] == [
-            ("Shared", "nb2"),
+            ("Shared", "nb1"),
             ("Unique", "nb3"),
         ]
+
+    def test_notebooks_mapping_views_preserve_first_match_for_duplicates(self):
+        """Test that keys/items/values agree with getitem for duplicate names (#214).
+
+        keys(), items(), and values() must retain the *first* notebook when
+        there are duplicate names, matching the behaviour of __getitem__.
+        """
+        mock_user = Mock(spec=User)
+        notebooks_init = [
+            NotebookInit(id="nb1", name="dup", is_default=True),
+            NotebookInit(id="nb2", name="dup", is_default=False),
+        ]
+        notebooks = Notebooks(notebooks_init, mock_user)
+
+        # __getitem__ already returns the first match
+        assert notebooks["dup"].id == "nb1"
+
+        # mapping views must agree with __getitem__
+        keys = list(notebooks.keys())
+        assert keys == ["dup"]
+
+        values_ids = [nb.id for nb in notebooks.values()]
+        assert values_ids == ["nb1"]
+
+        items_ids = [(name, nb.id) for name, nb in notebooks.items()]
+        assert items_ids == [("dup", "nb1")]
 
     def test_notebooks_duplicate_mapping_methods_preserve_duplicate_names(self):
         """Test duplicate_* methods preserve duplicate notebook names."""
