@@ -171,15 +171,16 @@ class TestEntriesUnit:
 
     def test_create_json_entry_raises_partial_error_on_text_failure(self):
         """Test create_json_entry raises PartialEntryCreateError if text entry fails."""
-        from labapi.exceptions import PartialEntryCreateError
         from lxml.etree import fromstring
+
+        from labapi.exceptions import PartialEntryCreateError
 
         mock_user = Mock(spec=User)
         mock_page = Mock()
         mock_page.id = "pid"
         mock_page.root.id = "nbid"
 
-        def mock_api_post(method, *args, **kwargs):
+        def mock_api_post(method, *_args, **_kwargs):
             if method == "entries/add_attachment":
                 return fromstring(
                     b"<response><entry><eid>att-1</eid></entry></response>"
