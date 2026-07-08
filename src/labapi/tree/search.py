@@ -39,6 +39,7 @@ class EntrySearch:
     def __iter__(self) -> Iterator[EntrySearchPage]:
         """Iterate through search result pages until all results are exhausted."""
         page_number = 0
+        seen_so_far = 0
 
         while True:
             page = self.page(page_number)
@@ -47,8 +48,8 @@ class EntrySearch:
 
             yield page
 
-            returned_so_far = page.page_number * page.page_size + page.total_returned
-            if returned_so_far >= page.total_found:
+            seen_so_far += page.total_returned
+            if seen_so_far >= page.total_found:
                 return
 
             page_number += 1
@@ -56,7 +57,7 @@ class EntrySearch:
     def page(self, page_number: int) -> EntrySearchPage:
         """Return one zero-based search result page.
 
-        :raises IndexError: If ``page_number`` is negative or out of range.
+        :raises IndexError: If ``page_number`` is negative.
         """
         if page_number < 0:
             raise IndexError("search page index must be non-negative")
@@ -104,15 +105,10 @@ class EntrySearch:
                 )
             )
 
-        page = EntrySearchPage(
+        return EntrySearchPage(
             page_size=self._page_size,
             page_number=page_number,
             total_found=result_counts["total-found"],
             total_returned=result_counts["total-returned"],
             entries=tuple(entries),
         )
-
-        if page_number > 0 and page.total_returned == 0:
-            raise IndexError(f"search page index {page_number} is out of range")
-
-        return page
