@@ -540,11 +540,11 @@ class TestClientUnit:
         with (
             patch("labapi.client.detect_default_browser", return_value="chrome"),
             patch.dict("sys.modules", {"selenium.webdriver": None}),
-        ):
-            with pytest.raises(
+            pytest.raises(
                 ImportError, match="builtin-auth dependencies are required"
-            ):
-                client.default_authenticate()
+            ),
+        ):
+            client.default_authenticate()
 
     def test_authenticate_propagates_importerror_from_wait(self):
         """Test ImportError from the wait block is NOT repackaged."""
