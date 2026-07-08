@@ -412,6 +412,29 @@ class TestClientUnit:
         with pytest.raises(ApiError, match=r"\[4999\] Unknown Error"):
             client.raw_api_get("users/get_info")
 
+    def test_raw_api_get_raises_api_error_with_encoding(self):
+        """Test raw_api_get handles XML error payloads with custom encodings correctly."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        # Build response manually to control the exact byte encoding
+        response = Response()
+        response.status_code = 500
+        response.url = "https://api.test.com"
+        xml_body = (
+            '<?xml version="1.0" encoding="iso-8859-1"?>\n'
+            "<error>"
+            "<error-code>5000</error-code>"
+            "<error-description>Especial café</error-description>"
+            "</error>"
+        )
+        response._content = xml_body.encode("iso-8859-1")
+        response.encoding = "iso-8859-1"
+
+        client.session.get = Mock(return_value=response)
+
+        with pytest.raises(ApiError, match=r"\[5000\] Especial café"):
+            client.raw_api_get("users/get_info")
+
     def test_raw_api_get_raises_authentication_error_for_auth_failures(self):
         """Test raw_api_get maps auth-related XML errors to AuthenticationError."""
         client = Client("https://api.test.com", "test_akid", "test_password")
