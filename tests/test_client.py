@@ -243,16 +243,47 @@ class TestClientUnit:
     def test_client_construct_url_accepts_absolute_datetime_expiry(self):
         """Test construct_url preserves explicit absolute expiration datetimes."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        absolute_expiry = datetime(2026, 4, 1, 12, 5, 0)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0)
+        absolute_expiry = fixed_now + timedelta(minutes=5)
 
-        signed_url = client.construct_url(
-            "users/get_info",
-            {"uid": "123"},
-            expires_in=absolute_expiry,
-        )
+        with patch("labapi.client.datetime") as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            signed_url = client.construct_url(
+                "users/get_info",
+                {"uid": "123"},
+                expires_in=absolute_expiry,
+            )
 
         expires = dict(parse_qsl(urlsplit(signed_url).query))["expires"]
         assert int(expires) == round(absolute_expiry.timestamp() * 1000)
+
+    @pytest.mark.parametrize("expires_in", [timedelta(0), timedelta(seconds=-1)])
+    def test_client_construct_url_rejects_non_positive_duration_expiry(
+        self, expires_in: timedelta
+    ):
+        """Test explicit non-positive duration expiries are rejected."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        with pytest.raises(ValueError, match="positive duration"):
+            client.construct_url(
+                "users/get_info",
+                {"uid": "123"},
+                expires_in=expires_in,
+            )
+
+    def test_client_construct_url_rejects_expired_absolute_datetime(self):
+        """Test explicit expired absolute datetime expiries are rejected."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0)
+
+        with patch("labapi.client.datetime") as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            with pytest.raises(ValueError, match="future datetime"):
+                client.construct_url(
+                    "users/get_info",
+                    {"uid": "123"},
+                    expires_in=fixed_now,
+                )
 
     def test_client_api_get_parses_raw_response_bytes(self):
         """Test Client.api_get parses response.content rather than re-encoded text."""
@@ -646,6 +677,47 @@ class TestClientUnit:
         assert events.index("bind") < events.index("print")
         assert events.index("print") < events.index("wait")
 
+    def test_default_authenticate_warns_when_browser_cleanup_fails(self):
+        """Test browser cleanup failures do not mask successful authentication."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        auth_response_collector = MagicMock()
+        auth_response_collector.__enter__.return_value = auth_response_collector
+        auth_response_collector.wait.return_value = Mock(spec=User)
+        driver = MagicMock()
+        driver.quit.side_effect = RuntimeError("quit failed")
+        webdriver = MagicMock()
+        webdriver.Chrome.return_value = driver
+
+        with (
+            patch.object(
+                client,
+                "generate_auth_url",
+                return_value="https://auth.test/url",
+            ),
+            patch.object(
+                client,
+                "collect_auth_response",
+                return_value=auth_response_collector,
+            ),
+            patch("labapi.client.token_urlsafe", return_value="test-token"),
+            patch("labapi.client.detect_default_browser", return_value="chrome"),
+            patch.dict(
+                "sys.modules",
+                {
+                    "selenium": MagicMock(webdriver=webdriver),
+                    "selenium.webdriver": webdriver,
+                },
+            ),
+            pytest.warns(
+                RuntimeWarning,
+                match="Failed to close authentication browser driver",
+            ),
+        ):
+            result = client.default_authenticate()
+
+        assert result is auth_response_collector.wait.return_value
+        driver.quit.assert_called_once_with()
+
     def test_collect_auth_response_binds_loopback_callback_listener(self):
         """Test auth callback collector binds the expected loopback listener."""
         client = Client("https://api.test.com", "test_akid", "test_password")
@@ -713,6 +785,39 @@ class TestClientUnit:
             match="before waiting for a callback",
         ):
             auth_response_collector.wait()
+
+    @pytest.mark.parametrize("timeout", [0.0, -1.0])
+    def test_collect_auth_response_rejects_non_positive_timeout(self, timeout: float):
+        """Test callback collectors reject non-positive timeout values."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        with pytest.raises(ValueError, match="timeout must be positive"):
+            client.collect_auth_response(timeout=timeout)
+
+    def test_collect_auth_response_sets_timeout_from_remaining_time(self):
+        """Test callback wait uses remaining timeout duration before blocking."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        observed_timeouts: list[float | None] = []
+
+        class FakeTCPServer:
+            def __init__(self, _server_address, _handler_cls):
+                self.timeout: float | None = None
+
+            def handle_request(self):
+                observed_timeouts.append(self.timeout)
+
+            def server_close(self):
+                pass
+
+        with (
+            patch("labapi.client.TCPServer", FakeTCPServer),
+            patch("labapi.client.monotonic", side_effect=[100.0, 100.09, 100.11]),
+            client.collect_auth_response(timeout=0.1) as auth_response_collector,
+            pytest.raises(AuthenticationError, match="Timed out"),
+        ):
+            auth_response_collector.wait()
+
+        assert observed_timeouts == [pytest.approx(0.01)]
 
     def test_collect_auth_response_ignores_invalid_callbacks_until_valid(self):
         """Test auth callback collector ignores stray requests until the expected callback arrives."""
