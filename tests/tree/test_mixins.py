@@ -298,6 +298,32 @@ class TestTreeMixinsIntegration:
         items = notebook_tree.items()
         assert ("Test Folder A", notebook_tree[Index.Id : "dir-1"]) in items
 
+    def test_standard_mapping_methods_preserve_first_matching_child(
+        self, notebook_tree: Notebook
+    ):
+        """Test keys(), values(), and items() preserve the first matching child."""
+        duplicate_page = NotebookPage(
+            "page-duplicate",
+            "Test Page 1",
+            notebook_tree,
+            notebook_tree,
+            notebook_tree.user,
+        )
+        notebook_tree._children.append(duplicate_page)  # pyright: ignore[reportPrivateUsage]
+
+        keys = notebook_tree.keys()
+        # dict keys are unique, so there should be only one "Test Page 1"
+        assert len(keys) == 3
+        assert "Test Page 1" in keys
+
+        values = list(notebook_tree.values())
+        # Should contain the original page-1, not page-duplicate
+        assert any(node.id == "page-1" for node in values)
+        assert all(node.id != "page-duplicate" for node in values)
+
+        items = dict(notebook_tree.items())
+        assert items["Test Page 1"].id == "page-1"
+
     def test_duplicate_mapping_methods_preserve_duplicate_names(
         self, notebook_tree: Notebook
     ):
