@@ -556,6 +556,36 @@ class TestClientUnit:
             timeout=90.0,
         )
 
+    def test_authenticate_repackages_importerror_from_browser_setup(self):
+        """Test ImportError during browser setup is repackaged with builtin-auth instructions."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        with (
+            patch("labapi.client.detect_default_browser", return_value="chrome"),
+            patch.dict("sys.modules", {"selenium.webdriver": None}),
+            pytest.raises(ImportError, match="builtin-auth dependencies are required"),
+        ):
+            client.default_authenticate()
+
+    def test_authenticate_propagates_importerror_from_wait(self):
+        """Test ImportError from the wait block is NOT repackaged."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        auth_response_collector = MagicMock()
+        auth_response_collector.__enter__.return_value = auth_response_collector
+        auth_response_collector.wait.side_effect = ImportError("Deep unrelated error")
+
+        with (
+            patch("labapi.client.detect_default_browser", return_value="terminal"),
+            patch.object(
+                client, "collect_auth_response", return_value=auth_response_collector
+            ),
+        ):
+            with pytest.raises(ImportError, match="Deep unrelated error") as exc_info:
+                client.default_authenticate()
+
+            assert "builtin-auth dependencies" not in str(exc_info.value)
+
     def test_default_authenticate_does_not_warn_when_terminal_is_explicit(self, capsys):
         """Test no warning is shown when terminal auth is explicitly configured."""
         client = Client("https://api.test.com", "test_akid", "test_password")
