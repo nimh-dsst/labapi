@@ -540,9 +540,7 @@ class TestClientUnit:
         with (
             patch("labapi.client.detect_default_browser", return_value="chrome"),
             patch.dict("sys.modules", {"selenium.webdriver": None}),
-            pytest.raises(
-                ImportError, match="builtin-auth dependencies are required"
-            ),
+            pytest.raises(ImportError, match="builtin-auth dependencies are required"),
         ):
             client.default_authenticate()
 
