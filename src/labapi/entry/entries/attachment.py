@@ -6,6 +6,7 @@ which represents an attachment entry within a LabArchives page.
 
 from __future__ import annotations
 
+import shutil
 from email.message import Message
 from io import BytesIO
 from tempfile import TemporaryFile
@@ -89,7 +90,7 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
         # Return an independent copy so each caller gets isolated read/seek/close state
         # while still sharing a single downloaded backing attachment in the cache.
         self._filedata.seek(0)
-        output.write(self._filedata.read())
+        shutil.copyfileobj(self._filedata, output)
         output.seek(0)
 
         return Attachment(
