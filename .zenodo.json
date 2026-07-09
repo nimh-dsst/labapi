@@ -9,8 +9,18 @@
     },
     {
       "name": "Lawrimore, Josh",
-      "affiliation": "National Institute of Mental Health",
+      "affiliation": "Clinical Monitoring Research Program Directorate, Frederick National Laboratory for Cancer Research, Frederick, Maryland, USA",
       "orcid": "0000-0003-2301-9073"
+    },
+    {
+      "name": "Moraczewski, Dustin",
+      "affiliation": "National Institute of Mental Health",
+      "orcid": "0000-0002-0422-3135"
+    },
+    {
+      "name": "Thomas, Adam",
+      "affiliation": "National Institute of Mental Health",
+      "orcid": "0000-0002-2850-1419"
     }
   ],
   "keywords": ["Electronic Lab Notebook", "ELN", "LabArchives", "API"],
