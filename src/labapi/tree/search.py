@@ -41,7 +41,10 @@ class EntrySearch:
         page_number = 0
 
         while True:
-            page = self.page(page_number)
+            try:
+                page = self.page(page_number)
+            except IndexError:
+                return
             if page.total_returned == 0:
                 return
 
