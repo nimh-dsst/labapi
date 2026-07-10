@@ -8,6 +8,7 @@ from unittest.mock import Mock
 from labapi.client import StreamingResponse
 from labapi.entry.attachment import Attachment
 from labapi.entry.entries.attachment import AttachmentEntry
+from labapi.exceptions import ApiError
 from labapi.user import User
 
 
@@ -137,6 +138,66 @@ class TestAttachmentEntryIntegration:
 
         assert backing.tell() == 0
         _ = client.pop_api_call()
+
+    def test_attachment_entry_content_setter_adds_context_to_4999_error(
+        self, client, user: User
+    ):
+        """Test 4999 attachment update errors include actionable context."""
+        entry = AttachmentEntry("eid_att", "Old caption", user)
+        attachment = Attachment(
+            BytesIO(b"New file content"),
+            "text/plain",
+            "new_file.txt",
+            "New caption",
+        )
+        raw_error = ApiError("[4999] Unknown Error", 4999)
+        client.api_response = raw_error
+
+        try:
+            entry.content = attachment
+        except ApiError as exc:
+            translated_error = exc
+        else:
+            raise AssertionError("Expected ApiError")
+
+        assert translated_error.error_code == 4999
+        assert translated_error.__cause__ is raw_error
+        message = str(translated_error)
+        assert "entry 'eid_att'" in message
+        assert "filename 'new_file.txt'" in message
+        assert "LabArchives returned [4999] Unknown Error" in message
+        assert "retry with a fresh Attachment object" in message
+        assert entry.caption == "Old caption"
+        api_call = client.pop_api_call()
+        assert api_call[0] == "entries/update_attachment"
+        assert api_call[1]["eid"] == "eid_att"
+        assert api_call[1]["filename"] == "new_file.txt"
+
+    def test_attachment_entry_content_setter_preserves_non_4999_errors(
+        self, client, user: User
+    ):
+        """Test non-4999 attachment update errors pass through unchanged."""
+        entry = AttachmentEntry("eid_att", "Old caption", user)
+        attachment = Attachment(
+            BytesIO(b"New file content"),
+            "text/plain",
+            "new_file.txt",
+            "New caption",
+        )
+        raw_error = ApiError("[5000] Other Error", 5000)
+        client.api_response = raw_error
+
+        try:
+            entry.content = attachment
+        except ApiError as exc:
+            preserved_error = exc
+        else:
+            raise AssertionError("Expected ApiError")
+
+        assert preserved_error is raw_error
+        api_call = client.pop_api_call()
+        assert api_call[0] == "entries/update_attachment"
+        assert api_call[1]["eid"] == "eid_att"
 
     def test_attachment_entry_get_attachment_caching(self, client, user: User):
         """Test AttachmentEntry.get_attachment reuses download cache without sharing handles."""

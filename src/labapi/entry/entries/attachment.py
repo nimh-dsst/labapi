@@ -127,14 +127,27 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
         if value._backing.seekable():  # pyright: ignore[reportPrivateUsage]
             value._backing.seek(0)  # pyright: ignore[reportPrivateUsage]
 
-        self._user.api_post(
-            "entries/update_attachment",
-            value._backing,  # pyright: ignore[reportPrivateUsage, reportArgumentType]
-            filename=value.filename,
-            caption=value.caption,
-            eid=self.id,
-            change_description="File updated via API",
-        )
+        try:
+            self._user.api_post(
+                "entries/update_attachment",
+                value._backing,  # pyright: ignore[reportPrivateUsage, reportArgumentType]
+                filename=value.filename,
+                caption=value.caption,
+                eid=self.id,
+                change_description="File updated via API",
+            )
+        except ApiError as exc:
+            if exc.error_code != 4999:
+                raise
+
+            raise ApiError(
+                "Attachment update failed for "
+                f"entry {self.id!r} with filename {value.filename!r}. "
+                f"LabArchives returned {exc}. "
+                "Reload the page or entry, revalidate the attachment metadata, "
+                "and retry with a fresh Attachment object.",
+                exc.error_code,
+            ) from exc
 
         self._data = value.caption
 

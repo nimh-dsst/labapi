@@ -80,7 +80,16 @@ Attachment update API can return a ``4999`` error
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Some attachment update operations can fail with a LabArchives ``4999`` error response.
-If this occurs, retrying with a fresh object/session and validating attachment metadata is recommended.
+When this occurs during ``AttachmentEntry.content`` assignment, ``labapi`` raises
+an :class:`~labapi.exceptions.ApiError` that includes the entry ID, filename, raw
+LabArchives error, and recovery guidance. The original raw API failure remains
+available as the exception cause.
+
+Recommended recovery workflow:
+
+1. Reload the page or re-fetch the attachment entry so local metadata matches the server.
+2. Revalidate the filename, caption, MIME type, and backing stream before retrying.
+3. Retry with a fresh :class:`~labapi.entry.attachment.Attachment` object or a fresh session.
 
 Planning Guidance
 -----------------
