@@ -225,6 +225,31 @@ def test_extract_etree_mapper_fails_raises():
         extract_etree(element, format_dict)
 
 
+def test_extract_etree_mapper_without_name_raises():
+    """Test extract_etree raises ExtractionError properly when mapper has no __name__."""
+    from functools import partial
+
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <root>
+        <value>not_an_int</value>
+    </root>
+    """
+    element = etree.fromstring(bytes(xml, encoding="utf-8"))
+    mapper = partial(int, base=16)
+    format_dict: EtreeExtractorDict = {
+        "value": mapper,
+    }
+
+    with pytest.raises(
+        ExtractionError,
+        match=(
+            r"Could not map value 'not_an_int' with .*partial.* for '.+/value' while "
+            r"parsing element at /root"
+        ),
+    ):
+        extract_etree(element, format_dict)
+
+
 def test_extract_etree_warns_on_duplicate_leaf_names():
     """Test duplicate leaf extraction warns and last assignment wins."""
     xml = """<?xml version="1.0" encoding="UTF-8"?>
