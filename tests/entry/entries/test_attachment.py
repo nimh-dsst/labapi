@@ -169,3 +169,23 @@ class TestAttachmentEntryIntegration:
         attachment3 = entry.get_attachment()
         assert client.stream_api_get.call_count == 1
         assert attachment3.read() == b"Content"
+
+    def test_get_attachment_tempfile_copies_in_chunks(self, client, user: User):
+        """get_attachment(use_tempfile=True) must not read the full payload at once.
+
+        Regression for #215: the old code called self._filedata.read() with no
+        size, materializing the entire cached payload as one bytes object.
+        """
+        entry = AttachmentEntry("eid_att", "Caption", user)
+
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Disposition": 'attachment; filename="test.txt"',
+        }
+        mock_response.iter_content.return_value = [b"Chunked content"]
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        attachment = entry.get_attachment(use_tempfile=True)
+        assert attachment.read() == b"Chunked content"
+        attachment.close()
