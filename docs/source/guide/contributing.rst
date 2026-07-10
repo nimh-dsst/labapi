@@ -69,6 +69,31 @@ Run them explicitly with:
    ``ACCESS_KEYID``, and ``ACCESS_PWD``. ``AUTH_EMAIL`` and ``AUTH_KEY`` are
    conventions used by this repository's integration-test fixtures.
 
+Attachment Update 4999 Reproducer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The attachment-update ``4999`` reproducer is separately gated because it
+creates and updates content through the live LabArchives API.
+
+.. code-block:: bash
+
+   LABAPI_RUN_ATTACHMENT_4999_REPRODUCER=true uv run pytest \
+      --integration tests/test_integration.py \
+      -k attachment_update_4999_reproducer -s
+
+In PowerShell:
+
+.. code-block:: powershell
+
+   $env:LABAPI_RUN_ATTACHMENT_4999_REPRODUCER = "true"
+   uv run pytest --integration tests/test_integration.py `
+      -k attachment_update_4999_reproducer -s
+
+The reproducer creates an isolated page and attachment, then updates the
+attachment through ``AttachmentEntry.content``. It prints the request shape
+and reports the API response if LabArchives returns ``4999``. Payload bytes
+are represented by their length and SHA-256 hash rather than their contents.
+
 Code Style
 ----------
 

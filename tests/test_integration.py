@@ -1,5 +1,6 @@
 """Integration tests covering end-to-end LabArchives workflows."""
 
+import hashlib
 import json
 import os
 from collections.abc import Mapping
@@ -11,6 +12,7 @@ import pytest
 
 import labapi as LA
 from labapi import Index
+from labapi.exceptions import ApiError
 
 pytestmark = pytest.mark.integration
 
@@ -330,6 +332,93 @@ def test_fix_metadata(test_env):
     # Check raw attachment content
     updated_bytes = attachment_entry.content.read()
     assert b"male" in updated_bytes
+
+
+@pytest.mark.skipif(
+    os.getenv("LABAPI_RUN_ATTACHMENT_4999_REPRODUCER", "").lower()
+    not in {"1", "true", "yes", "on"},
+    reason=(
+        "Set LABAPI_RUN_ATTACHMENT_4999_REPRODUCER=true to run the "
+        "attachment update 4999 reproducer."
+    ),
+)
+def test_attachment_update_4999_reproducer(
+    tests_dir: LA.NotebookDirectory,
+) -> None:
+    """Reproduce and report attachment update error 4999 against the live API."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    page = tests_dir.create(
+        LA.NotebookPage,
+        f"attachment update 4999 reproducer {timestamp}",
+    )
+
+    filename = "attachment-update-4999.txt"
+    initial_attachment = LA.Attachment(
+        BytesIO(b"initial attachment update 4999 reproducer payload\n"),
+        "text/plain",
+        filename,
+        "Attachment update 4999 reproducer",
+    )
+    try:
+        entry = page.entries.create(LA.AttachmentEntry, initial_attachment)
+    finally:
+        initial_attachment.close()
+
+    update_payload = b"updated attachment update 4999 reproducer payload\n"
+    update_caption = "Attachment update 4999 reproducer updated"
+    updated_attachment = LA.Attachment(
+        BytesIO(update_payload),
+        "text/plain",
+        filename,
+        update_caption,
+    )
+    request_report = {
+        "method": "POST",
+        "operation": "entries/update_attachment",
+        "context": {
+            "notebook_id": page.root.id,
+            "page_id": page.id,
+            "entry_id": entry.id,
+        },
+        "parameters": {
+            "filename": filename,
+            "caption": update_caption,
+            "change_description": "File updated via API",
+        },
+        "body": {
+            "kind": "binary stream",
+            "mime_type": updated_attachment.mime_type,
+            "size_bytes": len(update_payload),
+            "sha256": hashlib.sha256(update_payload).hexdigest(),
+        },
+    }
+    print(
+        "Attachment update request:\n"
+        f"{json.dumps(request_report, indent=2, sort_keys=True)}"
+    )
+
+    try:
+        entry.content = updated_attachment
+    except ApiError as exc:
+        if exc.error_code != 4999:
+            raise
+
+        failure_report = {
+            **request_report,
+            "response": {
+                "error_code": exc.error_code,
+                "message": str(exc),
+            },
+        }
+        pytest.fail(
+            "LabArchives returned 4999 for the attachment update:\n"
+            f"{json.dumps(failure_report, indent=2, sort_keys=True)}",
+            pytrace=False,
+        )
+    finally:
+        updated_attachment.close()
+
+    assert entry.caption == update_caption
 
 
 def test_delete_subject(test_env):
