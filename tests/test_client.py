@@ -361,6 +361,7 @@ class TestClientUnit:
         called_url = client.session.get.call_args.args[0]
         assert "users/get_info" in called_url
         assert "uid=123" in called_url
+        assert client.session.get.call_args.kwargs["timeout"] == 60.0
 
     def test_raw_api_post_returns_response(self):
         """Test raw_api_post returns the raw response and passes the request body."""
@@ -375,6 +376,17 @@ class TestClientUnit:
         called_url = client.session.post.call_args.args[0]
         assert "entries/add_entry" in called_url
         assert client.session.post.call_args.kwargs["data"] == body
+        assert client.session.post.call_args.kwargs["timeout"] == 60.0
+
+    def test_client_custom_timeout_passed_to_requests(self):
+        """Test custom timeout is respected by request methods."""
+        client = Client("https://api.test.com", "akid", "pass", timeout=5.0)
+
+        response = make_response(200, "<xml/>")
+        client.session.get = Mock(return_value=response)
+
+        client.raw_api_get("test")
+        assert client.session.get.call_args.kwargs["timeout"] == 5.0
 
     def test_raw_api_get_raises_api_error_from_xml_error_body(self):
         """Test raw_api_get surfaces LabArchives XML error payloads."""
@@ -701,6 +713,7 @@ class TestClientUnit:
         assert chunks == [b"chunk-1", b"chunk-2"]
         assert stream.response is response
         assert stream.headers == {"Content-Type": "application/octet-stream"}
+        assert client.session.get.call_args.kwargs["timeout"] == 60.0
 
     def test_stream_api_get_raises_api_error_before_yielding_chunks(self):
         """Test stream_api_get raises before yielding when the response is not OK."""

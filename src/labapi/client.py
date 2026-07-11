@@ -259,6 +259,7 @@ class Client:
         akpass: bytes | str | None = None,
         *,
         strict_cert: bool = True,
+        timeout: float | tuple[float, float] | None = 60.0,
     ):
         """Initialize a LabArchives API client.
 
@@ -279,6 +280,9 @@ class Client:
                            If False, disables the VERIFY_X509_STRICT flag to allow connections
                            to servers with certificates that may not pass strict validation.
                            Defaults to True. **Warning:** Setting this to False reduces security.
+        :param timeout: How many seconds to wait for the server to send data before giving up.
+                        Can be a float, a (connect timeout, read timeout) tuple, or None to
+                        wait indefinitely. Defaults to 60.0 seconds.
         """
         super().__init__()
 
@@ -311,6 +315,7 @@ class Client:
             bytes(akpass, "utf8") if isinstance(akpass, str) else akpass, SHA512()
         )
         self.session = Session()
+        self.timeout = timeout
         self._closed = False
         if not strict_cert:
             self.session.mount("https://", _313HTTPAdapter())
@@ -458,7 +463,9 @@ class Client:
         """
         self._ensure_open()
         request = self.session.get(
-            self.construct_url(api_method_uri, query=kwargs), stream=True
+            self.construct_url(api_method_uri, query=kwargs),
+            stream=True,
+            timeout=self.timeout,
         )
         try:
             Client._handle_request_status(request)
@@ -492,7 +499,10 @@ class Client:
         """
         self._ensure_open()
         request = self.session.post(
-            self.construct_url(api_method_uri, query=kwargs), data=body, stream=True
+            self.construct_url(api_method_uri, query=kwargs),
+            data=body,
+            stream=True,
+            timeout=self.timeout,
         )
         try:
             Client._handle_request_status(request)
@@ -521,7 +531,9 @@ class Client:
         :raises ApiError: If LabArchives returns any other non-success response.
         """
         self._ensure_open()
-        request = self.session.get(self.construct_url(api_method_uri, query=kwargs))
+        request = self.session.get(
+            self.construct_url(api_method_uri, query=kwargs), timeout=self.timeout
+        )
         Client._handle_request_status(request)
 
         return request
@@ -550,7 +562,9 @@ class Client:
         """
         self._ensure_open()
         request = self.session.post(
-            self.construct_url(api_method_uri, query=kwargs), data=body
+            self.construct_url(api_method_uri, query=kwargs),
+            data=body,
+            timeout=self.timeout,
         )
         Client._handle_request_status(request)
 
