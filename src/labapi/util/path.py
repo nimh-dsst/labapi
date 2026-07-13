@@ -313,7 +313,12 @@ class NotebookPath(Sequence[UnescapedSegment]):
             )
 
         if not other._absolute and other._parent is None:
-            return NotebookPath(*self.escape(*self[len(other) :]))
+            remaining = self.escape(*self[len(other) :])
+            return (
+                NotebookPath(*remaining)
+                if remaining
+                else NotebookPath(EscapedSegment(""))
+            )
 
         p_origin = other.resolve()
         p_endpoint = self.resolve(other)
@@ -380,8 +385,17 @@ class NotebookPath(Sequence[UnescapedSegment]):
 
     @override
     def __hash__(self) -> int:
-        """Hash based on absoluteness, segments, and parent anchor."""
-        return hash((self._absolute, tuple(self._parts)))
+        """Hash the resolved path so equal paths hash equally.
+
+        Mirrors ``__eq__``, which compares resolved paths. An unresolvable
+        relative path (no parent anchor) falls back to its unresolved state;
+        such a path is only ever equal to itself.
+        """
+        try:
+            resolved = self.resolve()
+        except PathError:
+            return hash((self._absolute, tuple(self._parts)))
+        return hash((resolved._absolute, tuple(resolved._parts)))
 
     @override
     def __eq__(self, other: object) -> bool:
