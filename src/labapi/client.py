@@ -653,7 +653,7 @@ class Client:
 
                         driver = webdriver.Firefox(options=webdriver.FirefoxOptions())
                         print("Opening Firefox for authentication...")
-                    case "edge":
+                    case "edge" | "msedge":
                         import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
 
                         driver = webdriver.Edge(options=webdriver.EdgeOptions())
