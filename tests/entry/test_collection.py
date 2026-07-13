@@ -321,6 +321,32 @@ class TestEntriesIntegration:
         assert backing.tell() == 0
         _ = client.pop_api_call()
 
+    def test_entries_create_attachment_stream_without_callable_seekable(
+        self, client, user: User, mock_page
+    ):
+        """Create must not fail on streams whose seekable attribute is not callable."""
+        entries = Entries([], user, mock_page)
+
+        client.api_response = client.entries_response(
+            client.entry_xml("noseek_attachment_eid")
+        )
+
+        stream_cls = type("Stream", (BytesIO,), {"seekable": None})
+        backing = stream_cls(b"File content")
+        attachment = Attachment(
+            backing=backing,
+            mime_type="text/plain",
+            filename="test.txt",
+            caption="Test file",
+        )
+        attachment.read(4)
+
+        entry = entries.create(AttachmentEntry, attachment)
+
+        assert isinstance(entry, AttachmentEntry)
+        assert backing.tell() == 0
+        _ = client.pop_api_call()
+
     def test_entries_create_json_entry(self, client, user: User, mock_page):
         """Test Entries.create_json_entry creates both attachment and text entry."""
         entries = Entries([], user, mock_page)
