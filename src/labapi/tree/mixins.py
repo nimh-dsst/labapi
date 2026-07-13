@@ -368,6 +368,12 @@ class AbstractTreeNode(AbstractBaseTreeNode):
         """
         api_deleted_items = self.root.dir("API Deleted Items")
 
+        if api_deleted_items is self:
+            raise ValueError(
+                "Cannot delete the 'API Deleted Items' directory through the API. "
+                "Delete it from the LabArchives web interface instead."
+            )
+
         self.name = (
             f"{self.name} - Deleted at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
