@@ -128,6 +128,7 @@ def download_json_files(
     source_page = user.notebooks[notebook].traverse(page).as_page()
     folder.mkdir(parents=True, exist_ok=True)
     results: list[FileResult] = []
+    used_paths: set[Path] = set()
 
     # A page can contain text entries, widgets, attachments, and other entry
     # types. This example only downloads attachment entries that look like JSON.
@@ -151,6 +152,22 @@ def download_json_files(
                 continue
 
             output_path = folder / filename
+            # Two attachments can normalize to the same basename. Refuse to
+            # overwrite an already-written file; report the collision instead
+            # of silently replacing earlier data.
+            if output_path in used_paths:
+                results.append(
+                    FileResult(
+                        filename,
+                        output_path,
+                        False,
+                        f"Duplicate attachment filename '{filename}'; "
+                        "refusing to overwrite",
+                    )
+                )
+                continue
+            used_paths.add(output_path)
+
             try:
                 attachment.seek(0)
                 data = cast(JsonData, json.load(attachment))
