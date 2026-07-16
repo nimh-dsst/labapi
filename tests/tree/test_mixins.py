@@ -285,6 +285,21 @@ class TestTreeMixinsIntegration:
         _ = client.pop_api_call()  # update_node for name
         _ = client.pop_api_call()  # update_node for move
 
+    def test_delete_api_deleted_items_rejected_before_rename(
+        self, client, notebook_tree: Notebook
+    ):
+        """Deleting the 'API Deleted Items' directory is rejected before any mutation."""
+        client.api_response = client.tree_node_response("deleted-dir")
+        trash = notebook_tree.dir("API Deleted Items")
+        client.clear_api_calls()
+        original_name = trash.name
+
+        with pytest.raises(ValueError, match="web interface"):
+            trash.delete()
+
+        assert trash.name == original_name
+        assert client.api_calls == ()
+
     def test_contains(self, notebook_tree: Notebook):
         """Test __contains__ handles strings and indexed slices properly."""
         assert "Test Folder A" in notebook_tree
