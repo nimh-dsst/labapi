@@ -3,21 +3,18 @@
 JSON Entries
 ============
 
-``labapi`` provides a high-level way to store JSON data so it is both
-machine-readable and easy to inspect in the LabArchives UI.
+Use :meth:`~labapi.entry.collection.Entries.create_json_entry` to upload JSON
+and add a rich-text preview to the same page.
 
 How JSON Entries Are Stored
 ---------------------------
 
 When you create a JSON entry with ``labapi``, the library creates two related
-records:
+entries:
 
-- A JSON attachment that preserves the original structured data exactly.
+- A JSON attachment that stores the JSON-serialized data.
 - A rich-text preview entry that shows a formatted, human-readable version in
   the notebook page.
-
-This pairing makes it easy to keep a reliable machine format without giving up
-on readable notebook content.
 
 Create a JSON Entry
 -------------------
@@ -46,18 +43,9 @@ Use :meth:`~labapi.entry.collection.Entries.create_json_entry` on
    print(f"Created attachment entry (ID: {attachment_entry.id})")
    print(f"Created text preview (ID: {text_entry.id})")
 
-What You Get Back
------------------
-
-:meth:`~labapi.entry.collection.Entries.create_json_entry` returns both created
-entry objects:
-
-- ``attachment_entry`` for the uploaded ``.json`` attachment.
-- ``text_entry`` for the pretty-printed preview shown on the page.
-
 Related Pages
 -------------
 
-- :ref:`entries` for the surrounding entry model.
+- :ref:`entries` for entry types and entry creation methods.
 - :doc:`/examples/json_sync` for a complete JSON sync workflow.
-- :ref:`limitations` for current capability boundaries.
+- :ref:`limitations` for caveats that apply to JSON entries.

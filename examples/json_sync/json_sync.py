@@ -136,9 +136,16 @@ def download_json_files(
         if not isinstance(entry, AttachmentEntry):
             continue
 
-        # ``entry.content`` downloads a fresh Attachment object. Close it when
-        # finished so local file handles or temporary buffers are released.
-        attachment = entry.content
+        # ``entry.content`` downloads a fresh Attachment object. A failed
+        # retrieval is recorded per-entry so later entries still process.
+        try:
+            attachment = entry.content
+        except Exception as exc:
+            results.append(FileResult(entry.id, folder, False, str(exc)))
+            continue
+
+        # Close the attachment when finished so local file handles or temporary
+        # buffers are released.
         try:
             # Treat remote filenames as filenames, not paths. This keeps every
             # download inside ``folder`` even if a server-provided name includes

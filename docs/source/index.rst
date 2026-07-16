@@ -5,9 +5,6 @@ LabArchives API Client
 object-oriented way to authenticate, browse notebook trees, and create or
 update entries from scripts, tools, and integrations.
 
-Choose the section that matches where you are in the workflow, then drop into
-the deeper guides when you need behavior details or API signatures.
-
 .. toctree::
    :maxdepth: 2
    :hidden:
@@ -28,33 +25,33 @@ Start Here
       :link: quick_start/index
       :link-type: doc
 
-      Install ``labapi``, authenticate locally, and make your first successful
-      write call.
+      Install ``labapi``, authenticate locally, and create your first
+      LabArchives entry.
 
    .. grid-item-card:: User Guide
       :link: guide/index
       :link-type: doc
 
-      Learn the behavior behind traversal, entry handling, authentication, and
-      caching.
+      Read how traversal, entries, authentication, and caching work.
 
    .. grid-item-card:: Example Applications
       :link: examples/index
       :link-type: doc
 
-      Run end-to-end scripts for JSON sync, folder export, and CSV table
-      workflows.
+      Run scripts that sync JSON, export folders, and update CSV-backed
+      tables.
 
    .. grid-item-card:: API Reference
       :link: reference/index
       :link-type: doc
 
-      Look up classes, methods, and generated module documentation.
+      Look up class, method, and module reference pages.
 
 Reference Tools
 ---------------
 
-- :ref:`faq` for operational troubleshooting and environment setup questions.
+- :ref:`faq` for authentication, certificate, and environment setup
+  troubleshooting.
 - :ref:`genindex` for the generated symbol index.
 - :ref:`modindex` for the module index.
-- :ref:`search` to search the built documentation directly.
+- :ref:`search` for full-text search.

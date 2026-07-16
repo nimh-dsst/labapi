@@ -3,13 +3,11 @@
 Working with Paths
 ==================
 
-Paths provide a way to navigate, reference, and create nodes in the notebook tree using Unix-style
-slash-separated strings. This is an alternative to chained index access and is especially useful
-when working with deeply nested structures.
+Use slash-separated path strings to navigate, reference, and create notebook tree nodes; paths
+avoid long chains of indexing when structures are deeply nested.
 
-.. warning::
-   For duplicate-name and first-match lookup behavior, see
-   :ref:`index_access`. This page focuses on path syntax and traversal rules.
+.. seealso::
+   :ref:`index_access` for duplicate-name and first-match lookup behavior.
 
 .. code-block:: python
 
@@ -76,17 +74,17 @@ strings, including ``traverse()``, ``create()``, ``dir()``, and ``page()``.
 
 .. code-block:: python
 
-    # Literal name "Figure / 1"
+    # Literal name "Figure/1"
     figure = notebook.traverse(r"Experiments/Figure\/1")
 
-    # Literal name "Reports / 2024"
+    # Literal name "Reports/2024"
     page = notebook.page(r"Reports\/2024")
 
 Programmatic Escaping
 ^^^^^^^^^^^^^^^^^^^^^
 
 If you are building paths from variables that might contain slashes, use
-:meth:`~labapi.util.path.NotebookPath.escape` to safely prepare the segments:
+:meth:`~labapi.util.path.NotebookPath.escape` to escape the segments:
 
 .. code-block:: python
 
@@ -104,13 +102,12 @@ segment string:
 
 .. code-block:: python
 
-    print(NotebookPath.unescape(r"Results\/Final")) # "Results / Final"
+    print(NotebookPath.unescape(r"Results\/Final")) # "Results/Final"
 
 .. note::
-   To inspect duplicate child names under a container, use explicit indexing
-   on that container (for example, ``container[Index.Name: "Results"]``)
-   to retrieve all matches; then use ``Index.Id`` to select exactly one
-   (see :ref:`index_access`).
+   To list children with the same name, call
+   ``container[Index.Name: "Results"]``; then use ``Index.Id`` to select one
+   match (see :ref:`index_access`).
 
 .. warning::
    Nodes with the literal name ``".."`` cannot be accessed via ``traverse``,
@@ -119,13 +116,13 @@ segment string:
 Enumerating Descendants
 -----------------------
 
-The enumeration methods return relative path strings for all descendants, up to a specified depth.
-This is useful for listing or searching the tree without fetching every node individually.
+The enumeration methods return relative path strings for descendants through the requested depth,
+which lets you list or search tree paths without traversing each path separately.
 
 .. code-block:: python
 
-    # All descendants (directories and pages), depth 1 (default)
-    notebook.enumerate_all()
+    # All descendants (directories and pages) through depth 2
+    notebook.enumerate_all(depth=2)
     # e.g. ["Experiments", "Experiments/2024", "Protocols"]
 
     # Only directories
@@ -134,8 +131,8 @@ This is useful for listing or searching the tree without fetching every node ind
     # Only pages
     notebook.enumerate_pages(depth=2)
 
-``depth`` defaults to ``1`` (immediate children only). To fetch the full tree you can increase
-it, but be aware that this makes one API request per directory level visited.
+``depth`` defaults to ``1`` (immediate children only). Increase ``depth`` to include more
+levels; each directory visited adds one API request.
 
 .. code-block:: python
 
@@ -145,6 +142,11 @@ it, but be aware that this makes one API request per directory level visited.
     for path in all_paths:
         node = notebook.traverse(path)
         print(path, "->", node.id)
+
+.. note::
+   Use :meth:`~labapi.tree.mixins.AbstractTreeContainer.enumerate_nodes` to get
+   ``(path, node)`` pairs directly instead of re-traversing, since first-match
+   name lookup can pick the wrong node when sibling names repeat.
 
 Creating Nodes with Paths
 -------------------------
@@ -161,8 +163,9 @@ automatically.
     # Create a page at a nested path; intermediate directories are created as needed
     page = notebook.create(NotebookPage, "Experiments/2024/Results", parents=True)
 
-    # Without parents=True, a ValueError is raised if an intermediate directory is missing
-    page = notebook.create(NotebookPage, "Experiments/2024/Results")  # raises if missing
+    # Without parents=True, create() raises ValueError for any multi-segment path,
+    # even when the intermediate directories already exist
+    page = notebook.create(NotebookPage, "Experiments/2024/Results")  # raises ValueError
 
 See :ref:`creating_pages` for details on the ``if_exists`` parameter and other creation options.
 
@@ -203,8 +206,8 @@ with:
 When to Use Them
 ~~~~~~~~~~~~~~~~
 
-Use ``dir()`` and ``page()`` when you want concise, idempotent setup code.
-They are especially useful in scripts that may run repeatedly.
+Use ``dir()`` and ``page()`` when missing directories or pages should be
+created and existing matches should be returned.
 
 .. code-block:: python
 
@@ -212,12 +215,8 @@ They are especially useful in scripts that may run repeatedly.
     notebook.dir("Experiments/2024").page("Results")
     notebook.page("Experiments/2024/Raw Data")
 
-Because both methods retain existing nodes, calling them again for the same
-path returns the existing directory/page instead of creating a duplicate.
-
-They can also be used for navigation when you expect the path to already
-exist: the same call either returns the existing node or creates it if
-missing.
+For read-only navigation, use ``traverse()``. Use ``dir()`` or ``page()``
+only when creating a missing node is acceptable.
 
 .. code-block:: python
 
@@ -230,9 +229,8 @@ missing.
 The NotebookPath Class
 ----------------------
 
-:class:`~labapi.util.path.NotebookPath` is a structured path object that can be constructed from
-nodes or strings, combined with ``/``, and converted back to strings. It is used internally by
-``traverse`` and ``create``, but is also available for your own path logic.
+:class:`~labapi.util.path.NotebookPath` represents parsed notebook paths. Use it to compose,
+resolve, compare, or stringify paths before calling ``traverse()`` or ``create()``.
 
 **Constructing a path from a node:**
 
@@ -243,7 +241,7 @@ nodes or strings, combined with ``/``, and converted back to strings. It is used
     path = NotebookPath(folder)
     print(path)           # /Experiments/2024
     print(path.name)      # 2024  (last segment)
-    print(path.parts)     # ['Experiments']  (all but last)
+    print(path.parts)     # ('Experiments',)  (all but last)
     print(path.is_absolute())  # True
 
 **Constructing from a string:**

@@ -173,6 +173,18 @@ def _make_attachment_entry(
     return entry
 
 
+def _make_failing_attachment_entry(entry_id: str) -> AttachmentEntry:
+    """Create an attachment entry whose content retrieval raises."""
+    entry = AttachmentEntry(entry_id, "caption", cast(User, object()))
+
+    def get_attachment(use_tempfile: bool = False) -> Attachment:
+        del use_tempfile
+        raise RuntimeError("content unavailable")
+
+    entry.get_attachment = get_attachment
+    return entry
+
+
 def test_cli_module_import_has_no_side_effects():
     """Test importing the CLI module does not run authentication."""
     parser = json_sync.build_parser()
@@ -338,6 +350,38 @@ def test_download_json_files_reports_duplicate_basenames_without_overwriting(tmp
     # The first payload is preserved, not overwritten by the second.
     assert json.loads((tmp_path / "same.json").read_text(encoding="utf-8")) == {
         "value": 1
+    }
+
+
+def test_download_json_files_records_failure_and_continues(tmp_path):
+    """A failed attachment retrieval is recorded per-entry; later entries still process."""
+    failing_entry = _make_failing_attachment_entry("bad-entry")
+    good_entry = _make_attachment_entry(
+        "good-entry",
+        "results.json",
+        "application/json",
+        b'{"score": 42}',
+    )
+    entries = _RecordingEntries([failing_entry, good_entry])
+    page = _PageDouble(entries)
+    notebook = _RecordingContainer(traverse_result=_PageNode(page))
+    user = _UserDouble(notebook)
+
+    results = json_sync.download_json_files(
+        user,
+        notebook="My Notebook",
+        page="Results/Page",
+        folder=tmp_path,
+    )
+
+    assert len(results) == 2
+    assert results[0].name == "bad-entry"
+    assert results[0].success is False
+    assert results[0].error == "content unavailable"
+    assert results[1].name == "results.json"
+    assert results[1].success is True
+    assert json.loads((tmp_path / "results.json").read_text(encoding="utf-8")) == {
+        "score": 42
     }
 
 

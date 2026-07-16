@@ -1,9 +1,7 @@
 """LabArchives User Module.
 
 This module defines the :class:`~labapi.user.User` class, which represents an
-authenticated user session with the LabArchives API. It provides methods for
-interacting with the API on behalf of the user, managing notebooks, and
-accessing user-specific information.
+authenticated user session with the LabArchives API.
 """
 
 from __future__ import annotations
@@ -52,26 +50,17 @@ class User:
 
     @property
     def id(self) -> str:
-        """The unique ID of the user.
-
-        :returns: The user's ID.
-        """
+        """The unique ID of the user."""
         return self._id
 
     @property
     def email(self) -> str:
-        """The email address of the user.
-
-        :returns: The user's email.
-        """
+        """The email address of the user."""
         return self._email
 
     @property
     def client(self) -> Client:
-        """The :class:`~labapi.client.Client` instance associated with this user session.
-
-        :returns: The client instance.
-        """
+        """The :class:`~labapi.client.Client` instance associated with this user session."""
         return self._client
 
     def api_get(self, api_method_uri: str | Sequence[str], **kwargs: Any):
@@ -121,8 +110,6 @@ class User:
     def get_max_upload_size(self) -> int:
         """Return the maximum upload size for this user in bytes.
 
-        The unit of the returned value is bytes.
-
         :returns: The maximum upload size in bytes.
         :raises RuntimeError: If the underlying client session has been closed.
         :raises AuthenticationError: If LabArchives rejects the request due to
@@ -139,7 +126,7 @@ class User:
 
     @property
     def notebooks(self) -> Notebooks:
-        """Provides access to the user's notebooks.
+        """The user's notebooks.
 
         :returns: A :class:`~labapi.tree.collection.Notebooks` object managing the user's notebooks.
         """
