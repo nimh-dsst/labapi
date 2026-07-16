@@ -120,8 +120,8 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
         # NOTE: this implicitly invalidates all previous Attachments
         # NOTE: if every time content is called we give a new copy anyways that's fine
         #       (see get_attachment())
-        if value._backing.seekable():  # pyright: ignore[reportPrivateUsage]
-            value._backing.seek(0)  # pyright: ignore[reportPrivateUsage]
+        if value.seekable():
+            value.seek(0)
 
         self._user.api_post(
             "entries/update_attachment",
