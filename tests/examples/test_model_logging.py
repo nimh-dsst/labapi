@@ -107,3 +107,18 @@ def test_log_escapes_commit_and_tags():
     assert "&lt;b&gt;x&lt;/b&gt;" in commit_html
     assert "<img" not in tags_html
     assert "&lt;img" in tags_html
+
+
+def test_log_success_message_is_ascii_safe(capsys):
+    """log() output must be printable on a non-UTF-8 (e.g. cp1252) console."""
+    entries = _EntriesDouble()
+    user = _UserDouble(_DirDouble(_PageDouble(entries)))
+    logger = model_logger.ModelLogger("My Research", cast(User, user))
+
+    logger.log(tags=[], metrics={}, results=b"", figures=[], commit="abc123")
+
+    out = capsys.readouterr().out
+    assert "Log complete!" in out
+    # Would raise UnicodeEncodeError if any character (e.g. a checkmark) is not
+    # encodable in the default Windows console encoding.
+    out.encode("cp1252")

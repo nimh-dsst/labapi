@@ -122,7 +122,7 @@ class ModelLogger:
             )
             entries.create(AttachmentEntry, fig_attachment)
 
-        print("✓ Log complete!")
+        print("Log complete!")
 
 
 def main() -> None:
