@@ -285,6 +285,32 @@ class TestTreeMixinsIntegration:
         _ = client.pop_api_call()  # update_node for name
         _ = client.pop_api_call()  # update_node for move
 
+    def test_delete_api_deleted_items_rejected_before_rename(
+        self, client, notebook_tree: Notebook
+    ):
+        """Deleting the 'API Deleted Items' directory is rejected before any mutation."""
+        client.api_response = client.tree_node_response("deleted-dir")
+        trash = notebook_tree.dir("API Deleted Items")
+        client.clear_api_calls()
+        original_name = trash.name
+
+        with pytest.raises(ValueError, match="web interface"):
+            trash.delete()
+
+        assert trash.name == original_name
+        assert client.api_calls == ()
+
+    def test_contains(self, notebook_tree: Notebook):
+        """Test __contains__ handles strings and indexed slices properly."""
+        assert "Test Folder A" in notebook_tree
+        assert "Missing Folder" not in notebook_tree
+
+        assert slice(Index.Id, "dir-1") in notebook_tree
+        assert slice(Index.Id, "missing-id") not in notebook_tree
+
+        assert slice(Index.Name, "Test Folder A") in notebook_tree
+        assert slice(Index.Name, "Missing Folder") not in notebook_tree
+
     def test_mapping_methods(self, notebook_tree: Notebook):
         """Test keys(), values(), and items() on a container."""
         keys = notebook_tree.keys()
@@ -403,6 +429,35 @@ class TestTreeMixinsIntegration:
             path == "Test Folder A/Dir1 Test Page A" and node.id == "page-1-1"
             for path, node in nodes
         )
+
+    def test_enumeration_escapes_separator_names_for_traversal(
+        self, notebook_tree: Notebook
+    ):
+        """Test enumerated paths with separator names round-trip through traverse."""
+        slash_dir = NotebookDirectory(
+            "slash-dir",
+            "Reports/2024",
+            notebook_tree,
+            notebook_tree,
+            notebook_tree.user,
+        )
+        slash_page = NotebookPage(
+            "slash-page",
+            r"Summary\Final",
+            notebook_tree,
+            slash_dir,
+            notebook_tree.user,
+        )
+        slash_dir._children.append(slash_page)  # pyright: ignore[reportPrivateUsage]
+        slash_dir._populated = True  # pyright: ignore[reportPrivateUsage]
+        notebook_tree._children.append(slash_dir)  # pyright: ignore[reportPrivateUsage]
+
+        nodes = notebook_tree.enumerate_nodes(depth=2)
+
+        assert (r"Reports\/2024", slash_dir) in nodes
+        assert (r"Reports\/2024/Summary\\Final", slash_page) in nodes
+        for path, node in nodes:
+            assert notebook_tree.traverse(path) is node
 
     def test_enumeration_handles_same_name_page_and_directory(
         self, notebook_tree: Notebook

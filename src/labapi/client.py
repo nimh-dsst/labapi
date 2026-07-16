@@ -1,7 +1,7 @@
 """LabArchives API Client.
 
 This module provides the core client for interacting with the LabArchives API,
-handling authentication, request signing, and various API call methods.
+handling authentication, request signing, and API calls.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from base64 import b64encode
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import suppress
 from datetime import datetime, timedelta
-from http.server import SimpleHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler
 from operator import itemgetter
 from secrets import token_urlsafe
 from socketserver import TCPServer
@@ -45,7 +45,7 @@ _AUTH_ERROR_CODES: frozenset[int] = frozenset(
 
 _DEFAULT_AUTH_CALLBACK_HOST = "127.0.0.1"
 _DEFAULT_AUTH_CALLBACK_PORT = 8089
-_DEFAULT_AUTH_CALLBACK_PATH = "/"
+
 _DEFAULT_AUTH_CALLBACK_TIMEOUT = 300.0
 
 
@@ -104,9 +104,9 @@ class StreamingResponse:
 class _313HTTPAdapter(HTTPAdapter):
     """Custom HTTP adapter that disables strict X.509 certificate verification.
 
-    This adapter is used to work around certain SSL certificate validation issues
-    by disabling the VERIFY_X509_STRICT flag. This allows the client to connect
-    to servers with certificates that might not pass strict validation.
+    This adapter disables the VERIFY_X509_STRICT flag. This allows the client
+    to connect to servers with certificates that might not pass strict
+    validation.
 
     .. warning::
        This reduces security by relaxing certificate validation. Use only when
@@ -115,9 +115,6 @@ class _313HTTPAdapter(HTTPAdapter):
 
     def init_poolmanager(self, *args: Any, **kwargs: Any):
         """Initialize the connection pool manager with a custom SSL context.
-
-        This method overrides the default pool manager initialization to inject
-        a custom SSL context that disables strict X.509 verification.
 
         :param args: Positional arguments to pass to the parent init_poolmanager.
         :param kwargs: Keyword arguments to pass to the parent init_poolmanager.
@@ -128,6 +125,18 @@ class _313HTTPAdapter(HTTPAdapter):
         super().init_poolmanager(*args, **kwargs, ssl_context=context)  # pyright: ignore[reportUnknownMemberType]
 
 
+def _close_auth_driver(driver: Any) -> None:
+    """Close an auth browser driver without masking authentication results."""
+    try:
+        driver.quit()
+    except Exception as exc:
+        warnings.warn(
+            f"Failed to close authentication browser driver: {exc}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+
+
 class _AuthResponseCollector:
     """Context manager for binding and waiting on a loopback auth callback."""
 
@@ -136,13 +145,15 @@ class _AuthResponseCollector:
         client: Client,
         *,
         port: int = _DEFAULT_AUTH_CALLBACK_PORT,
-        callback_path: str = _DEFAULT_AUTH_CALLBACK_PATH,
+        callback_path: str | None = None,
         timeout: float | None = _DEFAULT_AUTH_CALLBACK_TIMEOUT,
     ):
         """Initialize a loopback auth callback collector."""
         self._client = client
         self._port = port
-        self._callback_path = callback_path
+        self._callback_path = callback_path or f"/auth/{token_urlsafe(24)}/"
+        if timeout is not None and timeout <= 0:
+            raise ValueError("timeout must be positive or None")
         self._timeout = timeout
         self._error: str | None = None
         self._email: str | None = None
@@ -154,14 +165,13 @@ class _AuthResponseCollector:
         collector = self
         callback_path = self._callback_path
 
-        class AuthRequestHandler(SimpleHTTPRequestHandler):
+        class AuthRequestHandler(BaseHTTPRequestHandler):
             def _write_response(self, status_code: int, message: str) -> None:
                 self.send_response(status_code)
-                self.send_header("Content-type", "text/html")
+                self.send_header("Content-type", "text/plain")
                 self.end_headers()
                 self.wfile.write(message.encode("utf-8"))
 
-            @override
             def do_GET(self) -> None:
                 _scheme, _netloc, path, querystring, _fragment = urlsplit(self.path)
 
@@ -224,7 +234,16 @@ class _AuthResponseCollector:
         deadline = None if self._timeout is None else monotonic() + self._timeout
 
         while True:
-            self._httpd.timeout = deadline if deadline is None else min(deadline, 0.5)
+            if deadline is None:
+                self._httpd.timeout = None
+            else:
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    raise AuthenticationError(
+                        "Timed out waiting for the authentication callback"
+                    )
+                self._httpd.timeout = min(remaining, 0.5)
+
             self._httpd.handle_request()
 
             if self._error is not None:
@@ -232,16 +251,6 @@ class _AuthResponseCollector:
 
             if self._auth_code and self._email:
                 return self._client.login(self._email, self._auth_code)
-
-            if deadline is not None:
-                remaining = deadline - monotonic()
-                if remaining <= 0:
-                    raise AuthenticationError(
-                        "Timed out waiting for the authentication callback"
-                    )
-                self._httpd.timeout = min(remaining, 0.5)
-            else:
-                self._httpd.timeout = None
 
 
 class Client:
@@ -259,6 +268,7 @@ class Client:
         akpass: bytes | str | None = None,
         *,
         strict_cert: bool = True,
+        timeout: float | tuple[float, float] | None = 60.0,
     ):
         """Initialize a LabArchives API client.
 
@@ -279,6 +289,9 @@ class Client:
                            If False, disables the VERIFY_X509_STRICT flag to allow connections
                            to servers with certificates that may not pass strict validation.
                            Defaults to True. **Warning:** Setting this to False reduces security.
+        :param timeout: How many seconds to wait for the server to send data before giving up.
+                        Can be a float, a (connect timeout, read timeout) tuple, or None to
+                        wait indefinitely. Defaults to 60.0 seconds.
         """
         super().__init__()
 
@@ -305,12 +318,20 @@ class Client:
                 "'https://api.labarchives.com'."
             )
 
+        if parsed_base_url.query:
+            warnings.warn(
+                f"Query parameters in base URL will be ignored: ?{parsed_base_url.query}",
+                UserWarning,
+                stacklevel=2,
+            )
+
         self._base_url = normalized_base_url
         self._akid = akid
         self._hmac = HMAC(
             bytes(akpass, "utf8") if isinstance(akpass, str) else akpass, SHA512()
         )
         self.session = Session()
+        self.timeout = timeout
         self._closed = False
         if not strict_cert:
             self.session.mount("https://", _313HTTPAdapter())
@@ -318,9 +339,8 @@ class Client:
     def close(self) -> None:
         """Close the underlying requests session.
 
-        Once closed, this client should not be used for further API requests.
-        Any :class:`~labapi.user.User` objects derived from this client should
-        also be treated as no longer usable for API calls.
+        Once closed, API calls through this client — including via derived
+        :class:`~labapi.user.User` objects — raise :class:`RuntimeError`.
         """
         if not self._closed:
             self.session.close()
@@ -419,7 +439,7 @@ class Client:
             error_code: int | None = None
             error_desc: str | None = None
             try:
-                tree = fromstring(bytes(response.text, encoding="utf-8"))
+                tree = fromstring(response.content)
                 code_text = tree.findtext("./error-code")
                 if code_text is not None:
                     error_code = int(code_text)
@@ -433,9 +453,16 @@ class Client:
                     raise AuthenticationError(message, error_code)
                 raise ApiError(message, error_code)
 
+            parts = urlsplit(response.url)
+            query = dict(parse_qsl(parts.query, keep_blank_values=True))
+            for key in {"akid", "sig", "expires", "password", "login_or_email"}:
+                if key in query:
+                    query[key] = "***"
+            clean_url = urlunsplit(parts._replace(query=urlencode(query)))
+
             raise ApiError(
                 f"API request failed with status code {response.status_code} "
-                f"for URL {response.url}: {response.text}"
+                f"for URL {clean_url}: {response.text}"
             )
 
     def stream_api_get(
@@ -458,7 +485,9 @@ class Client:
         """
         self._ensure_open()
         request = self.session.get(
-            self.construct_url(api_method_uri, query=kwargs), stream=True
+            self.construct_url(api_method_uri, query=kwargs),
+            stream=True,
+            timeout=self.timeout,
         )
         try:
             Client._handle_request_status(request)
@@ -492,7 +521,10 @@ class Client:
         """
         self._ensure_open()
         request = self.session.post(
-            self.construct_url(api_method_uri, query=kwargs), data=body, stream=True
+            self.construct_url(api_method_uri, query=kwargs),
+            data=body,
+            stream=True,
+            timeout=self.timeout,
         )
         try:
             Client._handle_request_status(request)
@@ -521,7 +553,9 @@ class Client:
         :raises ApiError: If LabArchives returns any other non-success response.
         """
         self._ensure_open()
-        request = self.session.get(self.construct_url(api_method_uri, query=kwargs))
+        request = self.session.get(
+            self.construct_url(api_method_uri, query=kwargs), timeout=self.timeout
+        )
         Client._handle_request_status(request)
 
         return request
@@ -550,7 +584,9 @@ class Client:
         """
         self._ensure_open()
         request = self.session.post(
-            self.construct_url(api_method_uri, query=kwargs), data=body
+            self.construct_url(api_method_uri, query=kwargs),
+            data=body,
+            timeout=self.timeout,
         )
         Client._handle_request_status(request)
 
@@ -642,25 +678,34 @@ class Client:
             timeout=timeout,
         ) as auth_response_collector:
             try:
-                match detect_default_browser():
-                    case "chrome":
-                        import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                try:
+                    match detect_default_browser():
+                        case "chrome":
+                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
 
-                        driver = webdriver.Chrome(options=webdriver.ChromeOptions())
-                        print("Opening Chrome for authentication...")
-                    case "firefox":
-                        import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                            driver = webdriver.Chrome(options=webdriver.ChromeOptions())
+                            print("Opening Chrome for authentication...")
+                        case "firefox":
+                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
 
-                        driver = webdriver.Firefox(options=webdriver.FirefoxOptions())
-                        print("Opening Firefox for authentication...")
-                    case "edge" | "msedge":
-                        import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                            driver = webdriver.Firefox(
+                                options=webdriver.FirefoxOptions()
+                            )
+                            print("Opening Firefox for authentication...")
+                        case "edge" | "msedge":
+                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
 
-                        driver = webdriver.Edge(options=webdriver.EdgeOptions())
-                        print("Opening Edge for authentication...")
-                    case "terminal":
-                        print("Open authentication URL in your browser:")
-                        print(auth_url)
+                            driver = webdriver.Edge(options=webdriver.EdgeOptions())
+                            print("Opening Edge for authentication...")
+                        case "terminal":
+                            print("Open authentication URL in your browser:")
+                            print(auth_url)
+                except ImportError as e:
+                    raise ImportError(
+                        "The builtin-auth dependencies are required for automatic browser-based authentication. "
+                        "Install with: pip install labapi[builtin-auth]\n"
+                        "Alternatively, use manual authentication with LA_AUTH_BROWSER=terminal."
+                    ) from e
 
                 if driver is not None:
                     driver.get(auth_url)
@@ -669,21 +714,15 @@ class Client:
                     )
 
                 return auth_response_collector.wait()
-            except ImportError as e:
-                raise ImportError(
-                    "The builtin-auth dependencies are required for automatic browser-based authentication. "
-                    "Install with: pip install labapi[builtin-auth]\n"
-                    "Alternatively, use manual authentication with LA_AUTH_BROWSER=terminal."
-                ) from e
             finally:
                 if driver is not None:
-                    driver.quit()
+                    _close_auth_driver(driver)
 
     def collect_auth_response(
         self,
         *,
         port: int = _DEFAULT_AUTH_CALLBACK_PORT,
-        callback_path: str = _DEFAULT_AUTH_CALLBACK_PATH,
+        callback_path: str | None = None,
         timeout: float | None = _DEFAULT_AUTH_CALLBACK_TIMEOUT,
     ) -> _AuthResponseCollector:
         """Return a context manager for collecting a loopback auth callback.
@@ -699,7 +738,7 @@ class Client:
         :returns: An enterable collector with a ``wait()`` method for the authentication callback.
         """
         self._ensure_open()
-        if not callback_path.startswith("/"):
+        if callback_path is not None and not callback_path.startswith("/"):
             callback_path = f"/{callback_path}"
 
         return _AuthResponseCollector(
@@ -737,7 +776,8 @@ class Client:
                                  actual method name differs from the URI path.
         :returns: The fully constructed and signed URL.
         :raises ValueError: If ``api_method_uri`` does not contain any non-empty
-                            path segments after normalization.
+                            path segments after normalization, or if
+                            ``expires_in`` is explicitly expired.
         """
         if isinstance(api_method_uri, str):
             api_method_uri = api_method_uri.split("/")
@@ -767,17 +807,18 @@ class Client:
 
         path += "/".join(method_parts)
 
-        url = urlunsplit((scheme, netloc, path, urlencode(query), _f))
+        # LabArchives API does not use fragments in API requests
+        url = urlunsplit((scheme, netloc, path, urlencode(query), ""))
 
-        if expires_in:
+        if expires_in is not None:
             return self._sign_url(url, api_method, expires_in)
         return self._sign_url(url, api_method)
 
     def _signature(self, api_method: str, expiry: int) -> str:
         """Generate the HMAC-SHA512 signature for a LabArchives API request.
 
-        This private method is used internally by `_sign_url` to create the
-        cryptographic signature based on the Access Key ID, API method, and expiry.
+        Called by `_sign_url`; the signature covers the Access Key ID, API
+        method, and expiry.
 
         :param api_method: The specific API method name used in the signature calculation.
         :param expiry: The expiration timestamp (in milliseconds since epoch) for the request.
@@ -799,8 +840,8 @@ class Client:
     ) -> str:
         """Sign a URL and append the LabArchives auth query parameters.
 
-        This private method appends the Access Key ID, expiration timestamp, and
-        the generated signature to the URL's query string.
+        Appends the Access Key ID, expiration timestamp, and signature to the
+        URL's query string.
 
         :param url: The unsigned URL to be signed.
         :param api_method: The specific API method name used for signature generation.
@@ -808,14 +849,19 @@ class Client:
                            `timedelta` object or a specific `datetime` object. Defaults
                            to 60 seconds from the current time.
         :returns: The fully signed URL.
+        :raises ValueError: If ``expires_in`` is not a future expiry.
         """
         scheme, netloc, path, querystring, _f = urlsplit(url)
         query = dict(parse_qsl(querystring))
 
         if isinstance(expires_in, timedelta):
+            if expires_in <= timedelta(0):
+                raise ValueError("expires_in must be a positive duration")
             expiry = round((datetime.now() + expires_in).timestamp() * 1000)
         else:
             expiry = round(expires_in.timestamp() * 1000)
+            if expiry <= round(datetime.now().timestamp() * 1000):
+                raise ValueError("expires_in must be a future datetime")
         sig = self._signature(api_method, expiry)
 
         query["akid"] = self._akid

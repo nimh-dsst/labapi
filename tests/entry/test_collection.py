@@ -15,6 +15,9 @@ from labapi.entry.entries import (
     HeaderEntry,
     PlainTextEntry,
     TextEntry,
+    UnimplementedEntry,
+    UnknownEntry,
+    WidgetEntry,
 )
 from labapi.user import User
 
@@ -131,6 +134,21 @@ class TestEntriesUnit:
 
         mock_user.api_post.assert_not_called()
 
+    @pytest.mark.parametrize("cls", [UnknownEntry, UnimplementedEntry, WidgetEntry])
+    def test_entries_create_rejects_unsupported_wrappers(self, cls: type[Any]):
+        """Test unsupported fallback entry wrappers are rejected before API calls."""
+        mock_user = Mock(spec=User)
+        mock_page = Mock()
+        mock_page.id = "test_page_id"
+        mock_page.root = Mock()
+        mock_page.root.id = "test_notebook_id"
+        entries = Entries([], mock_user, mock_page)
+
+        with pytest.raises(TypeError, match=f"{cls.__name__} cannot be created"):
+            entries.create(cast(Any, cls), "payload")
+
+        mock_user.api_post.assert_not_called()
+
     def test_entries_iter_snapshot_stable_after_mutation(self):
         """Entries iteration should remain stable after later mutations."""
         mock_user = Mock(spec=User)
@@ -168,6 +186,37 @@ class TestEntriesUnit:
         assert next(iterator).id == "eid_1"
         with pytest.raises(StopIteration):
             next(iterator)
+
+    def test_create_json_entry_raises_partial_error_on_text_failure(self):
+        """Test create_json_entry raises PartialEntryCreateError if text entry fails."""
+        from lxml.etree import fromstring
+
+        from labapi.exceptions import PartialEntryCreateError
+
+        mock_user = Mock(spec=User)
+        mock_page = Mock()
+        mock_page.id = "pid"
+        mock_page.root.id = "nbid"
+
+        def mock_api_post(method, *_args, **_kwargs):
+            if method == "entries/add_attachment":
+                return fromstring(
+                    b"<response><entry><eid>att-1</eid></entry></response>"
+                )
+            if method == "entries/add_entry":
+                raise RuntimeError("API failure")
+            raise AssertionError(f"Unexpected API call: {method}")
+
+        mock_user.api_post.side_effect = mock_api_post
+
+        entries = Entries([], mock_user, mock_page)
+
+        with pytest.raises(PartialEntryCreateError) as exc_info:
+            entries.create_json_entry({"data": "val"}, filename="data.json")
+
+        assert "Failed to create companion text entry" in str(exc_info.value)
+        assert exc_info.value.partial_entry.id == "att-1"
+        assert exc_info.value.partial_entry in entries
 
 
 class TestEntriesIntegration:
@@ -287,6 +336,32 @@ class TestEntriesIntegration:
 
         entries.create(AttachmentEntry, attachment)
 
+        assert backing.tell() == 0
+        _ = client.pop_api_call()
+
+    def test_entries_create_attachment_stream_without_callable_seekable(
+        self, client, user: User, mock_page
+    ):
+        """Create must not fail on streams whose seekable attribute is not callable."""
+        entries = Entries([], user, mock_page)
+
+        client.api_response = client.entries_response(
+            client.entry_xml("noseek_attachment_eid")
+        )
+
+        stream_cls = type("Stream", (BytesIO,), {"seekable": None})
+        backing = stream_cls(b"File content")
+        attachment = Attachment(
+            backing=backing,
+            mime_type="text/plain",
+            filename="test.txt",
+            caption="Test file",
+        )
+        attachment.read(4)
+
+        entry = entries.create(AttachmentEntry, attachment)
+
+        assert isinstance(entry, AttachmentEntry)
         assert backing.tell() == 0
         _ = client.pop_api_call()
 

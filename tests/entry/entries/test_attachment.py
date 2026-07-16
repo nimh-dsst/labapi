@@ -138,6 +138,32 @@ class TestAttachmentEntryIntegration:
         assert backing.tell() == 0
         _ = client.pop_api_call()
 
+    def test_attachment_entry_content_setter_stream_without_callable_seekable(
+        self, client, user: User
+    ):
+        """Update must not fail on streams whose seekable attribute is not callable."""
+        entry = AttachmentEntry("eid_att", "Old caption", user)
+
+        stream_cls = type("Stream", (BytesIO,), {"seekable": None})
+        backing = stream_cls(b"New file content")
+        new_attachment = Attachment(
+            backing=backing,
+            mime_type="text/plain",
+            filename="new_file.txt",
+            caption="New caption",
+        )
+        new_attachment.read(4)
+
+        client.api_response = client.xml(
+            "entry",
+            client.xml("success", True),
+        )
+
+        entry.content = new_attachment
+
+        assert backing.tell() == 0
+        _ = client.pop_api_call()
+
     def test_attachment_entry_get_attachment_caching(self, client, user: User):
         """Test AttachmentEntry.get_attachment reuses download cache without sharing handles."""
         entry = AttachmentEntry("eid_att", "Caption", user)
@@ -169,3 +195,23 @@ class TestAttachmentEntryIntegration:
         attachment3 = entry.get_attachment()
         assert client.stream_api_get.call_count == 1
         assert attachment3.read() == b"Content"
+
+    def test_get_attachment_tempfile_copies_in_chunks(self, client, user: User):
+        """get_attachment(use_tempfile=True) must not read the full payload at once.
+
+        Regression for #215: the old code called self._filedata.read() with no
+        size, materializing the entire cached payload as one bytes object.
+        """
+        entry = AttachmentEntry("eid_att", "Caption", user)
+
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Disposition": 'attachment; filename="test.txt"',
+        }
+        mock_response.iter_content.return_value = [b"Chunked content"]
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        attachment = entry.get_attachment(use_tempfile=True)
+        assert attachment.read() == b"Chunked content"
+        attachment.close()

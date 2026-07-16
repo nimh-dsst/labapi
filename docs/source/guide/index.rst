@@ -4,7 +4,7 @@ User Guide
 ==========
 
 The guide explains the behavior behind the quick-start examples and highlights
-the caveats that matter in real integrations. Start with the core usage pages,
+the known caveats. Start with the core usage pages,
 then move into the design notes if you are extending or contributing to
 ``labapi``.
 

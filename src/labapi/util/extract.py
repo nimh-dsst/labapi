@@ -1,8 +1,7 @@
-"""XML Extraction Utilities Module.
+"""Utilities for extracting data from ``lxml.etree.Element`` objects.
 
-This module provides utility functions for extracting data from `lxml.etree.Element`
-objects, including flattening dictionaries for easier processing, converting
-strings to booleans, and a general-purpose XML extraction function.
+Includes flattening nested extractor dictionaries, converting strings to
+booleans, and a general-purpose XML extraction function.
 """
 
 from __future__ import annotations
@@ -118,8 +117,9 @@ def extract_etree(_etree: Element, schema: EtreeExtractorDict) -> dict[str, Any]
         try:
             items[leaf] = mapper(value)
         except ValueError as err:
+            mapper_name = getattr(mapper, "__name__", repr(mapper))
             raise ExtractionError(
-                f"Could not map value {value!r} with {mapper.__name__} for "
+                f"Could not map value {value!r} with {mapper_name} for "
                 f"{message_path!r} while parsing element at {etree_path}"
             ) from err
 

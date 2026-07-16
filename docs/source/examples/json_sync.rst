@@ -3,19 +3,14 @@
 JSON Folder Sync
 ================
 
-This example syncs JSON content between a local folder and a LabArchives page.
-Use it when you want a simple batch workflow for moving structured JSON files
-in or out of a notebook page.
+This example uploads local ``*.json`` files to a LabArchives page and downloads
+JSON attachment entries back to disk.
 
 When to Use It
 --------------
 
-This is useful for:
-
-- Backing up structured data from LabArchives to your local machine.
-- Uploading batches of JSON data files to a LabArchives page.
-- Syncing experimental data stored as JSON between local files and LabArchives.
-- Archiving API responses or other structured datasets.
+Use it to upload batches of JSON files, export JSON attachments for backup, or
+archive JSON API responses.
 
 Requirements
 ------------
@@ -60,17 +55,18 @@ How It Works
 
 - JSON files are uploaded with
   :meth:`~labapi.entry.collection.Entries.create_json_entry`.
-- ``examples/json_sync/json_sync.py`` contains importable upload and download
-  functions plus a command-line ``main()`` guarded by the usual
-  ``if __name__ == "__main__"`` check.
+- ``examples/json_sync/json_sync.py`` exposes importable upload and download
+  functions and a CLI entry point.
 - Each upload creates a JSON attachment with ``application/json`` MIME type and
   a companion rich-text preview entry.
-- Download mode writes each JSON attachment back to a local ``.json`` file.
+- Download mode writes each JSON attachment back to a local file named after
+  the attachment.
 
 Reusable API
 ------------
 
-When building your own script, import the sync function and call it directly:
+When building your own script, import ``upload_json_files`` and call it
+directly:
 
 .. code-block:: python
 
@@ -96,10 +92,9 @@ Notes and Limitations
 
 - Invalid JSON files are skipped with an error message.
 - The script creates the output folder if it does not exist during download.
-- The reusable functions return a ``FileResult`` for each file they try to sync.
+- The reusable functions return a ``FileResult`` for each JSON file processed,
+  including failures.
 - The CLI handles terminal output and process exit codes.
-- The sample upload command uses the checked-in files under
-  ``examples/json_sync/sample_data``.
 
 Ways to Extend It
 -----------------

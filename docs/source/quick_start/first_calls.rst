@@ -7,6 +7,32 @@ This page shows the credential and authentication patterns used throughout the
 docs. It assumes you already installed a suitable profile from
 :ref:`installation`.
 
+.. _obtaining_api_keys:
+
+Obtain API Keys
+---------------
+
+Every request to the LabArchives API is signed with an Access Key ID
+(``akid``) and Access Password issued by LabArchives. These identify your
+application; the sign-in flows further down this page additionally
+authenticate individual users. There is no self-service portal for API keys —
+they are issued on request:
+
+- If your institution has a LabArchives enterprise license, ask your
+  institution's LabArchives site administrator (or your LabArchives Enterprise
+  Success Team contact) to request API access. Provide the name and email
+  address for each existing LabArchives account that needs API access.
+- Otherwise, contact LabArchives support at
+  `support@labarchives.com <mailto:support@labarchives.com>`_.
+
+When issuing the keys, LabArchives will confirm the API base URL for
+your region (for example, ``https://api.labarchives.com`` for US-hosted
+accounts — the default used throughout these docs).
+
+Treat the Access Password like any other secret: keep it out of version
+control and supply it via a ``.env`` file or environment variables as shown
+below.
+
 Create a Client
 ---------------
 
@@ -95,13 +121,10 @@ API URL, Access Key ID, and Access Password in several ways:
 Sign In
 -------
 
-To interact with the LabArchives API, you need to authenticate. The sections
-below cover the main workflows.
-
 Local Interactive Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The simplest path is
+For local interactive use, call
 :meth:`~labapi.client.Client.default_authenticate`, which lets users running on
 the same machine sign in through a browser.
 
@@ -113,8 +136,8 @@ the same machine sign in through a browser.
        user = client.default_authenticate()
 
 .. note::
-   The local interactive path works best with
-   ``labapi[dotenv,builtin-auth]``. If automatic browser launch is
+   Use ``labapi[dotenv,builtin-auth]`` for ``.env`` loading and automatic
+   browser launch. If automatic browser launch is
    unavailable, ``labapi`` falls back to printing a URL so you can finish the
    login manually.
 
@@ -126,8 +149,8 @@ the same machine sign in through a browser.
 External App Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you cannot use a browser on the same machine, or you want a quick manual
-test path, use an External App authentication code:
+If you cannot use a browser on the same machine, or for a manual login test,
+use an External App authentication code:
 
 1. Log in to your LabArchives account in a web browser.
 2. Click your name in the top-right corner and select
@@ -160,8 +183,7 @@ Recommended flow:
 4. Store any resulting credentials or secrets using your platform's secret
    manager.
 
-For implementation details and operational guidance, see the full
-:ref:`Authentication guide <auth>`.
+For the complete flow, see :ref:`auth`.
 
 Get a Notebook
 --------------
@@ -182,16 +204,14 @@ name or iterate over them:
 Write Entries
 -------------
 
-After you have a notebook, navigate to a page and create entries:
+After you have a notebook, navigate to a page and create entries. Choose the
+entry class by the output you want in LabArchives:
 
-.. tip::
-   Choose the entry type based on what LabArchives should render:
-
-   - :class:`~labapi.entry.entries.text.TextEntry` renders HTML formatting.
-   - :class:`~labapi.entry.entries.text.PlainTextEntry` preserves text
-     literally.
-   - :class:`~labapi.entry.entries.text.HeaderEntry` creates a visible section
-     divider.
+- :class:`~labapi.entry.entries.text.TextEntry` renders HTML formatting.
+- :class:`~labapi.entry.entries.text.PlainTextEntry` preserves text
+  literally.
+- :class:`~labapi.entry.entries.text.HeaderEntry` creates a visible section
+  divider.
 
 .. code-block:: python
 
@@ -208,4 +228,4 @@ Related Pages
 
 - :ref:`auth` for full interactive and server-side authentication flows.
 - :ref:`navigating` for path-based notebook traversal after login.
-- :ref:`entries` for deeper coverage of entry classes and content handling.
+- :ref:`entries` for how entry classes store and update content.

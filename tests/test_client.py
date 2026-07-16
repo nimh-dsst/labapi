@@ -243,16 +243,47 @@ class TestClientUnit:
     def test_client_construct_url_accepts_absolute_datetime_expiry(self):
         """Test construct_url preserves explicit absolute expiration datetimes."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        absolute_expiry = datetime(2026, 4, 1, 12, 5, 0)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0)
+        absolute_expiry = fixed_now + timedelta(minutes=5)
 
-        signed_url = client.construct_url(
-            "users/get_info",
-            {"uid": "123"},
-            expires_in=absolute_expiry,
-        )
+        with patch("labapi.client.datetime") as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            signed_url = client.construct_url(
+                "users/get_info",
+                {"uid": "123"},
+                expires_in=absolute_expiry,
+            )
 
         expires = dict(parse_qsl(urlsplit(signed_url).query))["expires"]
         assert int(expires) == round(absolute_expiry.timestamp() * 1000)
+
+    @pytest.mark.parametrize("expires_in", [timedelta(0), timedelta(seconds=-1)])
+    def test_client_construct_url_rejects_non_positive_duration_expiry(
+        self, expires_in: timedelta
+    ):
+        """Test explicit non-positive duration expiries are rejected."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        with pytest.raises(ValueError, match="positive duration"):
+            client.construct_url(
+                "users/get_info",
+                {"uid": "123"},
+                expires_in=expires_in,
+            )
+
+    def test_client_construct_url_rejects_expired_absolute_datetime(self):
+        """Test explicit expired absolute datetime expiries are rejected."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0)
+
+        with patch("labapi.client.datetime") as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            with pytest.raises(ValueError, match="future datetime"):
+                client.construct_url(
+                    "users/get_info",
+                    {"uid": "123"},
+                    expires_in=fixed_now,
+                )
 
     def test_client_api_get_parses_raw_response_bytes(self):
         """Test Client.api_get parses response.content rather than re-encoded text."""
@@ -349,6 +380,24 @@ class TestClientUnit:
         with pytest.raises(ApiError, match="API request failed with status code 404"):
             Client._handle_request_status(response)
 
+    def test_client_handle_request_status_sanitizes_url(self):
+        """Test Client._handle_request_status sanitizes sensitive query params."""
+        response = Mock(spec=Response)
+        response.status_code = 500
+        response.url = "https://api.test.com/endpoint?akid=secret&password=pass&sig=123&normal=true"
+        response.text = "Internal Error"
+
+        with pytest.raises(ApiError) as exc_info:
+            Client._handle_request_status(response)
+
+        error_msg = str(exc_info.value)
+        assert "akid=%2A%2A%2A" in error_msg
+        assert "password=%2A%2A%2A" in error_msg
+        assert "sig=%2A%2A%2A" in error_msg
+        assert "normal=true" in error_msg
+        assert "=secret" not in error_msg
+        assert "=pass" not in error_msg
+
     def test_raw_api_get_returns_response(self):
         """Test raw_api_get returns the raw response and calls session.get directly."""
         client = Client("https://api.test.com", "test_akid", "test_password")
@@ -361,6 +410,7 @@ class TestClientUnit:
         called_url = client.session.get.call_args.args[0]
         assert "users/get_info" in called_url
         assert "uid=123" in called_url
+        assert client.session.get.call_args.kwargs["timeout"] == 60.0
 
     def test_raw_api_post_returns_response(self):
         """Test raw_api_post returns the raw response and passes the request body."""
@@ -375,6 +425,17 @@ class TestClientUnit:
         called_url = client.session.post.call_args.args[0]
         assert "entries/add_entry" in called_url
         assert client.session.post.call_args.kwargs["data"] == body
+        assert client.session.post.call_args.kwargs["timeout"] == 60.0
+
+    def test_client_custom_timeout_passed_to_requests(self):
+        """Test custom timeout is respected by request methods."""
+        client = Client("https://api.test.com", "akid", "pass", timeout=5.0)
+
+        response = make_response(200, "<xml/>")
+        client.session.get = Mock(return_value=response)
+
+        client.raw_api_get("test")
+        assert client.session.get.call_args.kwargs["timeout"] == 5.0
 
     def test_raw_api_get_raises_api_error_from_xml_error_body(self):
         """Test raw_api_get surfaces LabArchives XML error payloads."""
@@ -392,6 +453,29 @@ class TestClientUnit:
         )
 
         with pytest.raises(ApiError, match=r"\[4999\] Unknown Error"):
+            client.raw_api_get("users/get_info")
+
+    def test_raw_api_get_raises_api_error_with_encoding(self):
+        """Test raw_api_get handles XML error payloads with custom encodings correctly."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        # Build response manually to control the exact byte encoding
+        response = Response()
+        response.status_code = 500
+        response.url = "https://api.test.com"
+        xml_body = (
+            '<?xml version="1.0" encoding="iso-8859-1"?>\n'
+            "<error>"
+            "<error-code>5000</error-code>"
+            "<error-description>Especial café</error-description>"
+            "</error>"
+        )
+        response._content = xml_body.encode("iso-8859-1")
+        response.encoding = "iso-8859-1"
+
+        client.session.get = Mock(return_value=response)
+
+        with pytest.raises(ApiError, match=r"\[5000\] Especial café"):
             client.raw_api_get("users/get_info")
 
     def test_raw_api_get_raises_authentication_error_for_auth_failures(self):
@@ -515,6 +599,36 @@ class TestClientUnit:
             timeout=90.0,
         )
 
+    def test_authenticate_repackages_importerror_from_browser_setup(self):
+        """Test ImportError during browser setup is repackaged with builtin-auth instructions."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        with (
+            patch("labapi.client.detect_default_browser", return_value="chrome"),
+            patch.dict("sys.modules", {"selenium.webdriver": None}),
+            pytest.raises(ImportError, match="builtin-auth dependencies are required"),
+        ):
+            client.default_authenticate()
+
+    def test_authenticate_propagates_importerror_from_wait(self):
+        """Test ImportError from the wait block is NOT repackaged."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        auth_response_collector = MagicMock()
+        auth_response_collector.__enter__.return_value = auth_response_collector
+        auth_response_collector.wait.side_effect = ImportError("Deep unrelated error")
+
+        with (
+            patch("labapi.client.detect_default_browser", return_value="terminal"),
+            patch.object(
+                client, "collect_auth_response", return_value=auth_response_collector
+            ),
+        ):
+            with pytest.raises(ImportError, match="Deep unrelated error") as exc_info:
+                client.default_authenticate()
+
+            assert "builtin-auth dependencies" not in str(exc_info.value)
+
     def test_default_authenticate_does_not_warn_when_terminal_is_explicit(self, capsys):
         """Test no warning is shown when terminal auth is explicitly configured."""
         client = Client("https://api.test.com", "test_akid", "test_password")
@@ -574,6 +688,47 @@ class TestClientUnit:
 
         assert events.index("bind") < events.index("print")
         assert events.index("print") < events.index("wait")
+
+    def test_default_authenticate_warns_when_browser_cleanup_fails(self):
+        """Test browser cleanup failures do not mask successful authentication."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        auth_response_collector = MagicMock()
+        auth_response_collector.__enter__.return_value = auth_response_collector
+        auth_response_collector.wait.return_value = Mock(spec=User)
+        driver = MagicMock()
+        driver.quit.side_effect = RuntimeError("quit failed")
+        webdriver = MagicMock()
+        webdriver.Chrome.return_value = driver
+
+        with (
+            patch.object(
+                client,
+                "generate_auth_url",
+                return_value="https://auth.test/url",
+            ),
+            patch.object(
+                client,
+                "collect_auth_response",
+                return_value=auth_response_collector,
+            ),
+            patch("labapi.client.token_urlsafe", return_value="test-token"),
+            patch("labapi.client.detect_default_browser", return_value="chrome"),
+            patch.dict(
+                "sys.modules",
+                {
+                    "selenium": MagicMock(webdriver=webdriver),
+                    "selenium.webdriver": webdriver,
+                },
+            ),
+            pytest.warns(
+                RuntimeWarning,
+                match="Failed to close authentication browser driver",
+            ),
+        ):
+            result = client.default_authenticate()
+
+        assert result is auth_response_collector.wait.return_value
+        driver.quit.assert_called_once_with()
 
     def test_collect_auth_response_binds_loopback_callback_listener(self):
         """Test auth callback collector binds the expected loopback listener."""
@@ -643,6 +798,39 @@ class TestClientUnit:
         ):
             auth_response_collector.wait()
 
+    @pytest.mark.parametrize("timeout", [0.0, -1.0])
+    def test_collect_auth_response_rejects_non_positive_timeout(self, timeout: float):
+        """Test callback collectors reject non-positive timeout values."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        with pytest.raises(ValueError, match="timeout must be positive"):
+            client.collect_auth_response(timeout=timeout)
+
+    def test_collect_auth_response_sets_timeout_from_remaining_time(self):
+        """Test callback wait uses remaining timeout duration before blocking."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        observed_timeouts: list[float | None] = []
+
+        class FakeTCPServer:
+            def __init__(self, _server_address, _handler_cls):
+                self.timeout: float | None = None
+
+            def handle_request(self):
+                observed_timeouts.append(self.timeout)
+
+            def server_close(self):
+                pass
+
+        with (
+            patch("labapi.client.TCPServer", FakeTCPServer),
+            patch("labapi.client.monotonic", side_effect=[100.0, 100.09, 100.11]),
+            client.collect_auth_response(timeout=0.1) as auth_response_collector,
+            pytest.raises(AuthenticationError, match="Timed out"),
+        ):
+            auth_response_collector.wait()
+
+        assert observed_timeouts == [pytest.approx(0.01)]
+
     def test_collect_auth_response_ignores_invalid_callbacks_until_valid(self):
         """Test auth callback collector ignores stray requests until the expected callback arrives."""
         client = Client("https://api.test.com", "test_akid", "test_password")
@@ -686,6 +874,68 @@ class TestClientUnit:
         assert result["user"] is login.return_value
         login.assert_called_once_with("user@example.com", "good-code")
 
+    def test_collect_auth_response_rejects_head_request(self):
+        """Test auth callback collector rejects HEAD requests with 501."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        port = reserve_local_port()
+        errors: list[BaseException] = []
+
+        def run_collect_auth_response() -> None:
+            try:
+                with client.collect_auth_response(port=port, timeout=1.0) as collector:
+                    collector.wait()
+            except BaseException as exc:
+                errors.append(exc)
+
+        thread = Thread(target=run_collect_auth_response, daemon=True)
+        thread.start()
+        wait_for_local_listener(port)
+
+        connection = HTTPConnection("127.0.0.1", port, timeout=2)
+        try:
+            connection.request("HEAD", "/pyproject.toml")
+            response = connection.getresponse()
+            assert response.status == 501
+            response.read()
+        finally:
+            connection.close()
+
+        thread.join(timeout=2)
+
+    def test_collect_auth_response_returns_text_plain_to_prevent_xss(self):
+        """Test auth callback collector responds with text/plain to prevent XSS."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        login = Mock(return_value=Mock(spec=User))
+        port = reserve_local_port()
+
+        def run_collect_auth_response() -> None:
+            try:
+                with client.collect_auth_response(
+                    port=port,
+                    callback_path="/expected/",
+                    timeout=2.0,
+                ) as auth_response_collector:
+                    auth_response_collector.wait()
+            except BaseException:
+                pass
+
+        with patch.object(client, "login", login):
+            thread = Thread(target=run_collect_auth_response, daemon=True)
+            thread.start()
+            wait_for_local_listener(port)
+
+            connection = HTTPConnection("127.0.0.1", port, timeout=2)
+            connection.request("GET", "/expected/?error=<script>alert('xss')</script>")
+            response = connection.getresponse()
+
+            assert response.status == 200
+            assert response.getheader("Content-Type") == "text/plain"
+            body = response.read().decode("utf-8")
+            assert "<script>alert('xss')</script>" in body
+
+            connection.close()
+            thread.join(timeout=5)
+
     def test_stream_api_get_yields_chunks_and_returns_response(self):
         """Test stream_api_get yields streamed chunks and returns the response."""
         client = Client("https://api.test.com", "test_akid", "test_password")
@@ -701,6 +951,7 @@ class TestClientUnit:
         assert chunks == [b"chunk-1", b"chunk-2"]
         assert stream.response is response
         assert stream.headers == {"Content-Type": "application/octet-stream"}
+        assert client.session.get.call_args.kwargs["timeout"] == 60.0
 
     def test_stream_api_get_raises_api_error_before_yielding_chunks(self):
         """Test stream_api_get raises before yielding when the response is not OK."""
@@ -774,16 +1025,30 @@ class TestClientUnit:
         with client.stream_api_get("attachments/download", eid="123") as stream:
             assert list(stream) == [b"chunk-1"]
             assert stream.response is response
-
         # Closing is idempotent even though both iterator and context manager clean up.
         response.close.assert_called_once()
 
     def test_client_initialization_with_params(self):
-        """Test Client initialization stores parameters correctly."""
-        client = Client("https://custom.api.com", "my_akid", "my_password")
+        """Test Client initializes correctly with explicit parameters."""
+        client = Client("https://test.api/", "test_akid", "test_akpass")
+        assert client._akid == "test_akid"  # pyright: ignore[reportPrivateUsage]
+        assert client._base_url == "https://test.api/"  # pyright: ignore[reportPrivateUsage]
 
-        assert client._base_url == "https://custom.api.com"
-        assert client._akid == "my_akid"
+    def test_client_initialization_warns_on_query_parameters(self):
+        """Test Client warns when initialized with a base_url containing query parameters."""
+        with pytest.warns(
+            UserWarning,
+            match=r"Query parameters in base URL will be ignored: \?drop=me",
+        ):
+            client = Client("https://test.api/api?drop=me", "test_akid", "test_akpass")
+        assert client._base_url == "https://test.api/api?drop=me"  # pyright: ignore[reportPrivateUsage]
+
+    def test_construct_url_drops_fragments(self):
+        """Test construct_url strips fragments from the base URL."""
+        client = Client("https://test.api/api#fragment", "test_akid", "test_akpass")
+        url = client.construct_url("test_method", {"param": "val"})
+        assert "#fragment" not in url
+        assert url.startswith("https://test.api/api/api/test_method?")
 
     def test_client_initialization_rejects_non_http_scheme(self):
         """Test Client initialization rejects unsupported base URL schemes."""

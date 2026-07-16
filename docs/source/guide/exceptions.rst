@@ -3,7 +3,7 @@
 Exception Types
 ===============
 
-``labapi`` exposes a small set of public exception classes at the top level so
+``labapi`` exports its public exception classes at the package top level so
 callers can reliably catch failures by category.
 
 Public Exception Hierarchy
@@ -19,7 +19,12 @@ All custom exceptions inherit from
        |-- AuthenticationError
        |-- ApiError
        |-- NodeExistsError
+       |-- PathError
        `-- TraversalError
+
+``ExtractionError`` (which also inherits from :class:`ValueError`) and its
+subclass ``TreeChildParseError`` also exist but are not exported at the
+package top level; import them from ``labapi.exceptions``.
 
 Import and catch these from ``labapi``:
 
@@ -46,8 +51,8 @@ Common Operations and Raised Exceptions
    node with
    ``if_exists=InsertBehavior.Raise``.
 
-   Raises :class:`ValueError` when creating a multi-segment path without
-   ``parents=True`` and an intermediate parent is missing.
+   Raises :class:`ValueError` for any multi-segment path when
+   ``parents=False``, even if the intermediate directories exist.
 
 :meth:`~labapi.tree.mixins.AbstractBaseTreeNode.traverse`
    Raises :class:`~labapi.exceptions.TraversalError` when an intermediate path
@@ -58,4 +63,4 @@ Related Pages
 
 - :ref:`paths` for traversal rules and parent-navigation behavior.
 - :ref:`creating_pages` for duplicate-create behavior in practice.
-- :ref:`limitations` for broader operational caveats.
+- :ref:`limitations` for limitations not represented as exception types.
