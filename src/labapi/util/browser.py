@@ -8,7 +8,9 @@ from typing import Literal, TypeAlias, TypeGuard
 from .env import getenv
 
 _DetectableBrowser: TypeAlias = Literal["chrome", "firefox", "edge"]
-_ChoosableBrowser: TypeAlias = Literal["chrome", "firefox", "edge", "terminal"]
+_ChoosableBrowser: TypeAlias = Literal[
+    "chrome", "firefox", "edge", "msedge", "terminal"
+]
 
 
 _DETECTABLE_BROWSERS: tuple[_DetectableBrowser, ...] = ("chrome", "firefox", "edge")
@@ -16,6 +18,7 @@ _CHOOSEABLE_BROWSERS: tuple[_ChoosableBrowser, ...] = (
     "chrome",
     "firefox",
     "edge",
+    "msedge",
     "terminal",
 )
 
@@ -72,6 +75,17 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
 
     if installed_browsers.do_i_have_installed(browser):
         return browser
+
+    # Fall back to a linear search: installed-browsers may register a browser
+    # under a key that differs from our canonical name (e.g. Edge as "msedge"),
+    # so match on the same substring basis autodetection uses.
+    try:
+        installed = installed_browsers.browsers()
+    except Exception:
+        installed = []
+    for entry in installed:
+        if _parse_detectable(entry.get("name")) == browser:
+            return browser
 
     warnings.warn(
         f"Configured LA_AUTH_BROWSER value {browser!r} is not installed. "
