@@ -415,6 +415,35 @@ class TestTreeMixinsIntegration:
             for path, node in nodes
         )
 
+    def test_enumeration_escapes_separator_names_for_traversal(
+        self, notebook_tree: Notebook
+    ):
+        """Test enumerated paths with separator names round-trip through traverse."""
+        slash_dir = NotebookDirectory(
+            "slash-dir",
+            "Reports/2024",
+            notebook_tree,
+            notebook_tree,
+            notebook_tree.user,
+        )
+        slash_page = NotebookPage(
+            "slash-page",
+            r"Summary\Final",
+            notebook_tree,
+            slash_dir,
+            notebook_tree.user,
+        )
+        slash_dir._children.append(slash_page)  # pyright: ignore[reportPrivateUsage]
+        slash_dir._populated = True  # pyright: ignore[reportPrivateUsage]
+        notebook_tree._children.append(slash_dir)  # pyright: ignore[reportPrivateUsage]
+
+        nodes = notebook_tree.enumerate_nodes(depth=2)
+
+        assert (r"Reports\/2024", slash_dir) in nodes
+        assert (r"Reports\/2024/Summary\\Final", slash_page) in nodes
+        for path, node in nodes:
+            assert notebook_tree.traverse(path) is node
+
     def test_enumeration_handles_same_name_page_and_directory(
         self, notebook_tree: Notebook
     ):

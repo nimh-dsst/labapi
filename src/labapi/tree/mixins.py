@@ -39,7 +39,7 @@ from labapi.util import (
     extract_etree,
     to_bool,
 )
-from labapi.util.path import EscapedSegment
+from labapi.util.path import EscapedSegment, UnescapedSegment
 
 if TYPE_CHECKING:
     from labapi.user import User
@@ -628,7 +628,7 @@ class AbstractTreeContainer(
 
         self._ensure_populated()
         for child in self._children:
-            name = child.name
+            name = str(NotebookPath.escape(UnescapedSegment(child.name))[0])
 
             if time.monotonic() > _timeout:
                 warnings.warn(
