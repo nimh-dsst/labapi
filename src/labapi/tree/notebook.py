@@ -8,9 +8,13 @@ notebook-level operations (renaming, default-notebook status, entry search).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from os import PathLike
+from pathlib import Path
+from typing import IO, TYPE_CHECKING, cast
 
 from typing_extensions import override
+
+from labapi.exceptions import ApiError
 
 from .mixins import AbstractTreeContainer, HasNameMixin
 from .search import EntrySearch
@@ -82,3 +86,62 @@ class Notebook(AbstractTreeContainer):
         :returns: A lazy iterable over search result pages.
         """
         return EntrySearch(self, query, page_size=page_size)
+
+    def backup(
+        self,
+        destination: str | PathLike[str] | IO[bytes],
+        *,
+        include_attachments: bool = True,
+        as_json: bool = False,
+    ) -> None:
+        """Download this notebook's native LabArchives backup archive.
+
+        Streams the archive produced by the ``notebooks/notebook_backup`` API
+        method to ``destination``. LabArchives returns the backup as a 7-Zip
+        (``.7z``) archive in a proprietary format; ``labapi`` saves it verbatim
+        without interpreting it.
+
+        :param destination: A filesystem path (its parent directories are
+            created if needed) or a writable binary file-like object to stream
+            the archive into.
+        :param include_attachments: When ``False``, request a backup without
+            attachment payloads (the API ``no_attachments`` option).
+        :param as_json: When ``True``, request the notebook data in JSON format
+            (the API ``json`` option).
+        :raises ApiError: If LabArchives rejects the request. Error code
+            ``4547`` means the account lacks the notebook admin/backup rights
+            required for this action.
+        """
+        params: dict[str, str] = {}
+        if as_json:
+            params["json"] = "true"
+        if not include_attachments:
+            params["no_attachments"] = "true"
+
+        try:
+            stream = self.user.client.stream_api_get(
+                "notebooks/notebook_backup",
+                uid=self.user.id,
+                nbid=self.id,
+                **params,
+            )
+        except ApiError as exc:
+            if exc.error_code == 4547:
+                raise ApiError(
+                    "Downloading a notebook backup requires notebook "
+                    "admin/backup rights for this account (LabArchives error "
+                    "4547).",
+                    exc.error_code,
+                ) from exc
+            raise
+
+        with stream:
+            if isinstance(destination, (str, PathLike)):
+                path = Path(cast("str | PathLike[str]", destination))
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with path.open("wb") as file:
+                    for chunk in stream:
+                        file.write(chunk)
+            else:
+                for chunk in stream:
+                    destination.write(chunk)
