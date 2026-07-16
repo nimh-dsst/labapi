@@ -125,6 +125,18 @@ class _313HTTPAdapter(HTTPAdapter):
         super().init_poolmanager(*args, **kwargs, ssl_context=context)  # pyright: ignore[reportUnknownMemberType]
 
 
+def _close_auth_driver(driver: Any) -> None:
+    """Close an auth browser driver without masking authentication results."""
+    try:
+        driver.quit()
+    except Exception as exc:
+        warnings.warn(
+            f"Failed to close authentication browser driver: {exc}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+
+
 class _AuthResponseCollector:
     """Context manager for binding and waiting on a loopback auth callback."""
 
@@ -140,6 +152,8 @@ class _AuthResponseCollector:
         self._client = client
         self._port = port
         self._callback_path = callback_path or f"/auth/{token_urlsafe(24)}/"
+        if timeout is not None and timeout <= 0:
+            raise ValueError("timeout must be positive or None")
         self._timeout = timeout
         self._error: str | None = None
         self._email: str | None = None
@@ -220,7 +234,16 @@ class _AuthResponseCollector:
         deadline = None if self._timeout is None else monotonic() + self._timeout
 
         while True:
-            self._httpd.timeout = deadline if deadline is None else min(deadline, 0.5)
+            if deadline is None:
+                self._httpd.timeout = None
+            else:
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    raise AuthenticationError(
+                        "Timed out waiting for the authentication callback"
+                    )
+                self._httpd.timeout = min(remaining, 0.5)
+
             self._httpd.handle_request()
 
             if self._error is not None:
@@ -228,16 +251,6 @@ class _AuthResponseCollector:
 
             if self._auth_code and self._email:
                 return self._client.login(self._email, self._auth_code)
-
-            if deadline is not None:
-                remaining = deadline - monotonic()
-                if remaining <= 0:
-                    raise AuthenticationError(
-                        "Timed out waiting for the authentication callback"
-                    )
-                self._httpd.timeout = min(remaining, 0.5)
-            else:
-                self._httpd.timeout = None
 
 
 class Client:
@@ -689,7 +702,7 @@ class Client:
                 return auth_response_collector.wait()
             finally:
                 if driver is not None:
-                    driver.quit()
+                    _close_auth_driver(driver)
 
     def collect_auth_response(
         self,
@@ -749,7 +762,8 @@ class Client:
                                  actual method name differs from the URI path.
         :returns: The fully constructed and signed URL.
         :raises ValueError: If ``api_method_uri`` does not contain any non-empty
-                            path segments after normalization.
+                            path segments after normalization, or if
+                            ``expires_in`` is explicitly expired.
         """
         if isinstance(api_method_uri, str):
             api_method_uri = api_method_uri.split("/")
@@ -782,7 +796,7 @@ class Client:
         # LabArchives API does not use fragments in API requests
         url = urlunsplit((scheme, netloc, path, urlencode(query), ""))
 
-        if expires_in:
+        if expires_in is not None:
             return self._sign_url(url, api_method, expires_in)
         return self._sign_url(url, api_method)
 
@@ -821,14 +835,19 @@ class Client:
                            `timedelta` object or a specific `datetime` object. Defaults
                            to 60 seconds from the current time.
         :returns: The fully signed URL.
+        :raises ValueError: If ``expires_in`` is not a future expiry.
         """
         scheme, netloc, path, querystring, _f = urlsplit(url)
         query = dict(parse_qsl(querystring))
 
         if isinstance(expires_in, timedelta):
+            if expires_in <= timedelta(0):
+                raise ValueError("expires_in must be a positive duration")
             expiry = round((datetime.now() + expires_in).timestamp() * 1000)
         else:
             expiry = round(expires_in.timestamp() * 1000)
+            if expiry <= round(datetime.now().timestamp() * 1000):
+                raise ValueError("expires_in must be a future datetime")
         sig = self._signature(api_method, expiry)
 
         query["akid"] = self._akid
