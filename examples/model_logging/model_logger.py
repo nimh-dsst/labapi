@@ -4,6 +4,7 @@
 import sys
 from collections.abc import Sequence
 from datetime import datetime
+from html import escape
 from typing import Any
 
 from labapi import (
@@ -76,7 +77,9 @@ class ModelLogger:
         )
 
         # 1. Log Commit Hash
-        entries.create(TextEntry, f"<p><strong>Git Commit:</strong> {commit}</p>")
+        entries.create(
+            TextEntry, f"<p><strong>Git Commit:</strong> {escape(commit)}</p>"
+        )
 
         # 2. Log Tags
         # Flatten tags if they are mixed str and list[str]
@@ -89,7 +92,7 @@ class ModelLogger:
 
         tags_html = "".join(
             [
-                f'<span style="background: #eee; padding: 2px 5px; margin: 2px; border-radius: 3px;">{t}</span>'
+                f'<span style="background: #eee; padding: 2px 5px; margin: 2px; border-radius: 3px;">{escape(t)}</span>'
                 for t in flat_tags
             ]
         )
@@ -119,7 +122,7 @@ class ModelLogger:
             )
             entries.create(AttachmentEntry, fig_attachment)
 
-        print("✓ Log complete!")
+        print("Log complete!")
 
 
 def main() -> None:

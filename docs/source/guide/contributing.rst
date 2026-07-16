@@ -127,7 +127,7 @@ GitHub Actions split the main quality gates into separate workflows under
 - docs
 - manual integration tests
 
-Keeping these commands green locally is the fastest way to avoid CI surprises.
+Run the same commands locally before pushing to catch failures before CI.
 
 Type System
 -----------
@@ -137,7 +137,8 @@ documentation. All new code should be fully type-annotated.
 
 Key conventions:
 
-- ``from __future__ import annotations`` is present in every module.
+- ``from __future__ import annotations`` is used in modules that rely on
+  forward references.
 - Generics are used throughout the entry system so callers get concrete return
   types without extra casting.
 - ``TYPE_CHECKING`` guards prevent circular imports while keeping type
@@ -147,8 +148,8 @@ Key conventions:
 - ``overload`` is used on ``__getitem__`` to express the different return
   types produced by different index kinds.
 
-The project targets Python 3.10+ and uses modern typing features where they
-improve clarity, with backports from ``typing_extensions`` where needed. Keep
+The project targets Python 3.10+; use typing features supported by Python 3.10
+or available from ``typing_extensions``. Keep
 source syntax compatible with Python 3.10; for example, prefer
 ``TypeVar``/``Generic`` over PEP 695 generic parameter syntax.
 
@@ -157,4 +158,4 @@ Related Pages
 
 - :ref:`architecture` for the current internal module and cache model.
 - :ref:`integration_design` for practical design guidance across the guide set.
-- :ref:`reference` for generated API signatures while you are working.
+- :ref:`reference` for generated API signatures.

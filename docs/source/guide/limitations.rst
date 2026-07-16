@@ -3,13 +3,12 @@
 Capabilities and Limitations
 ============================
 
-This page summarizes the current scope of ``labapi`` in one place so you can plan around known boundaries.
-It applies to the current documentation set and reflects behavior verified at the time of writing.
+This page summarizes the current scope of ``labapi`` and its known limitations.
 
 Current Capabilities
 --------------------
 
-``labapi`` currently supports the following common workflows well:
+``labapi`` supports these workflows reliably:
 
 * Navigating notebooks, directories, and pages by path or index.
 * Creating and editing text entries (rich text, plain text, and headers).
@@ -20,19 +19,20 @@ Current Capabilities
 Known Limitations and Caveats
 -----------------------------
 
-Unsupported entry types are wrapped as ``UnknownEntry``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Unsupported entry types are wrapped as fallback entries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When a page contains entry types that ``labapi`` does not model yet, those
-entries are wrapped as :class:`~labapi.entry.entries.unknown.UnknownEntry` and
-loaded with a warning. This preserves page order and IDs, but editing behavior
-is limited for those fallback objects.
+entries are loaded with a warning: unrecognized part types are wrapped as
+:class:`~labapi.entry.entries.unknown.UnknownEntry`, and
+recognized-but-unimplemented types as
+:class:`~labapi.entry.entries.unknown.UnimplementedEntry`. The objects keep
+their order and IDs, but assigning ``content`` raises ``NotImplementedError``.
 
 Widget entries are read-only
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :class:`~labapi.entry.entries.widget.WidgetEntry` is supported for reading only.
-You can inspect widget content, but editing widget content is not currently supported.
 
 Duplicate names return first-match results by default
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -55,11 +55,10 @@ Re-fetch children from the refreshed parent object instead of reusing old refere
 ``copy_to()`` has copy fidelity limits and placement restrictions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The copy API has several practical caveats:
-
 * LabArchives may rename attachments during copy.
-* Widget and other specialized entry types are not fully supported for copy operations.
-* Copy attempts that include unsupported entry types can fail or produce incomplete copies.
+* Widget, unknown, and unimplemented entries may be skipped during page copy.
+* When an entry cannot be recreated, ``copy_to()`` emits a ``RuntimeWarning`` and skips that
+  entry; the copied page may be incomplete.
 * Copying a directory into itself or into one of its descendants raises :class:`ValueError`.
 
 ``enumerate_all()`` can return partial results on larger trees
@@ -94,13 +93,14 @@ Recommended recovery workflow:
 Planning Guidance
 -----------------
 
-To reduce surprises in production integrations:
+For production integrations:
 
 - Prefer ID-based addressing in automation.
-- Refresh parent nodes before critical reads and then re-fetch child objects.
+- Refresh parent nodes before reads that must include external changes and then
+  re-fetch child objects.
 - Validate copied content, especially attachments and specialized entries.
-- Treat unsupported entry types and ``4999`` attachment-update failures as
-  expected error-handling cases.
+- Add explicit handlers for unsupported entry types and ``ApiError`` code
+  ``4999`` during attachment updates.
 
 Related Pages
 -------------

@@ -1,8 +1,4 @@
-"""Types Module.
-
-This module defines enumeration classes and data types used throughout
-the LabArchives API client.
-"""
+"""Enumeration classes and data types shared across the LabArchives API client."""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -47,24 +43,21 @@ Example: ``Index.Name:"some_name"``
 
 IdOrNameIndex: TypeAlias = "str | IdIndex | NameIndex"
 """
-Type alias representing a flexible index that can be either an item's ID (string),
-or a slice using :attr:`Index.Id` or :attr:`Index.Name`.
+Type alias for an index: either an item's ID (string), or a slice using
+:attr:`Index.Id` or :attr:`Index.Name`.
 """
 
 
 @dataclass
 class NotebookInit:
-    """Represents the initial data required to set up a LabArchives notebook object.
-
-    This dataclass holds essential information such as the notebook's ID, and name.
-    """
+    """Represents the initial data required to set up a LabArchives notebook object."""
 
     id: str
     """The unique identifier of the notebook."""
     name: str
     """The name of the notebook."""
     is_default: bool
-    """A value indicating if this notebook is the user's default."""
+    """Whether this notebook is the user's default."""
 
 
 JsonData: TypeAlias = (

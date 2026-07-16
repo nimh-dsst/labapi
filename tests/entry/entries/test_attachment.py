@@ -199,6 +199,32 @@ class TestAttachmentEntryIntegration:
         assert api_call[0] == "entries/update_attachment"
         assert api_call[1]["eid"] == "eid_att"
 
+    def test_attachment_entry_content_setter_stream_without_callable_seekable(
+        self, client, user: User
+    ):
+        """Update must not fail on streams whose seekable attribute is not callable."""
+        entry = AttachmentEntry("eid_att", "Old caption", user)
+
+        stream_cls = type("Stream", (BytesIO,), {"seekable": None})
+        backing = stream_cls(b"New file content")
+        new_attachment = Attachment(
+            backing=backing,
+            mime_type="text/plain",
+            filename="new_file.txt",
+            caption="New caption",
+        )
+        new_attachment.read(4)
+
+        client.api_response = client.xml(
+            "entry",
+            client.xml("success", True),
+        )
+
+        entry.content = new_attachment
+
+        assert backing.tell() == 0
+        _ = client.pop_api_call()
+
     def test_attachment_entry_get_attachment_caching(self, client, user: User):
         """Test AttachmentEntry.get_attachment reuses download cache without sharing handles."""
         entry = AttachmentEntry("eid_att", "Caption", user)

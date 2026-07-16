@@ -1,8 +1,4 @@
-"""Attachment Entry Module.
-
-This module defines the :class:`~labapi.entry.entries.attachment.AttachmentEntry` class,
-which represents an attachment entry within a LabArchives page.
-"""
+"""Attachment Entry Module."""
 
 from __future__ import annotations
 
@@ -74,8 +70,8 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
     def get_attachment(self, use_tempfile: bool = False) -> Attachment:
         """Return the attachment payload as an independent stream copy.
 
-        The attachment data is fetched from the LabArchives API and cached.
-        Subsequent calls will return the cached data.
+        The attachment data is fetched from the LabArchives API on first call
+        and cached.
 
         :param use_tempfile: If True, the attachment data will be stored in a
                              temporary file; otherwise, in an in-memory BytesIO object.
@@ -124,8 +120,8 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
         # NOTE: this implicitly invalidates all previous Attachments
         # NOTE: if every time content is called we give a new copy anyways that's fine
         #       (see get_attachment())
-        if value._backing.seekable():  # pyright: ignore[reportPrivateUsage]
-            value._backing.seek(0)  # pyright: ignore[reportPrivateUsage]
+        if value.seekable():
+            value.seek(0)
 
         try:
             self._user.api_post(

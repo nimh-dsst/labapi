@@ -3,9 +3,6 @@
 Frequently Asked Questions
 ==========================
 
-This page collects the operational questions that come up most often when
-configuring authentication and troubleshooting local API access.
-
 How Do I Choose Which Browser ``default_authenticate()`` Opens?
 ---------------------------------------------------------------
 
@@ -20,15 +17,9 @@ tries to open a compatible local browser automatically. Set the
    export LA_AUTH_BROWSER=edge
    export LA_AUTH_BROWSER=terminal
 
-Supported values:
-
-- ``chrome`` for Google Chrome.
-- ``firefox`` for Mozilla Firefox.
-- ``edge`` for Microsoft Edge.
-- ``terminal`` to print the URL for manual copy/paste.
-
-If ``LA_AUTH_BROWSER`` is not set, ``labapi`` falls back to automatic browser
-detection.
+Supported values are ``chrome``, ``firefox``, ``edge``, and ``terminal``;
+``terminal`` prints the URL for manual copy/paste instead of opening a
+browser.
 
 Example:
 
@@ -47,13 +38,13 @@ How Do I Handle SSL/TLS Certificate Issues?
 -------------------------------------------
 
 By default, :class:`~labapi.client.Client` verifies TLS certificates on every
-HTTPS request. Keep that default whenever possible.
+HTTPS request.
 
 Can I Disable Strict Certificate Verification?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In some environments, such as corporate networks with custom CA certificates
-or local test systems, you may need to disable strict verification temporarily:
+For short-lived tests against systems whose certificates fail strict
+validation, pass ``strict_cert=False``:
 
 .. code-block:: python
 
@@ -67,15 +58,15 @@ or local test systems, you may need to disable strict verification temporarily:
    )
 
 .. warning::
-   Disabling certificate verification (``strict_cert=False``) can expose you
-   to man-in-the-middle attacks. Only use it in trusted environments where you
-   understand the security tradeoff.
+   Relaxing strict X.509 validation (``strict_cert=False``) can expose you
+   to man-in-the-middle attacks. Do not use this for normal production API
+   traffic or on networks you do not control.
 
 How Do I Trust a Custom CA Bundle Instead?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If your environment uses a private Certificate Authority, prefer adding that
-CA to a trusted bundle instead of turning verification off entirely.
+CA to a trusted bundle instead of relaxing strict certificate validation.
 
 Find the active ``certifi`` bundle with:
 
@@ -102,8 +93,9 @@ What Should I Check When Authentication Fails?
 When the authentication flow fails or stalls, check these common causes:
 
 1. Verify that ``ACCESS_KEYID`` and ``ACCESS_PWD`` are set correctly.
-2. If the browser does not open, confirm ``LA_AUTH_BROWSER`` or install the
-   ``builtin-auth`` extra.
+2. If the browser does not open, set ``LA_AUTH_BROWSER=terminal`` for manual
+   authentication, or install the ``builtin-auth`` extra for browser
+   launching.
 3. If you see certificate errors, use the guidance above to trust your CA
    bundle.
 4. If you use :meth:`~labapi.client.Client.generate_auth_url`, make sure the
