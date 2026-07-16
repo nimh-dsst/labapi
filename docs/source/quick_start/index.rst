@@ -3,9 +3,8 @@
 Quick Start
 ===========
 
-Use the quick start when you want the shortest path from installation to a
-successful notebook change. These pages move from setup to common write
-operations.
+Start with installation and authentication, then create, navigate, upload,
+copy, and delete notebook content.
 
 .. toctree::
    :maxdepth: 1
@@ -23,15 +22,15 @@ operations.
 Recommended Reading Order
 -------------------------
 
-1. :doc:`tutorial` for the fastest copy/paste path.
+1. :doc:`tutorial` for the runnable first script.
 2. :doc:`installation` for package-manager commands and optional extras.
 3. :doc:`first_calls` for credential setup and authentication patterns.
-4. :doc:`navigating` and :doc:`creating_pages` for the basic tree and write
-   operations.
+4. :doc:`navigating` and :doc:`creating_pages` for creating directories,
+   pages, and entries, then navigating the notebook tree.
 
 Related Pages
 -------------
 
-- :ref:`guide` for deeper behavior details and caveats.
+- :ref:`guide` for behavior notes outside the quick start.
 - :ref:`examples` for runnable end-to-end scripts.
 - :ref:`faq` for browser and certificate troubleshooting.

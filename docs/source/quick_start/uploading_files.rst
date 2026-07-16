@@ -3,14 +3,15 @@
 Uploading Files
 ===============
 
-Uploading attachments is a two-step workflow: create an
-:class:`~labapi.entry.attachment.Attachment`, then create an attachment entry on
-the target page. The examples below assume you already have a ``page`` object.
+To upload an attachment, create an
+:class:`~labapi.entry.attachment.Attachment` and then create an attachment
+entry on the target page. The examples below assume you already have a
+``page`` object.
 
 Create an Attachment
 --------------------
 
-Build an :class:`~labapi.entry.attachment.Attachment` from a filename or path:
+Build an :class:`~labapi.entry.attachment.Attachment` from a file path:
 
 .. code-block:: python
 
@@ -20,7 +21,8 @@ Build an :class:`~labapi.entry.attachment.Attachment` from a filename or path:
 
 .. note::
    :meth:`~labapi.entry.attachment.Attachment.from_file` accepts a filesystem
-   path or a random-access binary file object. When a path is provided,
+   path or a named, random-access binary file object (it must have a ``name``
+   attribute). When a path is provided,
    ``labapi`` opens the file in binary mode automatically. File objects must
    support random access so the library can rewind the stream before copying.
 
@@ -35,7 +37,7 @@ upload size:
 
 .. code-block:: python
 
-   max_size_bytes = user.get_max_upload_size()
+   max_size_bytes = page.user.get_max_upload_size()
    print(f"Max upload size: {max_size_bytes / 1024 / 1024:.1f} MB")
 
 Upload the Attachment
@@ -82,6 +84,7 @@ If you want a specific caption, construct the
 Related Pages
 -------------
 
-- :ref:`creating_pages` for the broader page-and-entry creation workflow.
+- :ref:`creating_pages` for creating pages before adding entries.
 - :ref:`entries` for attachment entry behavior and update semantics.
-- :ref:`limitations` for current capability boundaries.
+- :ref:`limitations` for unsupported LabArchives features and known
+  limitations.

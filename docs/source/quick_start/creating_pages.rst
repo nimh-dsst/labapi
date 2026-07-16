@@ -3,9 +3,9 @@
 Creating Pages and Entries
 ==========================
 
-This page covers the basic write operations you will use most often: creating
-directories and pages, then adding entries to a page. The examples assume you
-already have a ``notebook`` object from :ref:`first_calls`.
+This page covers how to create directories and pages, then add entries to a
+page. The examples assume you already have a ``notebook`` object from
+:ref:`first_calls`.
 
 Notebook Structure
 ------------------
@@ -32,8 +32,7 @@ Use :meth:`~labapi.tree.mixins.AbstractTreeContainer.create` to add new
    subfolder = my_folder.create(NotebookDirectory, "2024 Results")
 
 .. note::
-   Tree mutation methods update local cached objects immediately. The created
-   node is ready to use right away.
+   Tree mutation methods update local cached objects immediately.
 
 Handle Existing Nodes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -54,7 +53,7 @@ type already exists. Use ``if_exists`` to choose a different behavior:
 Create Entries
 --------------
 
-Use :meth:`~labapi.entry.collection.Entries.create` to add content blocks to a
+Use :meth:`~labapi.entry.collection.Entries.create` to add entries to a
 page:
 
 .. code-block:: python
@@ -105,6 +104,6 @@ Access entries through the page's ``entries`` collection:
 Related Pages
 -------------
 
-- :ref:`navigating` for getting to the right page first.
-- :ref:`entries` for deeper entry-class behavior and editing semantics.
+- :ref:`navigating` for locating a target page before adding entries.
+- :ref:`entries` for how each entry class stores, updates, and returns content.
 - :ref:`uploading_files` for attachment-specific details.

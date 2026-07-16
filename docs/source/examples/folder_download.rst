@@ -3,20 +3,15 @@
 Folder Structure Download
 =========================
 
-This example downloads a LabArchives notebook subtree to your local computer
-while preserving its directory hierarchy. Pages become folders, and individual
+This example exports a notebook, folder, or page to local directories.
+LabArchives directories and pages become local directories, and individual
 entries are written out as separate files.
 
 When to Use It
 --------------
 
-This is useful for:
-
-- Creating local backups of your LabArchives notebooks.
-- Exporting notebook content for offline viewing.
-- Archiving completed projects.
-- Migrating content to other systems.
-- Version control integration for notebook content.
+Use it to create local backup, offline review, archival, migration, or
+version-control copies of notebook content.
 
 Requirements
 ------------
@@ -65,9 +60,9 @@ Overwrite an existing output directory:
 How It Works
 ------------
 
-``examples/folder_download/folder_download.py`` contains importable download
-functions plus a command-line wrapper. The reusable layer takes an authenticated
-``User`` and returns a ``DownloadResult`` instead of printing or exiting.
+``examples/folder_download/folder_download.py`` exposes
+``download_notebook_or_folder(user, options)``, which writes the export and
+returns a ``DownloadResult`` for callers.
 
 The script mirrors the LabArchives structure:
 
@@ -75,7 +70,7 @@ The script mirrors the LabArchives structure:
 
    LabArchives Structure:          Local File Structure:
 
-   My Notebook/                    output/
+   My Notebook/                    output/My Notebook/
    |- Experiments/                 |- Experiments/
    |  |- Trial 1/  (page)          |  |- Trial 1/
    |  |  |- Header entry           |  |  |- 001_header.txt
@@ -103,12 +98,13 @@ Downloaded entries follow this naming pattern:
 - Entries are numbered in the order they appear on the page.
 - Entry type is indicated in the filename.
 - Attachments preserve their original filename.
-- Captions are saved in separate ``*_caption.txt`` files.
+- When an attachment has a caption, it is saved in a separate
+  ``*_caption.txt`` file.
 
 Output Layout
 -------------
 
-Each downloaded location contains:
+The exported tree uses these files and subdirectories:
 
 For pages:
 
@@ -117,26 +113,21 @@ For pages:
 
 For directories:
 
-- Subdirectories for each child directory.
-- Subdirectories for each page.
+- A subdirectory for each child directory or page.
 
 Notes
 -----
 
-- The script preserves the complete directory structure.
 - Filenames are sanitized to be filesystem-safe.
-- Widget entries are noted but cannot be fully exported because they are
-  read-only.
-- Large notebooks may take significant time to download.
-- The script creates a ``_metadata.txt`` file for each page with additional
-  information.
+- Widget entries are exported as ``*_widget.txt`` placeholder notes; their
+  content is not exported.
+- Download time grows with notebook size and attachment count.
 
 Reusable API
 ------------
 
-When building your own script, import the download function and call it
-directly. Most scripts only need ``DownloadFolderOptions`` and
-``download_notebook_or_folder``.
+Reuse the exporter by constructing ``DownloadFolderOptions`` and passing it to
+``download_notebook_or_folder``:
 
 .. code-block:: python
 

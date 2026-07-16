@@ -14,7 +14,7 @@ from typing_extensions import override
 from labapi.util import extract_etree
 
 from .attachment import Attachment
-from .entries import AttachmentEntry, Entry, TextEntry
+from .entries import AttachmentEntry, Entry, TextEntry, UnknownEntry
 
 E = TypeVar("E", bound="Entry[Any]")
 
@@ -94,9 +94,8 @@ class Entries(Sequence["Entry[Any]"]):
     ) -> tuple[AttachmentEntry, TextEntry]:
         """Create a JSON attachment plus a companion reference text entry.
 
-        This method uploads JSON data as an attachment file and creates a
-        companion text entry that references the attachment and displays
-        a formatted preview of the JSON data.
+        The companion text entry references the attachment's ID and displays a
+        formatted preview of the JSON data.
 
         :param data: The JSON-serializable data to upload.
         :param filename: Optional stable filename for the uploaded JSON attachment.
@@ -180,6 +179,9 @@ class Entries(Sequence["Entry[Any]"]):
 
         Invalid XML propagates ``lxml.etree.XMLSyntaxError``.
         """
+        if issubclass(cls, UnknownEntry):
+            raise TypeError(f"{cls.__name__} cannot be created")
+
         if issubclass(cls, AttachmentEntry):
             if not isinstance(data, Attachment):
                 raise TypeError(
@@ -187,8 +189,8 @@ class Entries(Sequence["Entry[Any]"]):
                     f"{type(data).__name__}"
                 )
 
-            if data._backing.seekable():  # pyright: ignore[reportPrivateUsage]
-                data._backing.seek(0)  # pyright: ignore[reportPrivateUsage]
+            if data.seekable():
+                data.seek(0)
 
             upload_kwargs = {
                 "filename": data.filename,

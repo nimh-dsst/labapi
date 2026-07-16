@@ -3,8 +3,8 @@
 Installation
 ============
 
-This page shows the supported install profiles for ``labapi`` and the matching
-credential setup options used throughout the rest of the docs.
+Install ``labapi`` with the extras you need, then configure credentials with
+``.env`` or environment variables.
 
 Python Version
 --------------
@@ -14,7 +14,7 @@ Supports Python 3.10 and newer.
 Choose an Install Profile
 -------------------------
 
-Pick the smallest install profile that matches how you plan to use ``labapi``:
+Choose the install target that includes the helpers you need:
 
 .. list-table::
    :header-rows: 1
@@ -24,8 +24,8 @@ Pick the smallest install profile that matches how you plan to use ``labapi``:
      - Use When
    * - Recommended local interactive
      - ``labapi[dotenv,builtin-auth]``
-     - You want the quick start, examples, ``.env`` loading, and browser-based
-       ``default_authenticate()``.
+     - You want ``.env`` loading and browser-based ``default_authenticate()``
+       for local examples.
    * - Minimal
      - ``labapi``
      - You already manage environment variables or pass credentials directly,
@@ -66,7 +66,7 @@ Pick the smallest install profile that matches how you plan to use ``labapi``:
 Optional Extras
 ---------------
 
-``labapi`` currently exposes two optional extras:
+``labapi`` has two optional extras:
 
 - ``dotenv`` lets :class:`~labapi.client.Client` read ``API_URL``,
   ``ACCESS_KEYID``, and ``ACCESS_PWD`` from a local ``.env`` file.
@@ -118,6 +118,6 @@ before running your code:
 Related Pages
 -------------
 
-- :ref:`first_success_tutorial` for the fastest first-run workflow.
+- :ref:`first_success_tutorial` for the runnable first script.
 - :ref:`first_calls` for authentication and notebook access patterns.
 - :ref:`faq` for browser and certificate troubleshooting.

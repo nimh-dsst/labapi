@@ -10,6 +10,5 @@ from __future__ import annotations
 class Comment:
     """Represents a comment associated with an entity in LabArchives.
 
-    Currently, this class is a placeholder and does not contain specific
-    attributes or methods for comment management.
+    Currently a placeholder; comment operations are not yet implemented.
     """
