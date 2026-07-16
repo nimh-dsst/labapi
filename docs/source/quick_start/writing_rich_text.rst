@@ -111,4 +111,4 @@ Related Pages
 
 - :ref:`entries` for entry type behavior and update semantics.
 - :doc:`/examples/csv_table` for a complete CSV-to-HTML workflow.
-- :ref:`creating_pages` for the surrounding page-and-entry creation pattern.
+- :ref:`creating_pages` for creating a page before adding rich-text entries.

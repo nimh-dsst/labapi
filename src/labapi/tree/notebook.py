@@ -3,7 +3,7 @@
 This module defines the :class:`~labapi.tree.notebook.Notebook` class,
 representing a LabArchives notebook. It extends :class:`~labapi.tree.mixins.AbstractTreeContainer`
 to manage its hierarchical content (directories and pages) and provides
-notebook-specific functionalities.
+notebook-level operations (renaming, default-notebook status, entry search).
 """
 
 from __future__ import annotations
@@ -26,8 +26,7 @@ class Notebook(AbstractTreeContainer):
     """Represents a LabArchives notebook, acting as the root of a tree structure.
 
     A notebook is a specialized :class:`~labapi.tree.mixins.AbstractTreeContainer`
-    that holds directories and pages. It provides methods to access notebook-specific
-    information and manage its contents.
+    that holds directories and pages.
     """
 
     def __init__(self, init: NotebookInit, user: User, notebooks: Notebooks):

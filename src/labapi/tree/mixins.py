@@ -1,8 +1,7 @@
 """Tree Mixins Module.
 
 This module defines abstract base classes and mixins that form the hierarchical
-structure of LabArchives notebooks, directories, and pages. These classes
-provide common functionalities and properties for tree nodes and containers.
+structure of LabArchives notebooks, directories, and pages.
 """
 
 from __future__ import annotations
@@ -76,7 +75,7 @@ class HasNameMixin:
 class AbstractBaseTreeNode(ABC, HasNameMixin):
     """Abstract base class for any node within the LabArchives tree structure.
 
-    This class provides fundamental properties and methods common to all
+    This class provides properties and methods common to all
     tree nodes, such as ID, name, references to parent and root, and the
     associated user.
 
@@ -141,7 +140,8 @@ class AbstractBaseTreeNode(ABC, HasNameMixin):
     def tree_id(self) -> str:
         """Return the node identifier within the LabArchives tree.
 
-        This is often the same as `id` but can be used to distinguish if needed.
+        Equal to `id` for all nodes except the Notebook root, whose `tree_id`
+        is the sentinel "0" while `id` is the notebook ID.
 
         :returns: The tree ID of the node.
         """
@@ -259,9 +259,8 @@ class AbstractBaseTreeNode(ABC, HasNameMixin):
     def as_dir(self) -> AbstractTreeContainer:
         """Return this node cast to :class:`~labapi.tree.mixins.AbstractTreeContainer`.
 
-        This method provides a convenient way to perform directory-specific
-        operations on a node after checking its type, with static type
-        checking support.
+        Use after checking :meth:`is_dir` to obtain a container-typed
+        reference for static type checking.
 
         :returns: The node cast to an
                   :class:`~labapi.tree.mixins.AbstractTreeContainer`.
@@ -275,9 +274,8 @@ class AbstractBaseTreeNode(ABC, HasNameMixin):
     def as_page(self) -> NotebookPage:
         """Return this node cast to :class:`~labapi.tree.page.NotebookPage`.
 
-        This method provides a convenient way to perform page-specific
-        operations on a node after checking its type, with static type
-        checking support.
+        Use after checking :meth:`is_dir` to obtain a page-typed reference
+        for static type checking.
 
         :returns: The node cast to a
                   :class:`~labapi.tree.page.NotebookPage`.
@@ -550,7 +548,8 @@ class AbstractTreeContainer(
     ) -> AbstractBaseTreeNode | Sequence[AbstractBaseTreeNode]:
         """Look up child nodes by name or indexed selector.
 
-        - If `key` is a string, it attempts to find a single child with that name.
+        - If `key` is a string, returns the first child with that name
+          (raises :exc:`KeyError` if none match).
         - If `key` is a slice with start of :attr:`~labapi.util.Index.Id`
           (e.g., ``Index.Id:"some_id"``),
           it returns the child with the matching ID.
@@ -742,8 +741,6 @@ class AbstractTreeContainer(
         if_exists: InsertBehavior = InsertBehavior.Raise,
     ) -> T:
         """Create a child page or directory in this container.
-
-        This method supports different behaviors if a node with the same name already exists.
 
         :param cls: The class of the node to create (e.g., :class:`~labapi.tree.page.NotebookPage` or :class:`~labapi.tree.directory.NotebookDirectory`).
         :param name: The name of the new node.

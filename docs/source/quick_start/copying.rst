@@ -17,7 +17,7 @@ Copy a Page
    copied_page = source_page.copy_to(destination)
 
 This creates a new page in the destination directory with the same name and
-entries.
+its supported entries.
 
 Copy Across Notebooks
 ---------------------
@@ -51,24 +51,25 @@ Return Value
    print(f"Original: {source_page.id}")
    print(f"Copy: {new_page.id}")
 
-Important Limitations
----------------------
+Limitations
+-----------
 
 .. warning::
    LabArchives can rename attachment files during copy operations. The file
    data is preserved, but the copied filename may differ from the original.
 
 .. warning::
-   Widget entries and other specialized entry types are not fully supported for
-   copying. Unsupported content can cause errors or incomplete copies.
+   Only text, plain-text, header, and attachment entries are fully supported.
+   Other entry types, including widgets, may be skipped after a
+   ``RuntimeWarning``.
 
 Best Practices
 --------------
 
-- Test the copy flow on non-critical content first.
-- Verify the copied entry count and spot-check important attachments.
+- Test copying with a disposable page or directory first.
+- Verify the copied entry count, then open representative copied attachments
+  and compare filenames and content.
 - If filenames matter, re-read copied attachments and confirm their names.
-- Prefer descriptive destination names so copied content is easy to identify.
 
 Example verification:
 
@@ -87,7 +88,8 @@ Move Instead of Copying
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want to relocate content instead of duplicating it, use
-:meth:`~labapi.tree.mixins.AbstractTreeNode.move_to`:
+:meth:`~labapi.tree.mixins.AbstractTreeNode.move_to` (moves are only possible
+within the same notebook):
 
 .. code-block:: python
 
@@ -96,8 +98,8 @@ If you want to relocate content instead of duplicating it, use
 Recreate Content Programmatically
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For simple pages, it can be more reliable to create a new page and rebuild the
-content yourself:
+When copy fidelity matters, create a new page and recreate only the entry
+types you need:
 
 .. code-block:: python
 
@@ -112,6 +114,6 @@ content yourself:
 Related Pages
 -------------
 
-- :ref:`limitations` for the centralized copy and fidelity caveats.
-- :ref:`delete` for move-to-trash behavior.
+- :ref:`limitations` for known copy limitations.
+- :ref:`delete` for moving pages and directories to ``API Deleted Items``.
 - :ref:`navigating` for finding source and destination locations.

@@ -1,7 +1,7 @@
 """LabArchives API Client.
 
 This module provides the core client for interacting with the LabArchives API,
-handling authentication, request signing, and various API call methods.
+handling authentication, request signing, and API calls.
 """
 
 from __future__ import annotations
@@ -104,9 +104,9 @@ class StreamingResponse:
 class _313HTTPAdapter(HTTPAdapter):
     """Custom HTTP adapter that disables strict X.509 certificate verification.
 
-    This adapter is used to work around certain SSL certificate validation issues
-    by disabling the VERIFY_X509_STRICT flag. This allows the client to connect
-    to servers with certificates that might not pass strict validation.
+    This adapter disables the VERIFY_X509_STRICT flag. This allows the client
+    to connect to servers with certificates that might not pass strict
+    validation.
 
     .. warning::
        This reduces security by relaxing certificate validation. Use only when
@@ -115,9 +115,6 @@ class _313HTTPAdapter(HTTPAdapter):
 
     def init_poolmanager(self, *args: Any, **kwargs: Any):
         """Initialize the connection pool manager with a custom SSL context.
-
-        This method overrides the default pool manager initialization to inject
-        a custom SSL context that disables strict X.509 verification.
 
         :param args: Positional arguments to pass to the parent init_poolmanager.
         :param kwargs: Keyword arguments to pass to the parent init_poolmanager.
@@ -324,9 +321,8 @@ class Client:
     def close(self) -> None:
         """Close the underlying requests session.
 
-        Once closed, this client should not be used for further API requests.
-        Any :class:`~labapi.user.User` objects derived from this client should
-        also be treated as no longer usable for API calls.
+        Once closed, API calls through this client — including via derived
+        :class:`~labapi.user.User` objects — raise :class:`RuntimeError`.
         """
         if not self._closed:
             self.session.close()
@@ -793,8 +789,8 @@ class Client:
     def _signature(self, api_method: str, expiry: int) -> str:
         """Generate the HMAC-SHA512 signature for a LabArchives API request.
 
-        This private method is used internally by `_sign_url` to create the
-        cryptographic signature based on the Access Key ID, API method, and expiry.
+        Called by `_sign_url`; the signature covers the Access Key ID, API
+        method, and expiry.
 
         :param api_method: The specific API method name used in the signature calculation.
         :param expiry: The expiration timestamp (in milliseconds since epoch) for the request.
@@ -816,8 +812,8 @@ class Client:
     ) -> str:
         """Sign a URL and append the LabArchives auth query parameters.
 
-        This private method appends the Access Key ID, expiration timestamp, and
-        the generated signature to the URL's query string.
+        Appends the Access Key ID, expiration timestamp, and signature to the
+        URL's query string.
 
         :param url: The unsigned URL to be signed.
         :param api_method: The specific API method name used for signature generation.

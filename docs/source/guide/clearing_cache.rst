@@ -3,15 +3,16 @@
 Clearing Cache
 ==============
 
-The LabArchives API client caches various data to improve performance and reduce unnecessary API calls.
-However, there are situations where you may need to refresh this cached data to reflect changes made
-outside your current session.
+The LabArchives API client caches child-node lists and page-entry collections so repeated reads
+do not issue API calls. Call ``refresh()`` before reading changes made outside the current
+session.
 
-Refreshing Object Cache
------------------------
+Refreshing Tree and Entry Caches
+--------------------------------
 
 Tree nodes (notebooks, directories, and pages) provide a :meth:`~labapi.tree.mixins.AbstractBaseTreeNode.refresh`
-method that clears cached data and forces the object to re-fetch from the API on next access.
+method that clears cached children for containers or cached entries for pages, so the next
+property access fetches them again.
 
 Refreshing a Page
 ~~~~~~~~~~~~~~~~~
@@ -35,7 +36,7 @@ When you refresh a page, the cached entries are cleared:
 Refreshing a Directory or Notebook
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Similarly, you can refresh directories and notebooks to reload their children:
+For directories and notebooks, ``refresh()`` clears cached children:
 
 .. code-block:: python
 
@@ -51,10 +52,10 @@ Similarly, you can refresh directories and notebooks to reload their children:
     # Next access gets fresh data
     children = directory.children  # Re-fetches from API
 
-When You Usually Do Not Need Refresh
-------------------------------------
+When Local Mutations Do Not Need Refresh
+----------------------------------------
 
-If you create, rename, move, or delete nodes through this client, the in-memory tree is updated immediately as part of the same operation. In those cases, you usually do not need to call ``refresh()`` just to observe your own change locally.
+Create, rename, move, and delete operations update the in-memory tree after the API call succeeds, so ``refresh()`` is not needed to see that operation's local result.
 
 This includes:
 
@@ -75,17 +76,10 @@ This includes:
     page.move_to(archive)
     print(page.parent is archive)  # True without refresh()
 
-Use ``refresh()`` when you need to pick up changes made outside the current object graph, such as edits from another user, the web UI, or a separate API session.
-
 When to Refresh Data
 --------------------
 
-You typically need to refresh cached data in these scenarios:
-
-1. **Collaborative environments**: When other users or processes may be modifying the notebook
-2. **Long-running scripts**: When your script runs for an extended period and you want to check for updates
-3. **After external changes**: When you've made changes through the web interface or another API session
-4. **Polling for changes**: When waiting for external processes to create or modify content
+Use ``refresh()`` when you need to pick up changes made by another user, the LabArchives web UI, or another API session.
 
 Example: Polling for New Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,17 +103,16 @@ Example: Polling for New Entries
 
         time.sleep(30)  # Wait 30 seconds before checking again
 
-Important Limitations
----------------------
+Limitations
+-----------
 
 .. warning::
-    The current implementation of ``refresh()`` has some limitations:
+    ``refresh()`` does not update existing child-object references:
 
-    **Stale object references**: If you have stored references to child objects (pages, directories,
-    or entries) before calling ``refresh()``, those objects will **not** be automatically updated.
-    They will continue to use their old cached data.
+    **Stale object references**: Existing references to child pages, directories, or entries are
+    not replaced by ``refresh()`` and can keep stale cached data.
 
-    **Example of potential issue:**
+    **Example: stale entry reference**
 
     .. code-block:: python
 
@@ -133,8 +126,7 @@ Important Limitations
         # It wasn't invalidated by the refresh
         print(entry.content)  # May show stale data
 
-    **Best practice**: After calling ``refresh()``, re-fetch any child objects you need
-    instead of reusing old references:
+    After ``refresh()``, re-fetch child objects before reading them:
 
     .. code-block:: python
 
@@ -161,10 +153,11 @@ The following data is cached and will be cleared by ``refresh()``:
 * List of entries on the page
 * Entry content and metadata
 
-**Not cached (always fresh from API):**
+**Not cleared by refresh():**
 
 * User authentication state
-* Notebook metadata accessed through :class:`~labapi.user.User`
+* The :class:`~labapi.user.User` ``notebooks`` collection, which is built once at
+  login and is not affected by tree or page ``refresh()``
 
 Related Pages
 -------------
