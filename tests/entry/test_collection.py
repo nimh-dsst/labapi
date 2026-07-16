@@ -15,6 +15,9 @@ from labapi.entry.entries import (
     HeaderEntry,
     PlainTextEntry,
     TextEntry,
+    UnimplementedEntry,
+    UnknownEntry,
+    WidgetEntry,
 )
 from labapi.user import User
 
@@ -128,6 +131,21 @@ class TestEntriesUnit:
 
         with pytest.raises(TypeError, match="TextEntry requires str data"):
             entries.create(TextEntry, cast(Any, attachment))
+
+        mock_user.api_post.assert_not_called()
+
+    @pytest.mark.parametrize("cls", [UnknownEntry, UnimplementedEntry, WidgetEntry])
+    def test_entries_create_rejects_unsupported_wrappers(self, cls: type[Any]):
+        """Test unsupported fallback entry wrappers are rejected before API calls."""
+        mock_user = Mock(spec=User)
+        mock_page = Mock()
+        mock_page.id = "test_page_id"
+        mock_page.root = Mock()
+        mock_page.root.id = "test_notebook_id"
+        entries = Entries([], mock_user, mock_page)
+
+        with pytest.raises(TypeError, match=f"{cls.__name__} cannot be created"):
+            entries.create(cast(Any, cls), "payload")
 
         mock_user.api_post.assert_not_called()
 
