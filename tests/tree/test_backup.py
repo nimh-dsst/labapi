@@ -26,8 +26,9 @@ def test_backup_streams_archive_to_path(client, notebook: LA.Notebook, tmp_path)
     stream = _mock_stream(client, [b"7z\xbc\xaf", b"payload"])
 
     dest = tmp_path / "nested" / "notebook.7z"
-    notebook.backup(dest)
+    result = notebook.backup(dest)
 
+    assert result == dest
     assert dest.read_bytes() == b"7z\xbc\xafpayload"
     stream.assert_called_once_with(
         "notebooks/notebook_backup", uid="testid1", nbid="testnb1"
@@ -39,8 +40,9 @@ def test_backup_streams_archive_to_file_like(client, notebook: LA.Notebook):
     _mock_stream(client, [b"chunk-1", b"chunk-2"])
 
     buffer = BytesIO()
-    notebook.backup(buffer)
+    result = notebook.backup(buffer)
 
+    assert result is None
     assert buffer.getvalue() == b"chunk-1chunk-2"
 
 

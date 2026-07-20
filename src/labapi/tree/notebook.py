@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from os import PathLike
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, cast
+from typing import IO, TYPE_CHECKING, Literal, cast
 
 from typing_extensions import override
 
@@ -87,13 +87,41 @@ class Notebook(AbstractTreeContainer):
         """
         return EntrySearch(self, query, page_size=page_size)
 
+    def export(
+        self,
+        destination: str | PathLike[str],
+        *,
+        source: Literal["auto", "walk", "backup"] = "auto",
+        overwrite: bool = False,
+    ) -> Path:
+        """Export this notebook to a local directory tree.
+
+        Reconstructs the notebook as a folder mirror under ``destination``:
+        one directory per folder/page (named ``<order>_<name>``), with each
+        page's content written as ordered files (``NN_text.html`` for rich
+        text, ``NN_text.txt`` for plain text, ``NN_<filename>`` for
+        attachments).
+
+        :param destination: Output directory for the exported tree. Its parent
+            directories are created if needed.
+        :param source: Where to read the notebook from. ``"walk"`` reads the
+            live API tree; ``"backup"`` downloads and unpacks the native backup
+            archive (requires notebook admin/backup rights and the optional
+            ``py7zr`` dependency: ``pip install 'labapi[export]'``); ``"auto"``
+            uses the backup archive when available and falls back to the walk.
+        :param overwrite: When ``destination`` exists and is not empty, raise
+            unless ``overwrite`` is ``True``.
+        :returns: The path of the export directory.
+        """
+        raise NotImplementedError
+
     def backup(
         self,
         destination: str | PathLike[str] | IO[bytes],
         *,
         include_attachments: bool = True,
         as_json: bool = False,
-    ) -> None:
+    ) -> Path | None:
         """Download this notebook's native LabArchives backup archive.
 
         LabArchives returns the backup as a 7-Zip (``.7z``) archive in
@@ -108,6 +136,8 @@ class Notebook(AbstractTreeContainer):
             attachment payloads (the API ``no_attachments`` option).
         :param as_json: When ``True``, request the notebook data in JSON format
             (the API ``json`` option).
+        :returns: The path the archive was written to, or ``None`` when
+            ``destination`` is a file-like object.
         :raises ApiError: If LabArchives rejects the request. Error code
             ``4547`` means the account lacks the notebook admin/backup rights
             required for this action.
@@ -141,5 +171,6 @@ class Notebook(AbstractTreeContainer):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with path.open("wb") as file:
                     file.writelines(stream)
-            else:
-                destination.writelines(stream)
+                return path
+            destination.writelines(stream)
+            return None
