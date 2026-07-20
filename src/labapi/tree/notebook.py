@@ -96,10 +96,10 @@ class Notebook(AbstractTreeContainer):
     ) -> None:
         """Download this notebook's native LabArchives backup archive.
 
-        Streams the archive produced by the ``notebooks/notebook_backup`` API
-        method to ``destination``. LabArchives returns the backup as a 7-Zip
-        (``.7z``) archive in a proprietary format; ``labapi`` saves it verbatim
-        without interpreting it.
+        LabArchives returns the backup as a 7-Zip (``.7z``) archive in
+        a proprietary format; ``labapi`` saves it verbatim. This format
+        may change at any time, but should remain interpretable and restorable
+        by LabArchives.
 
         :param destination: A filesystem path (its parent directories are
             created if needed) or a writable binary file-like object to stream
@@ -140,8 +140,6 @@ class Notebook(AbstractTreeContainer):
                 path = Path(cast("str | PathLike[str]", destination))
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with path.open("wb") as file:
-                    for chunk in stream:
-                        file.write(chunk)
+                    file.writelines(stream)
             else:
-                for chunk in stream:
-                    destination.write(chunk)
+                destination.writelines(stream)
