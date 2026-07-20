@@ -314,6 +314,45 @@ def test_download_json_files_writes_json_attachments_inside_target_folder(tmp_pa
     }
 
 
+def test_download_json_files_reports_duplicate_basenames_without_overwriting(tmp_path):
+    """Attachments normalizing to the same basename must not silently overwrite."""
+    first = _make_attachment_entry(
+        "entry-1",
+        "same.json",
+        "application/json",
+        b'{"value": 1}',
+    )
+    second = _make_attachment_entry(
+        "entry-2",
+        "../same.json",
+        "application/json",
+        b'{"value": 2}',
+    )
+    entries = _RecordingEntries([first, second])
+    page = _PageDouble(entries)
+    notebook = _RecordingContainer(traverse_result=_PageNode(page))
+    user = _UserDouble(notebook)
+
+    results = json_sync.download_json_files(
+        user,
+        notebook="My Notebook",
+        page="Results/Page",
+        folder=tmp_path,
+    )
+
+    assert len(results) == 2
+    assert results[0].name == "same.json"
+    assert results[0].success is True
+    assert results[1].name == "same.json"
+    assert results[1].success is False
+    assert results[1].error is not None
+    assert "Duplicate" in results[1].error
+    # The first payload is preserved, not overwritten by the second.
+    assert json.loads((tmp_path / "same.json").read_text(encoding="utf-8")) == {
+        "value": 1
+    }
+
+
 def test_download_json_files_records_failure_and_continues(tmp_path):
     """A failed attachment retrieval is recorded per-entry; later entries still process."""
     failing_entry = _make_failing_attachment_entry("bad-entry")

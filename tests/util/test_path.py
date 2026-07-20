@@ -338,6 +338,29 @@ def test_notebook_path_equality():
     assert hash(p1) != hash(p3)
 
 
+def test_notebook_path_anchored_equals_absolute_with_matching_hash():
+    """Anchored and absolute paths that resolve equal must hash equal."""
+    anchored = NotebookPath(
+        EscapedSegment("b"), parent=NotebookPath(EscapedSegment("/a"))
+    )
+    absolute = NotebookPath(EscapedSegment("/a/b"))
+
+    assert anchored == absolute
+    assert hash(anchored) == hash(absolute)
+    assert {anchored: "value"}.get(absolute) == "value"
+
+
+def test_notebook_path_relative_to_identical_relative_returns_empty():
+    """relative_to an identical relative path returns an empty relative path."""
+    result = NotebookPath(EscapedSegment("a")).relative_to(
+        NotebookPath(EscapedSegment("a"))
+    )
+
+    assert result.is_absolute() is False
+    assert list(result) == []
+    assert str(result) == ""
+
+
 def test_notebook_path_empty():
     """Test empty path behavior."""
     path = NotebookPath(EscapedSegment(""))

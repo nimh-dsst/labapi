@@ -64,6 +64,29 @@ def test_browser_detection_env_var_is_resolved_at_call_time(
     assert browser_module.detect_default_browser() == "edge"
 
 
+def test_env_browser_edge_found_via_linear_search(
+    browser_module, mock_installed_browsers, monkeypatch
+):
+    """LA_AUTH_BROWSER=edge resolves via linear search when only 'msedge' is registered."""
+    mock_installed_browsers.do_i_have_installed.return_value = False
+    mock_installed_browsers.browsers.return_value = [{"name": "Microsoft Edge"}]
+
+    monkeypatch.setenv("LA_AUTH_BROWSER", "edge")
+    assert browser_module.detect_default_browser() == "edge"
+
+
+def test_env_browser_msedge_spelling_accepted(
+    browser_module, mock_installed_browsers, monkeypatch
+):
+    """LA_AUTH_BROWSER=msedge is accepted and matches the installed-browsers key."""
+    mock_installed_browsers.do_i_have_installed.side_effect = lambda name: (
+        name == "msedge"
+    )
+
+    monkeypatch.setenv("LA_AUTH_BROWSER", "msedge")
+    assert browser_module.detect_default_browser() == "msedge"
+
+
 def test_browser_detection_loads_dotenv_before_reading_env(browser_module, monkeypatch):
     """Test browser detection can populate LA_AUTH_BROWSER via python-dotenv."""
     mock_dotenv = MagicMock()
