@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from os import PathLike
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Literal, cast
+from typing import IO, TYPE_CHECKING, Literal, cast, overload
 
 from typing_extensions import override
 
@@ -115,13 +115,31 @@ class Notebook(AbstractTreeContainer):
         """
         raise NotImplementedError
 
+    @overload
+    def backup(
+        self,
+        destination: str | PathLike[str],
+        *,
+        include_attachments: bool = ...,
+        as_json: bool = ...,
+    ) -> Path: ...
+
+    @overload
+    def backup(
+        self,
+        destination: IO[bytes],
+        *,
+        include_attachments: bool = ...,
+        as_json: bool = ...,
+    ) -> IO[bytes]: ...
+
     def backup(
         self,
         destination: str | PathLike[str] | IO[bytes],
         *,
         include_attachments: bool = True,
         as_json: bool = False,
-    ) -> Path | None:
+    ) -> Path | IO[bytes]:
         """Download this notebook's native LabArchives backup archive.
 
         LabArchives returns the backup as a 7-Zip (``.7z``) archive in
@@ -136,8 +154,9 @@ class Notebook(AbstractTreeContainer):
             attachment payloads (the API ``no_attachments`` option).
         :param as_json: When ``True``, request the notebook data in JSON format
             (the API ``json`` option).
-        :returns: The path the archive was written to, or ``None`` when
-            ``destination`` is a file-like object.
+        :returns: The :class:`~pathlib.Path` the archive was written to when
+            ``destination`` is a path, or the same file-like object when one
+            was passed.
         :raises ApiError: If LabArchives rejects the request. Error code
             ``4547`` means the account lacks the notebook admin/backup rights
             required for this action.
@@ -173,4 +192,4 @@ class Notebook(AbstractTreeContainer):
                     file.writelines(stream)
                 return path
             destination.writelines(stream)
-            return None
+            return destination

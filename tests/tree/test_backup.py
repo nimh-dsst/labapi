@@ -42,7 +42,7 @@ def test_backup_streams_archive_to_file_like(client, notebook: LA.Notebook):
     buffer = BytesIO()
     result = notebook.backup(buffer)
 
-    assert result is None
+    assert result is buffer
     assert buffer.getvalue() == b"chunk-1chunk-2"
 
 
