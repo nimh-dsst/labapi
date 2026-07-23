@@ -85,10 +85,8 @@ addopts = "--cov=labapi --cov-report=term-missing"
 
 [tool.ty.analysis]
 replace-imports-with-any = [
-    "dotenv.**",
     "installed_browsers.**",
     "requests.**",
-    "selenium.**",
 ]
 
 [[tool.ty.overrides]]
