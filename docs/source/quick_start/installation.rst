@@ -34,6 +34,10 @@ Choose the install target that includes the helpers you need:
      - ``labapi[dotenv]``
      - You want :class:`~labapi.client.Client` to read a local ``.env`` file,
        but you do not need browser helpers.
+   * - Export native backups
+     - ``labapi[export]``
+     - You want :meth:`~labapi.tree.notebook.Notebook.export` to read native
+       LabArchives backup archives.
 
 .. tab-set::
 
@@ -44,6 +48,7 @@ Choose the install target that includes the helpers you need:
          uv add "labapi[dotenv,builtin-auth]"
          uv add labapi
          uv add "labapi[dotenv]"
+         uv add "labapi[export]"
 
    .. tab-item:: poetry
 
@@ -52,6 +57,7 @@ Choose the install target that includes the helpers you need:
          poetry add "labapi[dotenv,builtin-auth]"
          poetry add labapi
          poetry add "labapi[dotenv]"
+         poetry add "labapi[export]"
 
    .. tab-item:: pip
 
@@ -60,13 +66,14 @@ Choose the install target that includes the helpers you need:
          pip install "labapi[dotenv,builtin-auth]"
          pip install labapi
          pip install "labapi[dotenv]"
+         pip install "labapi[export]"
 
 .. _optional-deps:
 
 Optional Extras
 ---------------
 
-``labapi`` has two optional extras:
+``labapi`` has three optional extras:
 
 - ``dotenv`` lets :class:`~labapi.client.Client` read ``API_URL``,
   ``ACCESS_KEYID``, and ``ACCESS_PWD`` from a local ``.env`` file.
@@ -74,6 +81,9 @@ Optional Extras
   :meth:`~labapi.client.Client.default_authenticate` auto-detect and open a
   local browser. Without it, you can still use terminal/manual auth or your own
   callback flow.
+- ``export`` installs ``py7zr`` so
+  :meth:`~labapi.tree.notebook.Notebook.export` can read native LabArchives
+  backup archives. Live ``source="walk"`` exports do not need it.
 
 Configuration
 -------------
