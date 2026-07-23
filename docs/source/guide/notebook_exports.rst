@@ -69,9 +69,10 @@ install the ``export`` extra:
    pip install "labapi[export]"
 
 Use ``source="backup"`` to require the native archive, or ``source="walk"``
-to bypass it and read the live tree directly. A live walk may take longer for
-large notebooks because it downloads page content and attachment files through
-the API.
+to bypass it and read the live tree directly. A live walk can take a long time
+for large notebooks: LabArchives requires many API requests to enumerate and
+download page content and attachment files, so duration grows with notebook
+size.
 
 Related Pages
 -------------
