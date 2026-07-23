@@ -8,7 +8,7 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
-## 1.2.0 - Unreleased
+## 1.2.0 - 2026-07-23
 
 ### Added
 
@@ -24,6 +24,7 @@ details that affect development workflows.
 
 - Client base URLs now discard fragments and warn when they contain query
   parameters that cannot be preserved in API requests.
+- Updated the locked indirect Pillow dependency from 12.2.0 to 12.3.0.
 
 ### Fixed
 
