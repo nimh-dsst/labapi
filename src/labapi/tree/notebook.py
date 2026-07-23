@@ -8,10 +8,16 @@ notebook-level operations (renaming, default-notebook status, entry search).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from os import PathLike
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import override
 
+from labapi.exceptions import ApiError
+
+from ._export import _backup_tree, _walk_tree, _write_tree
 from .mixins import AbstractTreeContainer, HasNameMixin
 from .search import EntrySearch
 
@@ -82,3 +88,102 @@ class Notebook(AbstractTreeContainer):
         :returns: A lazy iterable over search result pages.
         """
         return EntrySearch(self, query, page_size=page_size)
+
+    def export(
+        self,
+        destination: str | PathLike[str],
+        *,
+        source: Literal["auto", "walk", "backup"] = "auto",
+        overwrite: bool = False,
+    ) -> Path:
+        """Export this notebook to a local directory tree.
+
+        Reconstructs the notebook as a folder mirror under ``destination``:
+        one directory per folder/page (named ``<order>_<name>``), with each
+        page's content written as ordered files (``NN_text.html`` for rich
+        text, ``NN_text.txt`` for plain text, ``NN_<filename>`` for
+        attachments).
+
+        :param destination: Output directory for the exported tree. Its parent
+            directories are created if needed.
+        :param source: Where to read the notebook from. ``"walk"`` reads the
+            live API tree; ``"backup"`` downloads and unpacks the native backup
+            archive (requires the notebook owner's sign-in and the optional
+            ``py7zr`` dependency: ``pip install 'labapi[export]'``); ``"auto"``
+            uses the backup archive when available and falls back to the walk.
+        :param overwrite: When ``destination`` exists and is not empty, raise
+            unless ``overwrite`` is ``True``.
+        :returns: The path of the export directory.
+        """
+        backup_error = None
+        with TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+
+            if source != "walk":
+                try:
+                    tree = _backup_tree(self, tmp_path)
+                except (ImportError, ApiError) as error:
+                    backup_error = error
+                else:
+                    return _write_tree(tree, destination, overwrite)
+
+            if source != "backup":
+                return _write_tree(_walk_tree(self, tmp_path), destination, overwrite)
+
+        raise RuntimeError(
+            f"Could not export notebook with source={source!r}"
+        ) from backup_error
+
+    def backup(
+        self,
+        destination: str | PathLike[str],
+        *,
+        include_attachments: bool = True,
+        as_json: bool = False,
+    ) -> Path:
+        """Download this notebook's native LabArchives backup archive.
+
+        LabArchives returns the backup as a 7-Zip (``.7z``) archive in
+        a proprietary format; ``labapi`` saves it verbatim. This format
+        may change at any time, but should remain interpretable and restorable
+        by LabArchives.
+
+        :param destination: A filesystem path to write the archive to; its
+            parent directories are created if needed.
+        :param include_attachments: When ``False``, request a backup without
+            attachment payloads (the API ``no_attachments`` option).
+        :param as_json: When ``True``, request the notebook data in JSON format
+            (the API ``json`` option).
+        :returns: The :class:`~pathlib.Path` the archive was written to.
+        :raises ApiError: If LabArchives rejects the request. Error code
+            ``4547`` means the notebook owner must sign in before this action
+            can succeed.
+        """
+        params: dict[str, str] = {}
+        if as_json:
+            params["json"] = "true"
+        if not include_attachments:
+            params["no_attachments"] = "true"
+
+        try:
+            stream = self.user.client.stream_api_get(
+                "notebooks/notebook_backup",
+                uid=self.user.id,
+                nbid=self.id,
+                **params,
+            )
+        except ApiError as exc:
+            if exc.error_code == 4547:
+                raise ApiError(
+                    "Downloading a notebook backup requires the notebook owner's "
+                    "sign-in (LabArchives error 4547). Check the notebook's owner "
+                    "in the LabArchives web UI: Notebook Settings > Users.",
+                    exc.error_code,
+                ) from exc
+            raise
+
+        path = Path(destination)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with stream, path.open("wb") as file:
+            file.writelines(stream)
+        return path

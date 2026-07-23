@@ -440,10 +440,10 @@ class Client:
             error_desc: str | None = None
             try:
                 tree = fromstring(response.content)
-                code_text = tree.findtext("./error-code")
+                code_text = tree.findtext(".//error-code")
                 if code_text is not None:
                     error_code = int(code_text)
-                    error_desc = tree.findtext("./error-description")
+                    error_desc = tree.findtext(".//error-description")
             except Exception:
                 pass
 
