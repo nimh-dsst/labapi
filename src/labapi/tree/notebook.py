@@ -156,8 +156,9 @@ class Notebook(AbstractTreeContainer):
             (the API ``json`` option).
         :returns: The :class:`~pathlib.Path` the archive was written to.
         :raises ApiError: If LabArchives rejects the request. Error code
-            ``4547`` means the notebook owner must sign in before this action
-            can succeed.
+            ``4547`` means the currently authenticated account is not the
+            notebook owner. Check the owner in the LabArchives web UI, then
+            retry with that owner's credentials.
         """
         params: dict[str, str] = {}
         if as_json:

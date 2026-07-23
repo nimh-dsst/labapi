@@ -24,9 +24,10 @@ To omit attachment payloads from the archive, pass
 
    notebook.backup("metadata_only.7z", include_attachments=False)
 
-LabArchives only permits the notebook owner to request a native backup. When
-the API rejects the request, :class:`~labapi.exceptions.ApiError` reports the
-LabArchives error; error code ``4547`` means the owner must sign in first.
+LabArchives only permits the notebook owner's authenticated account to request
+a native backup. Error code ``4547`` means the currently authenticated account
+is not the owner; check ``Notebook Settings > Users`` in the LabArchives web UI
+and retry with the owner's credentials.
 
 Export a Directory Tree
 -----------------------
