@@ -173,9 +173,9 @@ def _walk_tree(notebook: Notebook, tmpdir: Path) -> dict:
                 prefix = f"{entry_number:0{entry_width}d}_"
 
                 if isinstance(entry, AttachmentEntry):
-                    attachment = entry.get_attachment(use_tempfile=True)
                     source = entries / entry.id
                     try:
+                        attachment = entry.get_attachment(use_tempfile=True)
                         with closing(attachment), source.open("wb") as file:
                             shutil.copyfileobj(attachment, file)
                     finally:
