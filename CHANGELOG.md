@@ -19,6 +19,11 @@ details that affect development workflows.
   per-page metadata. The optional `labapi[export]` extra reads native backup
   archives; the default source falls back to the live API when needed.
 
+### Changed
+
+- `Notebook.export()` now returns a `NotebookExport` result; its `path`
+  property is the completed export directory.
+
 ## 1.1.1 - 2026-07-05
 
 ### Fixed
