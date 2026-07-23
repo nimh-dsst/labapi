@@ -455,6 +455,26 @@ class TestClientUnit:
         with pytest.raises(ApiError, match=r"\[4999\] Unknown Error"):
             client.raw_api_get("users/get_info")
 
+    def test_raw_api_get_reads_error_from_xml_wrapper(self):
+        """Wrapped LabArchives error payloads retain their error code."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        client.session.get = Mock(
+            return_value=make_response(
+                400,
+                (
+                    "<notebooks><error>"
+                    "<error-code>4547</error-code>"
+                    "<error-description>not an owner</error-description>"
+                    "</error></notebooks>"
+                ),
+            )
+        )
+
+        with pytest.raises(ApiError, match=r"\[4547\] not an owner") as raised:
+            client.raw_api_get("users/get_info")
+
+        assert raised.value.error_code == 4547
+
     def test_raw_api_get_raises_api_error_with_encoding(self):
         """Test raw_api_get handles XML error payloads with custom encodings correctly."""
         client = Client("https://api.test.com", "test_akid", "test_password")

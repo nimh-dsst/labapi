@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from io import BytesIO
 from unittest.mock import Mock
 
 import pytest
@@ -35,17 +34,6 @@ def test_backup_streams_archive_to_path(client, notebook: LA.Notebook, tmp_path)
     )
 
 
-def test_backup_streams_archive_to_file_like(client, notebook: LA.Notebook):
-    """backup() streams the archive into a writable binary file-like object."""
-    _mock_stream(client, [b"chunk-1", b"chunk-2"])
-
-    buffer = BytesIO()
-    result = notebook.backup(buffer)
-
-    assert result is buffer
-    assert buffer.getvalue() == b"chunk-1chunk-2"
-
-
 def test_backup_optional_params_mapped(client, notebook: LA.Notebook, tmp_path):
     """include_attachments/as_json map to the API's no_attachments/json flags."""
     stream = _mock_stream(client, [b"data"])
@@ -62,7 +50,7 @@ def test_backup_optional_params_mapped(client, notebook: LA.Notebook, tmp_path):
 
 
 def test_backup_surfaces_missing_rights_error(client, notebook: LA.Notebook, tmp_path):
-    """A 4547 rights error is re-raised with actionable guidance."""
+    """A 4547 owner-sign-in error is re-raised with actionable guidance."""
     raw_error = ApiError("[4547] does not have rights", 4547)
     client.stream_api_get = Mock(side_effect=raw_error)
 
@@ -70,7 +58,7 @@ def test_backup_surfaces_missing_rights_error(client, notebook: LA.Notebook, tmp
         notebook.backup(tmp_path / "nb.7z")
 
     assert exc_info.value.error_code == 4547
-    assert "admin/backup rights" in str(exc_info.value)
+    assert "notebook owner's sign-in" in str(exc_info.value)
     assert exc_info.value.__cause__ is raw_error
     assert not (tmp_path / "nb.7z").exists()
 
