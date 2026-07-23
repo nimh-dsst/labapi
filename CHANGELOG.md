@@ -8,6 +8,17 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
+## 1.2.0 - Unreleased
+
+### Added
+
+- `Notebook.backup()` downloads a notebook's native LabArchives backup archive
+  or JSON response, with options to omit attachment payloads.
+- `Notebook.export()` materializes a notebook as a local directory tree,
+  preserving empty directories and pages, entry ordering, attachments, and
+  per-page metadata. The optional `labapi[export]` extra reads native backup
+  archives; the default source falls back to the live API when needed.
+
 ## 1.1.1 - 2026-07-05
 
 ### Fixed

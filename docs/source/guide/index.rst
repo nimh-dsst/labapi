@@ -13,6 +13,7 @@ then move into the design notes if you are extending or contributing to
    :caption: Core Usage
 
    limitations
+   notebook_exports
    auth
    entries
    json_entries
