@@ -8,7 +8,7 @@ from importlib.metadata import metadata as _metadata
 from importlib.metadata import version as _version
 from pathlib import Path
 
-_VERSION_TAG = r"^v(\d+\.\d+\.\d+)$"
+_VERSION_TAG = r"^v(\d+\.\d+\.\d+(?:rc\d+)?)$"
 
 sys.path.insert(0, str((Path(__file__).resolve().parents[2] / "src").resolve()))
 
