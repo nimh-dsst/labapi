@@ -24,6 +24,8 @@ details that affect development workflows.
 
 - Client base URLs now discard fragments and warn when they contain query
   parameters that cannot be preserved in API requests.
+- Versioned documentation shows only the newest release candidate and keeps
+  the root and `latest/` aliases on the newest final release.
 
 ### Fixed
 
