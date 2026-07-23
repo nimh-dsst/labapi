@@ -215,6 +215,15 @@ def test_download_table_can_use_explicit_entry_index(tmp_path: Path):
     assert output_file.read_text(encoding="utf-8") == "first,1\n"
 
 
+def test_parse_html_table_separates_inline_markup_text():
+    """Test inline markup does not concatenate adjacent cell text."""
+    table = csv_table._parse_html_table(
+        "<table><tr><td>alpha <strong>beta</strong></td></tr></table>"
+    )
+
+    assert table.rows == (("alpha beta",),)
+
+
 def test_download_table_raises_on_directory_path(
     capsys: pytest.CaptureFixture[str],
 ):
