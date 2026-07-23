@@ -25,8 +25,11 @@ def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
     py7zr = pytest.importorskip("py7zr")
     backup = tmp_path / "backup" / "notebook"
     attachment = backup / "attachments" / "14" / "1" / "original" / "report.pdf"
+    escaped_attachment = backup / "attachments" / "16" / "1" / "original" / "db.sqlite3"
     attachment.parent.mkdir(parents=True)
     attachment.write_bytes(b"attachment")
+    escaped_attachment.parent.mkdir(parents=True)
+    escaped_attachment.write_bytes(b"not the database")
 
     database = sqlite3.connect(backup / "db.sqlite3")
     database.executescript(
@@ -56,7 +59,8 @@ def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
         INSERT INTO entry_parts VALUES (13, 10, 5, 'plain', 3, NULL, 1);
         INSERT INTO entry_parts VALUES (14, 10, 2, NULL, 4, 'report.pdf', 1);
         INSERT INTO entry_parts VALUES (15, 10, 99, 'raw', 5, NULL, 1);
-        INSERT INTO entry_parts VALUES (16, 16, 0, 'Empty page', 1, NULL, 1);
+        INSERT INTO entry_parts VALUES (16, 10, 2, NULL, 6, '../../../../db.sqlite3', 1);
+        INSERT INTO entry_parts VALUES (17, 16, 0, 'Empty page', 1, NULL, 1);
         """
     )
     database.close()
@@ -65,6 +69,9 @@ def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
     with py7zr.SevenZipFile(archive_path, "w") as archive:
         archive.write(backup / "db.sqlite3", "notebook/db.sqlite3")
         archive.write(attachment, "notebook/attachments/14/1/original/report.pdf")
+        archive.write(
+            escaped_attachment, "notebook/attachments/16/1/original/db.sqlite3"
+        )
 
     class Notebook:
         def backup(self, destination, **_kwargs):
@@ -81,6 +88,7 @@ def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
     assert (page / "2_text.txt").read_text(encoding="utf-8") == "plain"
     assert (page / "3_report.pdf").read_bytes() == b"attachment"
     assert (page / "4_text.txt").read_text(encoding="utf-8") == "raw"
+    assert (page / "5_db.sqlite3").read_bytes() == b"not the database"
     assert json.loads((page / ".labarchives.json").read_text(encoding="utf-8")) == {
         "id": "2",
         "entries": [
@@ -93,6 +101,12 @@ def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
                 "filename": "report.pdf",
             },
             {"file": "4_text.txt", "id": "15", "type": "part type 99"},
+            {
+                "file": "5_db.sqlite3",
+                "id": "16",
+                "type": "Attachment",
+                "filename": "db.sqlite3",
+            },
         ],
     }
     assert (exported / "1_Folder" / "2_Empty page").is_dir()
@@ -103,6 +117,10 @@ def test_walk_tree_stages_all_entries(monkeypatch, tmp_path):
     """The live collector writes text and attachment entries to temporary files."""
     user = cast(LA.User, None)
     attachment_entry = AttachmentEntry("3", "caption", user)
+    cached_attachment = Attachment(
+        BytesIO(b"cached"), "text/plain", "cached.txt", "caption"
+    )
+    attachment_entry._filedata = cached_attachment
     monkeypatch.setattr(
         attachment_entry,
         "get_attachment",
@@ -176,6 +194,8 @@ def test_walk_tree_stages_all_entries(monkeypatch, tmp_path):
         )
     ) == {"id": "11", "entries": []}
     assert (exported / "1_Folder" / "2_Empty page").is_dir()
+    assert cached_attachment.closed
+    assert attachment_entry._filedata is None
 
 
 def test_write_tree_creates_an_empty_notebook(tmp_path):

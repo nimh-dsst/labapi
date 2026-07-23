@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import sqlite3
+from contextlib import closing
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -102,22 +103,23 @@ def _backup_tree(notebook: Notebook, tmpdir: Path) -> dict:
                     }.get(part["part_type"], f"part type {part['part_type']}")
 
                     if part["part_type"] == 2:
-                        source = (
+                        original = (
                             backup
                             / "attachments"
                             / str(part["id"])
                             / str(part["version"])
                             / "original"
-                            / part["attach_file_name"]
                         )
-                        filename = _writable_name(prefix + part["attach_file_name"])
+                        attachment_name = Path(part["attach_file_name"]).name
+                        source = original / attachment_name
+                        filename = _writable_name(prefix + attachment_name)
                         page[filename] = source
                         metadata.append(
                             {
                                 "file": filename,
                                 "id": str(part["id"]),
                                 "type": entry_type,
-                                "filename": part["attach_file_name"],
+                                "filename": attachment_name,
                             }
                         )
                         continue
@@ -174,10 +176,10 @@ def _walk_tree(notebook: Notebook, tmpdir: Path) -> dict:
                     attachment = entry.get_attachment(use_tempfile=True)
                     source = entries / entry.id
                     try:
-                        with source.open("wb") as file:
+                        with closing(attachment), source.open("wb") as file:
                             shutil.copyfileobj(attachment, file)
                     finally:
-                        attachment.close()
+                        entry._release_attachment_cache()
                     filename = _writable_name(prefix + attachment.filename)
                     files[filename] = source
                     metadata.append(

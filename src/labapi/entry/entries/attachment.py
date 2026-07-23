@@ -96,6 +96,12 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
             self._filedata.caption,
         )
 
+    def _release_attachment_cache(self) -> None:
+        """Close and discard the cached attachment payload."""
+        if self._filedata is not None:
+            self._filedata.close()
+            self._filedata = None
+
     @property
     @override
     def content(self) -> Attachment:
