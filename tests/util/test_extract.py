@@ -203,6 +203,19 @@ def test_extract_etree_missing_element_raises():
         extract_etree(element, format_dict)
 
 
+def test_extract_etree_can_skip_missing_elements():
+    """Test optional extraction omits missing elements."""
+    element = etree.fromstring(b"<root><name>Test</name><empty /></root>")
+
+    result = extract_etree(
+        element,
+        {"name": str, "empty": str, "missing": str},
+        raise_missing=False,
+    )
+
+    assert result == {"name": "Test", "empty": ""}
+
+
 def test_extract_etree_mapper_fails_raises():
     """Test extract_etree raises ValueError when mapper fails."""
     xml = """<?xml version="1.0" encoding="UTF-8"?>
