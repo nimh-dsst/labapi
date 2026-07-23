@@ -255,7 +255,7 @@ def test_auto_falls_back_to_walk(monkeypatch, notebook: LA.Notebook, tmp_path, e
 
 
 def test_backup_export_returns_result(monkeypatch, notebook: LA.Notebook, tmp_path):
-    """Backup exports return a completed path-like result."""
+    """Backup exports return a completed result."""
     monkeypatch.setattr(notebook_module, "_backup_tree", Mock(return_value={}))
 
     export = notebook.export(tmp_path / "export", source="backup")
