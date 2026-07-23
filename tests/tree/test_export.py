@@ -251,8 +251,7 @@ def test_auto_falls_back_to_walk(monkeypatch, notebook: LA.Notebook, tmp_path, e
     export = notebook.export(tmp_path / "export")
 
     assert export.path == tmp_path / "export"
-    assert Path(export) == tmp_path / "export"
-    assert str(export) == str(tmp_path / "export")
+    assert isinstance(export.path, Path)
 
 
 def test_backup_export_returns_result(monkeypatch, notebook: LA.Notebook, tmp_path):

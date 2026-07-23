@@ -28,20 +28,17 @@ if TYPE_CHECKING:
     from .collection import Notebooks
 
 
-class NotebookExport(PathLike[str]):
+class NotebookExport:
     """The completed result of exporting a notebook."""
 
     def __init__(self, path: Path):
         """Initialize the export result with its destination path."""
-        self.path = path
+        self._path = path
 
-    def __fspath__(self) -> str:
-        """Return the export destination as a filesystem path."""
-        return str(self.path)
-
-    def __str__(self) -> str:
-        """Return the export destination as text."""
-        return str(self.path)
+    @property
+    def path(self) -> Path:
+        """Return the export destination."""
+        return self._path
 
 
 class Notebook(AbstractTreeContainer):
