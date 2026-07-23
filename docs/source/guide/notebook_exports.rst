@@ -36,7 +36,8 @@ Export the notebook's top-level directories and pages to a local destination:
 
 .. code-block:: python
 
-   notebook.export("my_notebook")
+   export = notebook.export("my_notebook")
+   destination = export.path
 
 The destination contains numeric ordering prefixes, page content files, and a
 ``.labarchives.json`` manifest for every page. The manifest records the page
