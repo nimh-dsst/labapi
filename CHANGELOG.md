@@ -12,6 +12,7 @@ details that affect development workflows.
 
 ### Added
 
+- `Client` request methods accept a `timeout` parameter.
 - `Notebook.backup()` downloads a notebook's native LabArchives backup archive
   or JSON response, with options to omit attachment payloads.
 - `Notebook.export()` materializes a notebook as a local directory tree,
@@ -21,8 +22,37 @@ details that affect development workflows.
 
 ### Changed
 
-- `Notebook.export()` now returns a `NotebookExport` result; its `path`
-  property is the completed export directory.
+- Client base URLs now discard fragments and warn when they contain query
+  parameters that cannot be preserved in API requests.
+
+### Fixed
+
+- Authentication honors configured timeouts and token expiry, and
+  `LA_AUTH_BROWSER=edge` reliably selects Microsoft Edge.
+- Tree traversal correctly handles escaped names, membership checks with
+  `Index.Name`, notebook-path hashing, and relative paths rooted at a notebook.
+- Attachment uploads rewind seekable files when needed; cached attachment
+  downloads stream in chunks; and attachment updates report LabArchives error
+  4999 with actionable context.
+- `json_sync` preserves JSON attachments with duplicate basenames and records
+  failures for individual attachment downloads instead of abandoning the entry.
+- `create_json_entry()` raises `PartialEntryCreateError` when an attachment is
+  orphaned, and unsupported entry wrappers are rejected before creation.
+- XML responses retain their original encoding, `EntrySearch` tolerates
+  disappearing result pages, and extraction errors handle mappers without a
+  `__name__` attribute.
+- `PlainTextEntry.content` rejects non-string values before an API request,
+  the public parse exceptions are available from `labapi`, and the API
+  Deleted Items directory cannot be deleted accidentally.
+- The model-logging example escapes metadata and uses an ASCII-safe success
+  message.
+
+### Security
+
+- `ApiError` masks sensitive URL query parameters in its messages and
+  tracebacks.
+- The built-in authentication callback uses an unguessable loopback path and
+  a plain-text response.
 
 ## 1.1.1 - 2026-07-05
 
