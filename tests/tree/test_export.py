@@ -248,7 +248,20 @@ def test_auto_falls_back_to_walk(monkeypatch, notebook: LA.Notebook, tmp_path, e
     monkeypatch.setattr(notebook_module, "_backup_tree", Mock(side_effect=error))
     monkeypatch.setattr(notebook_module, "_walk_tree", Mock(return_value={}))
 
-    assert notebook.export(tmp_path / "export") == tmp_path / "export"
+    export = notebook.export(tmp_path / "export")
+
+    assert export.path == tmp_path / "export"
+    assert isinstance(export.path, Path)
+
+
+def test_backup_export_returns_result(monkeypatch, notebook: LA.Notebook, tmp_path):
+    """Backup exports return a completed result."""
+    monkeypatch.setattr(notebook_module, "_backup_tree", Mock(return_value={}))
+
+    export = notebook.export(tmp_path / "export", source="backup")
+
+    assert isinstance(export, notebook_module.NotebookExport)
+    assert export.path == tmp_path / "export"
 
 
 def test_backup_source_chains_the_backup_error(

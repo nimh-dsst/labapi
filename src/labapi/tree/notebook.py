@@ -28,6 +28,19 @@ if TYPE_CHECKING:
     from .collection import Notebooks
 
 
+class NotebookExport:
+    """The completed result of exporting a notebook."""
+
+    def __init__(self, path: Path):
+        """Initialize the export result with its destination path."""
+        self._path = path
+
+    @property
+    def path(self) -> Path:
+        """Return the export destination."""
+        return self._path
+
+
 class Notebook(AbstractTreeContainer):
     """Represents a LabArchives notebook, acting as the root of a tree structure.
 
@@ -95,7 +108,7 @@ class Notebook(AbstractTreeContainer):
         *,
         source: Literal["auto", "walk", "backup"] = "auto",
         overwrite: bool = False,
-    ) -> Path:
+    ) -> NotebookExport:
         """Export this notebook to a local directory tree.
 
         Reconstructs the notebook as a folder mirror under ``destination``:
@@ -113,7 +126,8 @@ class Notebook(AbstractTreeContainer):
             uses the backup archive when available and falls back to the walk.
         :param overwrite: When ``destination`` exists and is not empty, raise
             unless ``overwrite`` is ``True``.
-        :returns: The path of the export directory.
+        :returns: A completed :class:`NotebookExport`. Its ``path`` is the
+            export directory.
         """
         backup_error = None
         with TemporaryDirectory() as tmp:
@@ -125,10 +139,12 @@ class Notebook(AbstractTreeContainer):
                 except (ImportError, ApiError) as error:
                     backup_error = error
                 else:
-                    return _write_tree(tree, destination, overwrite)
+                    return NotebookExport(_write_tree(tree, destination, overwrite))
 
             if source != "backup":
-                return _write_tree(_walk_tree(self, tmp_path), destination, overwrite)
+                return NotebookExport(
+                    _write_tree(_walk_tree(self, tmp_path), destination, overwrite)
+                )
 
         raise RuntimeError(
             f"Could not export notebook with source={source!r}"
