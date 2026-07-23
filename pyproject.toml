@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "A Python client for the LabArchives API."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "CC0-1.0" }
+license = "MIT"
 authors = [
   { name = "Christoph Li", email = "christoph.li@nih.gov" },
   { name = "Joshua Lawrimore", email = "josh.lawrimore@nih.gov"},
@@ -17,7 +17,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication",
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",

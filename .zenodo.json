@@ -24,7 +24,7 @@
     }
   ],
   "keywords": ["Electronic Lab Notebook", "ELN", "LabArchives", "API"],
-  "license": "CC0-1.0",
+  "license": "MIT",
   "access_right": "open",
   "upload_type": "software"
 }
