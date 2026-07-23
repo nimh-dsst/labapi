@@ -217,8 +217,10 @@ def test_write_tree_shortens_an_overlong_filename(tmp_path):
     assert len(files) == 1
     assert len(files[0].name) <= 240
     assert files[0].suffix == ".txt"
-    extended_file = Path("\\\\?\\" + str(files[0].resolve()))
-    assert extended_file.read_text(encoding="utf-8") == "contents"
+    readable_path = files[0]
+    if os.name == "nt":
+        readable_path = Path("\\\\?\\" + str(readable_path.resolve()))
+    assert readable_path.read_text(encoding="utf-8") == "contents"
 
 
 @pytest.mark.skipif(os.name != "nt", reason="uses Windows extended paths")

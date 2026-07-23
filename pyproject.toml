@@ -59,6 +59,7 @@ export = [
 
 [dependency-groups]
 dev = [
+    "py7zr>=1.1.3",
     "pytest>=9.0.3",
     "pytest-cov>=7.0.0",
     "pyright>=1.1.406",

@@ -1161,6 +1161,7 @@ export = [
 [package.dev-dependencies]
 dev = [
     { name = "pre-commit" },
+    { name = "py7zr" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1191,6 +1192,7 @@ provides-extras = ["builtin-auth", "dotenv", "export"]
 [package.metadata.requires-dev]
 dev = [
     { name = "pre-commit", specifier = ">=4.5.1" },
+    { name = "py7zr", specifier = ">=1.1.3" },
     { name = "pyright", specifier = ">=1.1.406" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
