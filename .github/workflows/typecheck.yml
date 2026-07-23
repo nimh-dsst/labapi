@@ -9,11 +9,11 @@ jobs:
     uses: ./.github/workflows/python_check.yml
     with:
       job_name: Pyright
-      command: uv run pyright
+      command: uv run --all-extras pyright
 
   ty:
     uses: ./.github/workflows/python_check.yml
     with:
       job_name: ty
-      command: uv run ty check
+      command: uv run --all-extras ty check
       append_python_version_arg: true
