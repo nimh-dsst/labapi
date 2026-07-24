@@ -336,6 +336,11 @@ class Client:
         if not strict_cert:
             self.session.mount("https://", _313HTTPAdapter())
 
+    @property
+    def web_url(self) -> str:
+        """Return the LabArchives Web UI base URL."""
+        return self._base_url.replace("api.", "mynotebook.")
+
     def close(self) -> None:
         """Close the underlying requests session.
 

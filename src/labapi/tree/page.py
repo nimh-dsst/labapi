@@ -66,6 +66,11 @@ class NotebookPage(AbstractTreeNode):
         return super().id
 
     @property
+    def url(self) -> str:
+        """Return this page's LabArchives Web UI URL."""
+        return f"{self.user.client.web_url}/{self.root.id}/page/{self.id}"
+
+    @property
     def entries(self) -> Entries:
         """Return this page's entries, loading them from the API on first access.
 

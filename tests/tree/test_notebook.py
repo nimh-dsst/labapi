@@ -8,8 +8,10 @@ import pytest
 
 from labapi import (
     AttachmentEntry,
+    Client,
     HeaderEntry,
     Notebook,
+    NotebookPage,
     PlainTextEntry,
     TextEntry,
     UnknownEntry,
@@ -47,6 +49,24 @@ class TestNotebookUnit:
         assert notebook.name == "Test Notebook"
         assert notebook.is_default is True
         assert notebook.root is notebook
+
+    def test_notebook_and_page_urls(self):
+        """Test notebooks and pages build Web UI URLs from their IDs."""
+        with Client("https://api.labarchives-gov.com", "test", "test") as client:
+            user = User("test-user", "test@example.com", [], client)
+            notebook = Notebook(
+                NotebookInit("notebook-token", "Test Notebook", False),
+                user,
+                user.notebooks,
+            )
+            page = NotebookPage("page-1", "Test Page", notebook, notebook, user)
+
+            assert notebook.url == (
+                "https://mynotebook.labarchives-gov.com/notebook-token"
+            )
+            assert page.url == (
+                "https://mynotebook.labarchives-gov.com/notebook-token/page/page-1"
+            )
 
     def test_search_is_lazy(self):
         """Test Notebook.search does not call the API until a page is requested."""

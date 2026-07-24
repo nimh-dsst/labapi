@@ -9,6 +9,17 @@ avoid long chains of indexing when structures are deeply nested.
 .. seealso::
    :ref:`index_access` for duplicate-name and first-match lookup behavior.
 
+Web URLs
+--------
+
+Notebooks and pages expose their authenticated LabArchives Web UI URLs through
+their ``url`` properties. These are direct Web UI links, not Share URLs.
+
+.. code-block:: python
+
+    print(notebook.url)
+    print(page.url)
+
 .. code-block:: python
 
     from labapi import TraversalError

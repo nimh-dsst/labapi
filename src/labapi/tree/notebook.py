@@ -69,6 +69,11 @@ class Notebook(AbstractTreeContainer):
         """
         return self._id
 
+    @property
+    def url(self) -> str:
+        """Return this notebook's LabArchives Web UI URL."""
+        return f"{self.user.client.web_url}/{self.id}"
+
     @HasNameMixin.name.setter  # type: ignore[attr-defined]
     def name(self, value: str) -> None:
         """Set the notebook name.
