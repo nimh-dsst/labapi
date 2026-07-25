@@ -73,8 +73,17 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
         )
         return "terminal"
 
-    if installed_browsers.do_i_have_installed(browser):
-        return browser
+    try:
+        if installed_browsers.do_i_have_installed(browser):
+            return browser
+    except OSError as exc:
+        warnings.warn(
+            f"Configured browser probe failed: {exc}. "
+            "Falling back to automatic browser detection.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return None
 
     # Fall back to a linear search: installed-browsers may register a browser
     # under a key that differs from our canonical name (e.g. Edge as "msedge"),
