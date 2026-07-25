@@ -75,7 +75,12 @@ def to_bool(s: str) -> bool:
             raise ValueError(f"Cannot convert '{s}' to bool")
 
 
-def extract_etree(_etree: Element, schema: EtreeExtractorDict) -> dict[str, Any]:
+def extract_etree(
+    _etree: Element,
+    schema: EtreeExtractorDict,
+    *,
+    raise_missing: bool = True,
+) -> dict[str, Any]:
     """Extract data from an ``lxml.etree.Element`` using a format dictionary.
 
     This function navigates the XML tree using paths defined in the `schema` dictionary
@@ -85,9 +90,13 @@ def extract_etree(_etree: Element, schema: EtreeExtractorDict) -> dict[str, Any]
     :param schema: A dictionary defining the structure and extraction logic.
                    Keys are XML element tags (or paths), and values are either
                    nested `EtreeExtractorDict` or callable functions to process the text.
+    :param raise_missing: Whether to raise :class:`ExtractionError` when a
+                           requested element is missing. When false, missing
+                           values are omitted from the result.
     :returns: A dictionary containing the extracted and processed data.
-    :raises ExtractionError: If an element specified in the format is not found in the etree,
-                             or if a callable extractor fails to process a value.
+    :raises ExtractionError: If a requested element is missing while
+                             ``raise_missing`` is true, or if a callable
+                             extractor fails to process a value.
     """
     flat = _flatten_dict(schema)
 
@@ -98,12 +107,12 @@ def extract_etree(_etree: Element, schema: EtreeExtractorDict) -> dict[str, Any]
         message_path = f"./{key}"
         value = _etree.findtext(f"./{key}")
 
-        if (
-            value is None
-        ):  # XXX should we collate errors and return at end with the dict or?
-            raise ExtractionError(
-                f"Could not find value for './{key}' while parsing element at {etree_path}"
-            )
+        if value is None:
+            if raise_missing:
+                raise ExtractionError(
+                    f"Could not find value for './{key}' while parsing element at {etree_path}"
+                )
+            continue
 
         leaf = key.split("/")[-1]
 

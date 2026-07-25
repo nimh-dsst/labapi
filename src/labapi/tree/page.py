@@ -88,24 +88,31 @@ class NotebookPage(AbstractTreeNode):
             )
 
             for entry in entries_tree.iterfind(".//entry"):
-                entry_data = extract_etree(
+                entry_fields = extract_etree(
                     entry,
                     {
                         "eid": str,
                         "part-type": str,
-                        "attach-file-name": str,
-                        "attach-content-type": str,
-                        "entry-data": str,
                     },
                 )
+                entry_content = extract_etree(
+                    entry,
+                    {"entry-data": str, "caption": str},
+                    raise_missing=False,
+                )
 
-                part_type = entry_data["part-type"]
+                part_type = entry_fields["part-type"]
+                data = (
+                    entry_content.get("entry-data")
+                    or entry_content.get("caption")
+                    or ""
+                )
 
                 # Cast extracted string values to ensure type checker knows they're not None
                 entry_obj = Entry.from_part_type(
                     part_type,
-                    cast(str, entry_data["eid"]),
-                    cast(str, entry_data["entry-data"]),
+                    cast(str, entry_fields["eid"]),
+                    data,
                     self._user,
                 )
 
@@ -113,14 +120,14 @@ class NotebookPage(AbstractTreeNode):
                     pass
                 elif isinstance(entry_obj, UnimplementedEntry):
                     warnings.warn(
-                        f"Entry type '{part_type}' (ID: {entry_data['eid']}) is recognized but not "
+                        f"Entry type '{part_type}' (ID: {entry_fields['eid']}) is recognized but not "
                         f"implemented in labapi. Wrapping as UnimplementedEntry.",
                         UserWarning,
                         stacklevel=2,
                     )
                 elif isinstance(entry_obj, UnknownEntry):
                     warnings.warn(
-                        f"Unknown entry type '{part_type}' (ID: {entry_data['eid']}) encountered. "
+                        f"Unknown entry type '{part_type}' (ID: {entry_fields['eid']}) encountered. "
                         f"Wrapping as UnknownEntry.",
                         RuntimeWarning,
                         stacklevel=2,
