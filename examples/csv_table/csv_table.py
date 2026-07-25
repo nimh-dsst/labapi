@@ -345,7 +345,7 @@ def _find_tags(node: Tag, names: _TagNames) -> tuple[Tag, ...]:
 
 def _cell_texts(cells: Sequence[Tag]) -> _CsvRow:
     """Return stripped visible text from table cell tags."""
-    return tuple(cell.get_text(strip=True) for cell in cells)
+    return tuple(cell.get_text(" ", strip=True) for cell in cells)
 
 
 def main() -> None:
