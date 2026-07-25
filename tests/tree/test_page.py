@@ -9,7 +9,7 @@ from unittest.mock import Mock
 import pytest
 
 from labapi import Index, Notebook, NotebookPage
-from labapi.entry import Attachment, Entries, UnknownEntry, WidgetEntry
+from labapi.entry import Attachment, AttachmentEntry, Entries, UnknownEntry, WidgetEntry
 from labapi.user import User
 
 
@@ -309,6 +309,60 @@ class TestNotebookPageIntegration:
         assert isinstance(entries[0], UnknownEntry)
         assert entries[0].content_type == "future entry"
         assert entries[0].content == "future payload"
+        _ = client.pop_api_call()
+        client.clear_api_calls()
+
+    def test_page_entries_wrap_unknown_type_without_optional_fields(
+        self, client, notebook_tree: Notebook
+    ):
+        """Test page loading preserves unknown entries without optional fields."""
+        page = notebook_tree[Index.Id : "page-1"]
+
+        assert isinstance(page, NotebookPage)
+        client.clear_api_calls()
+        client.api_response = client.entries_response(
+            client.xml(
+                "entry",
+                client.xml("eid", "entry_unknown_new"),
+                client.xml("part-type", "future entry"),
+            ),
+            include_response=False,
+        )
+
+        with pytest.warns(RuntimeWarning, match="Wrapping as UnknownEntry"):
+            entries = page.entries
+
+        assert len(entries) == 1
+        assert isinstance(entries[0], UnknownEntry)
+        assert entries[0].content == ""
+        _ = client.pop_api_call()
+        client.clear_api_calls()
+
+    def test_page_entries_use_caption_when_attachment_data_is_nil(
+        self, client, notebook_tree: Notebook
+    ):
+        """Test attachment captions replace nil entry data."""
+        page = notebook_tree[Index.Id : "page-1"]
+
+        assert isinstance(page, NotebookPage)
+        client.clear_api_calls()
+        client.api_response = client.entries_response(
+            client.xml(
+                "entry",
+                client.xml("eid", "attachment-1"),
+                client.xml("part-type", "Attachment"),
+                client.xml("entry-data", nil="true"),
+                client.xml("caption", "Data file"),
+            ),
+            include_response=False,
+        )
+
+        entries = page.entries
+
+        assert len(entries) == 1
+        attachment_entry = entries[0]
+        assert isinstance(attachment_entry, AttachmentEntry)
+        assert attachment_entry.caption == "Data file"
         _ = client.pop_api_call()
         client.clear_api_calls()
 
