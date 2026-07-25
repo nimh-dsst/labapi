@@ -197,6 +197,20 @@ def test_browser_detection_warns_and_autodetects_when_preferred_browser_missing(
         assert browser_module.detect_default_browser() == "firefox"
 
 
+def test_configured_browser_probe_error_falls_back_to_autodetection(
+    browser_module, mock_installed_browsers, monkeypatch
+):
+    """Test configured browser probe errors fall back to autodetection."""
+    monkeypatch.setenv("LA_AUTH_BROWSER", "chrome")
+    mock_installed_browsers.do_i_have_installed.side_effect = PermissionError(
+        "access denied"
+    )
+    mock_installed_browsers.what_is_the_default_browser.return_value = "Mozilla Firefox"
+
+    with pytest.warns(RuntimeWarning, match="Configured browser probe failed"):
+        assert browser_module.detect_default_browser() == "firefox"
+
+
 def test_browser_detection_runtime_failure_warns(
     browser_module, mock_installed_browsers, monkeypatch
 ):
