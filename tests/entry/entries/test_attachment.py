@@ -108,10 +108,10 @@ class TestAttachmentEntryIntegration:
         assert attachment.filename == "testfile 1GiB.bin"
         assert attachment.read() == b"attachment data"
 
-    def test_attachment_entry_missing_filename_fails_before_downloading(
+    def test_attachment_entry_missing_filename_uses_eid_and_warns(
         self, client, user: User
     ):
-        """Test filename resolution errors do not consume attachment data."""
+        """Test an EID provides the filename when the response omits one."""
         entry = AttachmentEntry("eid_att", "Caption", user)
 
         mock_response = Mock()
@@ -121,12 +121,15 @@ class TestAttachmentEntryIntegration:
         }
         mock_response.history = []
         mock_response.url = "https://api.labarchives.com/api/entries/entry_attachment"
+        mock_response.iter_content.return_value = [b"attachment data"]
         client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
 
-        with pytest.raises(ApiError, match="attachment entry 'eid_att'"):
-            entry.get_attachment()
+        with pytest.warns(RuntimeWarning, match="using attachment entry EID 'eid_att'"):
+            attachment = entry.get_attachment()
 
-        mock_response.iter_content.assert_not_called()
+        assert attachment.filename == "eid_att"
+        assert attachment.read() == b"attachment data"
+        mock_response.iter_content.assert_called_once()
         mock_response.close.assert_called_once()
 
     def test_attachment_entry_content_setter(self, client, user: User):

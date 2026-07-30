@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import warnings
 from email.message import Message
 from io import BytesIO
 from pathlib import PurePosixPath
@@ -83,9 +84,13 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
                     filename = _s3_filename_from_url(attachment_stream.url)
 
                 if filename is None:
-                    raise ApiError(
+                    filename = self.id
+                    warnings.warn(
                         "Could not determine filename from API response headers "
-                        f"or redirected S3 URL for attachment entry {self.id!r}"
+                        "or redirected S3 URL; using attachment entry EID "
+                        f"{filename!r} as the filename.",
+                        RuntimeWarning,
+                        stacklevel=2,
                     )
 
                 mime_type = msg.get_content_type()
