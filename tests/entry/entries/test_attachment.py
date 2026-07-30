@@ -5,6 +5,8 @@ from __future__ import annotations
 from io import BytesIO
 from unittest.mock import Mock
 
+import pytest
+
 from labapi.client import StreamingResponse
 from labapi.entry.attachment import Attachment
 from labapi.entry.entries.attachment import AttachmentEntry
@@ -84,6 +86,48 @@ class TestAttachmentEntryIntegration:
         assert isinstance(attachment, Attachment)
         assert attachment.filename == "document.pdf"
         assert attachment.mime_type == "application/pdf"
+
+    def test_attachment_entry_uses_s3_redirect_path_for_filename(
+        self, client, user: User
+    ):
+        """Test S3 object keys provide a fallback attachment filename."""
+        entry = AttachmentEntry("eid_att", "Caption", user)
+
+        mock_response = Mock()
+        mock_response.headers = {"Content-Type": "application/octet-stream"}
+        mock_response.history = [Mock()]
+        mock_response.url = (
+            "https://bucket.s3-fips.us-east-1.amazonaws.com/"
+            "blobs/nbid/eid/1/testfile%201GiB.bin?X-Amz-Signature=redacted"
+        )
+        mock_response.iter_content.return_value = [b"attachment data"]
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        attachment = entry.get_attachment()
+
+        assert attachment.filename == "testfile 1GiB.bin"
+        assert attachment.read() == b"attachment data"
+
+    def test_attachment_entry_missing_filename_fails_before_downloading(
+        self, client, user: User
+    ):
+        """Test filename resolution errors do not consume attachment data."""
+        entry = AttachmentEntry("eid_att", "Caption", user)
+
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition": 'attachment; filename=""',
+        }
+        mock_response.history = []
+        mock_response.url = "https://api.labarchives.com/api/entries/entry_attachment"
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        with pytest.raises(ApiError, match="attachment entry 'eid_att'"):
+            entry.get_attachment()
+
+        mock_response.iter_content.assert_not_called()
+        mock_response.close.assert_called_once()
 
     def test_attachment_entry_content_setter(self, client, user: User):
         """Test AttachmentEntry.content setter uploads attachment."""
