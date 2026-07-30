@@ -108,15 +108,26 @@ class TestAttachmentEntryIntegration:
         assert attachment.filename == "testfile 1GiB.bin"
         assert attachment.read() == b"attachment data"
 
-    def test_attachment_entry_missing_filename_uses_eid_and_warns(
-        self, client, user: User
+    @pytest.mark.parametrize(
+        ("content_type", "expected_filename"),
+        [
+            ("application/pdf", "eid_att.pdf"),
+            ("application/x-unknown", "eid_att.bin"),
+        ],
+    )
+    def test_attachment_entry_missing_filename_uses_eid_and_extension(
+        self,
+        client,
+        user: User,
+        content_type: str,
+        expected_filename: str,
     ):
-        """Test an EID provides the filename when the response omits one."""
+        """Test an EID and MIME type provide a filename when the response omits one."""
         entry = AttachmentEntry("eid_att", "Caption", user)
 
         mock_response = Mock()
         mock_response.headers = {
-            "Content-Type": "application/octet-stream",
+            "Content-Type": content_type,
             "Content-Disposition": 'attachment; filename=""',
         }
         mock_response.history = []
@@ -124,10 +135,13 @@ class TestAttachmentEntryIntegration:
         mock_response.iter_content.return_value = [b"attachment data"]
         client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
 
-        with pytest.warns(RuntimeWarning, match="using attachment entry EID 'eid_att'"):
+        with pytest.warns(
+            RuntimeWarning,
+            match="using attachment entry EID 'eid_att'",
+        ):
             attachment = entry.get_attachment()
 
-        assert attachment.filename == "eid_att"
+        assert attachment.filename == expected_filename
         assert attachment.read() == b"attachment data"
         mock_response.iter_content.assert_called_once()
         mock_response.close.assert_called_once()

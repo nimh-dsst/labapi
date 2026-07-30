@@ -6,6 +6,7 @@ import shutil
 import warnings
 from email.message import Message
 from io import BytesIO
+from mimetypes import guess_extension
 from pathlib import PurePosixPath
 from tempfile import TemporaryFile
 from typing import IO, TYPE_CHECKING
@@ -77,6 +78,7 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
                 if content_disposition is not None:
                     msg["Content-Disposition"] = content_disposition
 
+                mime_type = msg.get_content_type()
                 filename = msg.get_filename()
                 if filename is not None and not filename.strip():
                     filename = None
@@ -84,16 +86,17 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
                     filename = _s3_filename_from_url(attachment_stream.url)
 
                 if filename is None:
-                    filename = self.id
+                    extension = guess_extension(mime_type, strict=False) or ".bin"
+                    filename = f"{self.id}{extension}"
                     warnings.warn(
                         "Could not determine filename from API response headers "
                         "or redirected S3 URL; using attachment entry EID "
-                        f"{filename!r} as the filename.",
+                        f"{self.id!r} with MIME-derived extension {extension!r} "
+                        f"as filename {filename!r}.",
                         RuntimeWarning,
                         stacklevel=2,
                     )
 
-                mime_type = msg.get_content_type()
                 output = _make_backing_io(use_tempfile)
                 for chunk in attachment_stream:
                     output.write(chunk)
