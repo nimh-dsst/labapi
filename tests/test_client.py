@@ -1054,6 +1054,40 @@ class TestClientUnit:
         assert client._akid == "test_akid"  # pyright: ignore[reportPrivateUsage]
         assert client._base_url == "https://test.api/"  # pyright: ignore[reportPrivateUsage]
 
+    def test_client_web_url_override(self):
+        """Test Client accepts an explicit Web UI URL for custom API hosts."""
+        client = Client(
+            "https://api.example.com/api",
+            "test_akid",
+            "test_akpass",
+            web_url="https://notebooks.example.com/eln/",
+        )
+        assert client.web_url == "https://notebooks.example.com/eln"
+
+    def test_client_web_url_requires_override_for_unknown_api_host(self):
+        """Test Client rejects unknown API hosts when a Web UI URL is requested."""
+        client = Client("https://api.example.com", "test_akid", "test_akpass")
+        with pytest.raises(ValueError, match="pass web_url explicitly"):
+            _ = client.web_url
+
+    @pytest.mark.parametrize(
+        "web_url",
+        [
+            "not-a-url",
+            "https://notebooks.example.com/?preview=true",
+            "https://notebooks.example.com/#overview",
+        ],
+    )
+    def test_client_rejects_invalid_web_url(self, web_url):
+        """Test Client validates explicit Web UI base URLs."""
+        with pytest.raises(ValueError, match="Invalid web_url"):
+            Client(
+                "https://api.example.com",
+                "test_akid",
+                "test_akpass",
+                web_url=web_url,
+            )
+
     def test_client_initialization_warns_on_query_parameters(self):
         """Test Client warns when initialized with a base_url containing query parameters."""
         with pytest.warns(

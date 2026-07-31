@@ -48,6 +48,38 @@ _DEFAULT_AUTH_CALLBACK_PORT = 8089
 
 _DEFAULT_AUTH_CALLBACK_TIMEOUT = 300.0
 
+_WEB_UI_HOSTS = {
+    "api.labarchives.com": "mynotebook.labarchives.com",
+    "api.labarchives-gov.com": "mynotebook.labarchives-gov.com",
+    "auapi.labarchives.com": "au-mynotebook.labarchives.com",
+    "caapi.labarchives.com": "ca-mynotebook.labarchives.com",
+    "euapi.labarchives.com": "eu-mynotebook.labarchives.com",
+    "ukapi.labarchives.com": "uk-mynotebook.labarchives.com",
+}
+
+
+def _normalize_web_url(web_url: str) -> str:
+    """Validate and normalize an explicitly configured Web UI base URL."""
+    parsed_web_url = urlsplit(web_url)
+    if (
+        parsed_web_url.scheme not in {"http", "https"}
+        or not parsed_web_url.netloc
+        or parsed_web_url.query
+        or parsed_web_url.fragment
+    ):
+        raise ValueError(
+            "Invalid web_url: expected a full HTTP(S) URL without a query or fragment."
+        )
+    return urlunsplit(
+        (
+            parsed_web_url.scheme,
+            parsed_web_url.netloc,
+            parsed_web_url.path.rstrip("/"),
+            "",
+            "",
+        )
+    )
+
 
 context = ssl.create_default_context()
 
@@ -267,6 +299,7 @@ class Client:
         akid: str | None = None,
         akpass: bytes | str | None = None,
         *,
+        web_url: str | None = None,
         strict_cert: bool = True,
         timeout: float | tuple[float, float] | None = 60.0,
     ):
@@ -279,12 +312,14 @@ class Client:
         - ``ACCESS_KEYID``: The Access Key ID.
         - ``ACCESS_PWD``: The Access Key Password.
 
-        :param base_url: The base URL of the LabArchives API (e.g., "https://mynotebook.labarchives.com").
+        :param base_url: The base URL of the LabArchives API (e.g., "https://api.labarchives.com").
                          If None, loaded from the ``API_URL`` environment variable.
         :param akid: The Access Key ID for API authentication.
                      If None, loaded from the ``ACCESS_KEYID`` environment variable.
         :param akpass: The Access Key Password for HMAC-SHA512 signing.
                        If None, loaded from the ``ACCESS_PWD`` environment variable.
+        :param web_url: The base URL of the LabArchives Web UI. If None, inferred
+                        from a supported API host when needed.
         :param strict_cert: Whether to use strict X.509 certificate verification.
                            If False, disables the VERIFY_X509_STRICT flag to allow connections
                            to servers with certificates that may not pass strict validation.
@@ -326,6 +361,7 @@ class Client:
             )
 
         self._base_url = normalized_base_url
+        self._web_url = _normalize_web_url(web_url) if web_url is not None else None
         self._akid = akid
         self._hmac = HMAC(
             bytes(akpass, "utf8") if isinstance(akpass, str) else akpass, SHA512()
@@ -339,7 +375,18 @@ class Client:
     @property
     def web_url(self) -> str:
         """Return the LabArchives Web UI base URL."""
-        return self._base_url.replace("api.", "mynotebook.")
+        if self._web_url is not None:
+            return self._web_url
+
+        parsed_base_url = urlsplit(self._base_url)
+        try:
+            web_host = _WEB_UI_HOSTS[parsed_base_url.hostname or ""]
+        except KeyError as error:
+            raise ValueError(
+                "Cannot infer a LabArchives Web UI URL from API base URL "
+                f"{self._base_url!r}; pass web_url explicitly."
+            ) from error
+        return urlunsplit((parsed_base_url.scheme, web_host, "", "", ""))
 
     def close(self) -> None:
         """Close the underlying requests session.

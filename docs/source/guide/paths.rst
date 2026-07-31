@@ -14,6 +14,8 @@ Web URLs
 
 Notebooks and pages expose their authenticated LabArchives Web UI URLs through
 their ``url`` properties. These are direct Web UI links, not Share URLs.
+For a custom API host, pass its Web UI base URL explicitly to
+``Client(..., web_url="https://notebooks.example.com")``.
 
 .. code-block:: python
 
