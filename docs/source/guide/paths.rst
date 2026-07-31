@@ -12,8 +12,9 @@ avoid long chains of indexing when structures are deeply nested.
 Web URLs
 --------
 
-Notebooks and pages expose their authenticated LabArchives Web UI URLs through
-their ``url`` properties. These are direct Web UI links, not Share URLs.
+Notebook and page ``url`` properties return direct LabArchives Web UI links.
+They are not Share URLs: only signed-in users authorized to access the target
+can view it.
 For a custom API host, pass its Web UI base URL explicitly to
 ``Client(..., web_url="https://notebooks.example.com")``.
 
