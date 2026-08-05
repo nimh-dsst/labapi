@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from labapi.entry import Entry
+from labapi.entry import AttachmentEntry, Entry
 from labapi.util import extract_etree
 
 if TYPE_CHECKING:
@@ -80,6 +80,9 @@ class EntrySearch:
         entries: list[Entry[Any]] = []
         for entry_element in response.findall("./entries/entry"):
             entry_fields = extract_etree(entry_element, {"eid": str, "part-type": str})
+            attachment_filename = extract_etree(
+                entry_element, {"attach-file-name": str}, raise_missing=False
+            ).get("attach-file-name")
 
             entry_data = entry_element.find("./entry-data")
             caption = entry_element.find("./caption")
@@ -98,14 +101,20 @@ class EntrySearch:
             ):
                 data = caption.text
 
-            entries.append(
-                Entry.from_part_type(
-                    entry_fields["part-type"],
-                    entry_fields["eid"],
-                    data,
-                    self._notebook.user,
-                )
+            entry = Entry.from_part_type(
+                entry_fields["part-type"],
+                entry_fields["eid"],
+                data,
+                self._notebook.user,
             )
+            if isinstance(entry, AttachmentEntry):
+                entry._filename = (  # pyright: ignore[reportPrivateUsage]
+                    attachment_filename
+                    if attachment_filename and attachment_filename.strip()
+                    else None
+                )
+
+            entries.append(entry)
 
         page = EntrySearchPage(
             page_size=self._page_size,

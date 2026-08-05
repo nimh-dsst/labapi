@@ -44,6 +44,18 @@ def _s3_filename_from_url(url: str) -> str | None:
     return filename
 
 
+def _listing_filename(filename: str | None) -> str | None:
+    """Return a safe basename from attachment listing metadata."""
+    if filename is None or not filename.strip():
+        return None
+
+    basename = PurePosixPath(filename.replace("\\", "/")).name
+    if not basename.strip() or basename in {".", ".."}:
+        return None
+
+    return basename
+
+
 class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
     """Represents an attachment entry on a LabArchives page.
 
@@ -60,6 +72,8 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
         """
         super().__init__(eid, caption, user)
         self._filedata: Attachment | None = None
+        # Filename reported by the page listing (or supplied at upload time).
+        # This is more stable than a generated download filename.
         self._filename: str | None = None
         self._mime_type: str | None = None
 
@@ -79,7 +93,9 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
                     msg["Content-Disposition"] = content_disposition
 
                 mime_type = msg.get_content_type()
-                filename = msg.get_filename()
+                filename = _listing_filename(self._filename)
+                if filename is None:
+                    filename = msg.get_filename()
                 if filename is not None and not filename.strip():
                     filename = None
                 if filename is None and attachment_stream.response.history:
@@ -188,6 +204,7 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
             ) from exc
 
         self._data = value.caption
+        self._filename = value.filename if value.filename.strip() else None
 
         if self._filedata:
             self._filedata.close()

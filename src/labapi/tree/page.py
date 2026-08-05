@@ -15,6 +15,7 @@ from typing_extensions import Self, override
 
 from labapi.entry import (
     Attachment,
+    AttachmentEntry,
     Entries,
     Entry,
     UnimplementedEntry,
@@ -100,6 +101,9 @@ class NotebookPage(AbstractTreeNode):
                         "part-type": str,
                     },
                 )
+                attachment_filename = extract_etree(
+                    entry, {"attach-file-name": str}, raise_missing=False
+                ).get("attach-file-name")
                 entry_content = extract_etree(
                     entry,
                     {"entry-data": str, "caption": str},
@@ -120,6 +124,13 @@ class NotebookPage(AbstractTreeNode):
                     data,
                     self._user,
                 )
+
+                if isinstance(entry_obj, AttachmentEntry):
+                    entry_obj._filename = (  # pyright: ignore[reportPrivateUsage]
+                        attachment_filename
+                        if attachment_filename and attachment_filename.strip()
+                        else None
+                    )
 
                 if isinstance(entry_obj, WidgetEntry):
                     pass
