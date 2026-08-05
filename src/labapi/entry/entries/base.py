@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from inspect import isabstract
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar, cast
 
@@ -27,6 +28,18 @@ class _MetaEntryFactory(Protocol):
 
 
 _entries_registry: dict[str, type[Entry[Any]]] = {}
+
+
+def _parse_iso_datetime(value: str) -> datetime:
+    """Parse a timezone-aware ISO 8601 timestamp from a LabArchives response."""
+    if value.endswith("Z"):
+        value = f"{value[:-1]}+00:00"
+
+    result = datetime.fromisoformat(value)
+    if result.tzinfo is None or result.utcoffset() is None:
+        raise ValueError("timestamp must include a timezone offset")
+
+    return result
 
 
 class Entry(Generic[T], ABC):
@@ -67,7 +80,16 @@ class Entry(Generic[T], ABC):
         return _entries_registry[part_type]
 
     @staticmethod
-    def from_part_type(part_type: str, eid: str, data: str, user: User) -> Entry[Any]:
+    def from_part_type(
+        part_type: str,
+        eid: str,
+        data: str,
+        user: User,
+        *,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        version: int | None = None,
+    ) -> Entry[Any]:
         """Create an entry instance for a LabArchives part type.
 
         This method takes a part type string and returns the corresponding
@@ -82,6 +104,9 @@ class Entry(Generic[T], ABC):
         :param data: The entry data. For text-based entries, this is the text content.
                     For attachment entries, this is the caption.
         :param user: The authenticated user associated with this entry.
+        :param created_at: The timestamp when the entry was created, if supplied by the API.
+        :param updated_at: The timestamp when the entry was last updated, if supplied by the API.
+        :param version: The API version number for the entry, if supplied by the API.
         :returns: An entry instance of the appropriate type.
         """
         klass = _entries_registry.get(part_type)
@@ -89,12 +114,16 @@ class Entry(Generic[T], ABC):
         if klass is None:
             from .unknown import UnknownEntry
 
-            return UnknownEntry(eid, data, user, part_type=part_type)
+            entry = UnknownEntry(eid, data, user, part_type=part_type)
+        elif klass._is_meta:
+            entry = cast(_MetaEntryFactory, klass)(eid, data, user, part_type=part_type)
+        else:
+            entry = cast(_EntryFactory, klass)(eid, data, user)
 
-        if klass._is_meta:
-            return cast(_MetaEntryFactory, klass)(eid, data, user, part_type=part_type)
-
-        return cast(_EntryFactory, klass)(eid, data, user)
+        entry._created_at = created_at
+        entry._updated_at = updated_at
+        entry._version = version
+        return entry
 
     # TODO perms
     def __init__(
@@ -112,6 +141,9 @@ class Entry(Generic[T], ABC):
         self._id = eid
         self._data = data
         self._user = user
+        self._created_at: datetime | None = None
+        self._updated_at: datetime | None = None
+        self._version: int | None = None
 
     def __init_subclass__(
         cls,
@@ -149,6 +181,21 @@ class Entry(Generic[T], ABC):
         :returns: A string representing the entry's type (e.g., "text entry", "Attachment").
         """
         return self._part_type
+
+    @property
+    def created_at(self) -> datetime | None:
+        """Return when this entry was created, if supplied by the API."""
+        return self._created_at
+
+    @property
+    def updated_at(self) -> datetime | None:
+        """Return when this entry was last updated, if supplied by the API."""
+        return self._updated_at
+
+    @property
+    def version(self) -> int | None:
+        """Return this entry's API version number, if supplied by the API."""
+        return self._version
 
     @property
     @abstractmethod

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -21,6 +22,14 @@ class TestEntryUnit:
         """Test Entry stores and exposes its ID."""
         entry = TextEntry("eid_test", "<p>Content</p>", Mock(spec=User))
         assert entry.id == "eid_test"
+
+    def test_direct_constructor_defaults_metadata_to_none(self):
+        """Test existing three-argument constructors leave metadata unset."""
+        entry = TextEntry("eid_test", "<p>Content</p>", Mock(spec=User))
+
+        assert entry.created_at is None
+        assert entry.updated_at is None
+        assert entry.version is None
 
     def test_entry_content_type(self):
         """Test Entry exposes the correct content_type for its class."""
@@ -115,3 +124,22 @@ class TestEntryIntegration:
         assert isinstance(entry, UnknownEntry)
         assert entry.content_type == "unknown_type"
         assert entry.content == "Data"
+
+    def test_entry_from_part_type_applies_optional_metadata(self, user: User):
+        """Test factory metadata is assigned without changing subclass constructors."""
+        created_at = datetime(2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc)
+        updated_at = datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
+
+        entry = Entry.from_part_type(
+            "text entry",
+            "eid_123",
+            "data",
+            user,
+            created_at=created_at,
+            updated_at=updated_at,
+            version=1,
+        )
+
+        assert entry.created_at == created_at
+        assert entry.updated_at == updated_at
+        assert entry.version == 1

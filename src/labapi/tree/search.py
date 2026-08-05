@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from labapi.entry import Entry
+from labapi.entry.entries.base import _parse_iso_datetime
 from labapi.util import extract_etree
 
 if TYPE_CHECKING:
@@ -80,6 +81,15 @@ class EntrySearch:
         entries: list[Entry[Any]] = []
         for entry_element in response.findall("./entries/entry"):
             entry_fields = extract_etree(entry_element, {"eid": str, "part-type": str})
+            entry_metadata = extract_etree(
+                entry_element,
+                {
+                    "created-at": _parse_iso_datetime,
+                    "updated-at": _parse_iso_datetime,
+                    "version": int,
+                },
+                raise_missing=False,
+            )
 
             entry_data = entry_element.find("./entry-data")
             caption = entry_element.find("./caption")
@@ -104,6 +114,9 @@ class EntrySearch:
                     entry_fields["eid"],
                     data,
                     self._notebook.user,
+                    created_at=entry_metadata.get("created-at"),
+                    updated_at=entry_metadata.get("updated-at"),
+                    version=entry_metadata.get("version"),
                 )
             )
 
