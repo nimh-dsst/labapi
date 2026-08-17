@@ -16,14 +16,31 @@ T = TypeVar("T")
 class _EntryFactory(Protocol):
     _is_meta: ClassVar[bool]
 
-    def __call__(self, eid: str, data: str, user: User) -> Entry[Any]: ...
+    def __call__(
+        self,
+        eid: str,
+        data: str,
+        user: User,
+        *,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        version: int | None = None,
+    ) -> Entry[Any]: ...
 
 
 class _MetaEntryFactory(Protocol):
     _is_meta: ClassVar[bool]
 
     def __call__(
-        self, eid: str, data: str, user: User, *, part_type: str
+        self,
+        eid: str,
+        data: str,
+        user: User,
+        *,
+        part_type: str,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        version: int | None = None,
     ) -> Entry[Any]: ...
 
 
@@ -68,7 +85,16 @@ class Entry(Generic[T], ABC):
         return _entries_registry[part_type]
 
     @staticmethod
-    def from_part_type(part_type: str, eid: str, data: str, user: User) -> Entry[Any]:
+    def from_part_type(
+        part_type: str,
+        eid: str,
+        data: str,
+        user: User,
+        *,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        version: int | None = None,
+    ) -> Entry[Any]:
         """Create an entry instance for a LabArchives part type.
 
         This method takes a part type string and returns the corresponding
@@ -83,6 +109,9 @@ class Entry(Generic[T], ABC):
         :param data: The entry data. For text-based entries, this is the text content.
                     For attachment entries, this is the caption.
         :param user: The authenticated user associated with this entry.
+        :param created_at: When the entry was created, if supplied by the API.
+        :param updated_at: When the entry was last updated, if supplied by the API.
+        :param version: The entry's API version number, if supplied by the API.
         :returns: An entry instance of the appropriate type.
         """
         klass = _entries_registry.get(part_type)
@@ -90,12 +119,35 @@ class Entry(Generic[T], ABC):
         if klass is None:
             from .unknown import UnknownEntry
 
-            return UnknownEntry(eid, data, user, part_type=part_type)
+            return UnknownEntry(
+                eid,
+                data,
+                user,
+                part_type=part_type,
+                created_at=created_at,
+                updated_at=updated_at,
+                version=version,
+            )
 
         if klass._is_meta:
-            return cast(_MetaEntryFactory, klass)(eid, data, user, part_type=part_type)
+            return cast(_MetaEntryFactory, klass)(
+                eid,
+                data,
+                user,
+                part_type=part_type,
+                created_at=created_at,
+                updated_at=updated_at,
+                version=version,
+            )
 
-        return cast(_EntryFactory, klass)(eid, data, user)
+        return cast(_EntryFactory, klass)(
+            eid,
+            data,
+            user,
+            created_at=created_at,
+            updated_at=updated_at,
+            version=version,
+        )
 
     # TODO perms
     def __init__(
@@ -103,19 +155,27 @@ class Entry(Generic[T], ABC):
         eid: str,
         data: str,
         user: User,
+        *,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        version: int | None = None,
     ):
         """Initialize an entry.
 
         :param eid: The unique ID of the entry.
+        :param data: The entry data or attachment caption.
         :param user: The authenticated user associated with this entry.
+        :param created_at: When the entry was created, if supplied by the API.
+        :param updated_at: When the entry was last updated, if supplied by the API.
+        :param version: The entry's API version number, if supplied by the API.
         """
         super().__init__()
         self._id = eid
         self._data = data
         self._user = user
-        self._created_at: datetime | None = None
-        self._updated_at: datetime | None = None
-        self._version: int | None = None
+        self._created_at = created_at
+        self._updated_at = updated_at
+        self._version = version
 
     def __init_subclass__(
         cls,

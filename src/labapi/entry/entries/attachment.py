@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import warnings
+from datetime import datetime
 from email.message import Message
 from io import BytesIO
 from mimetypes import guess_extension
@@ -51,14 +52,30 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
     providing access to the attachment's content, filename, and caption.
     """
 
-    def __init__(self, eid: str, caption: str, user: User):
+    def __init__(
+        self,
+        eid: str,
+        caption: str,
+        user: User,
+        *,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        version: int | None = None,
+    ):
         """Initialize an attachment entry.
 
         :param eid: The unique ID of the entry.
         :param caption: The caption associated with the attachment.
         :param user: The authenticated user.
         """
-        super().__init__(eid, caption, user)
+        super().__init__(
+            eid,
+            caption,
+            user,
+            created_at=created_at,
+            updated_at=updated_at,
+            version=version,
+        )
         self._filedata: Attachment | None = None
         self._filename: str | None = None
         self._mime_type: str | None = None

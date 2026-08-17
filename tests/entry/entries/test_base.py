@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -107,6 +108,29 @@ class TestEntryIntegration:
         # others are just strings.
         if not isinstance(entry, AttachmentEntry):
             assert entry.content == "data"
+
+    @pytest.mark.parametrize(
+        "part_type",
+        ["text entry", "sketch entry", "widget entry", "future entry"],
+    )
+    def test_entry_from_part_type_propagates_metadata(self, part_type: str, user: User):
+        """Test lifecycle metadata reaches every entry factory path."""
+        created_at = datetime(2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc)
+        updated_at = datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
+
+        entry = Entry.from_part_type(
+            part_type,
+            "eid_123",
+            "data",
+            user,
+            created_at=created_at,
+            updated_at=updated_at,
+            version=3,
+        )
+
+        assert entry.created_at is created_at
+        assert entry.updated_at is updated_at
+        assert entry.version == 3
 
     def test_entry_from_part_type_widget_entry_returns_widget_entry(self, user: User):
         """Test widget entries resolve to the backward-compatible WidgetEntry class."""

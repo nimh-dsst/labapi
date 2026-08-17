@@ -122,6 +122,8 @@ class NotebookPage(AbstractTreeNode):
                     or entry_content.get("caption")
                     or ""
                 )
+                created_at = entry_metadata.get("created-at")
+                updated_at = entry_metadata.get("updated-at")
 
                 # Cast extracted string values to ensure type checker knows they're not None
                 entry_obj = Entry.from_part_type(
@@ -129,21 +131,17 @@ class NotebookPage(AbstractTreeNode):
                     cast(str, entry_fields["eid"]),
                     data,
                     self._user,
-                )
-                created_at = entry_metadata.get("created-at")
-                updated_at = entry_metadata.get("updated-at")
-                entry_obj._created_at = (  # pyright: ignore[reportPrivateUsage]
-                    datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-                    if created_at is not None
-                    else None
-                )
-                entry_obj._updated_at = (  # pyright: ignore[reportPrivateUsage]
-                    datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-                    if updated_at is not None
-                    else None
-                )
-                entry_obj._version = entry_metadata.get(  # pyright: ignore[reportPrivateUsage]
-                    "version"
+                    created_at=(
+                        datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                        if created_at is not None
+                        else None
+                    ),
+                    updated_at=(
+                        datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                        if updated_at is not None
+                        else None
+                    ),
+                    version=entry_metadata.get("version"),
                 )
 
                 if isinstance(entry_obj, WidgetEntry):
