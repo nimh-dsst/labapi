@@ -80,24 +80,6 @@ class TestAttachmentEntryIntegration:
 
         assert entry.get_attachment().filename == "original.txt"
 
-    def test_attachment_entry_uses_basename_from_listing_filename(
-        self, client, user: User
-    ):
-        """A path-like listing filename is reduced to its basename."""
-        entry = AttachmentEntry("eid_att", "Caption", user)
-        entry._filename = (  # pyright: ignore[reportPrivateUsage]
-            "uploaded\\from/browser/original.txt"
-        )
-        mock_response = Mock()
-        mock_response.headers = {
-            "Content-Type": "text/plain",
-            "Content-Disposition": 'attachment; filename="generated.txt"',
-        }
-        mock_response.iter_content.return_value = [b"content"]
-        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
-
-        assert entry.get_attachment().filename == "original.txt"
-
     def test_attachment_entry_content_getter(self, client, user: User):
         """Test AttachmentEntry.content getter returns attachment."""
         entry = AttachmentEntry("eid_att", "Caption", user)

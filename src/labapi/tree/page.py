@@ -126,11 +126,7 @@ class NotebookPage(AbstractTreeNode):
                 )
 
                 if isinstance(entry_obj, AttachmentEntry):
-                    entry_obj._filename = (  # pyright: ignore[reportPrivateUsage]
-                        attachment_filename
-                        if attachment_filename and attachment_filename.strip()
-                        else None
-                    )
+                    entry_obj._filename = attachment_filename or None  # pyright: ignore[reportPrivateUsage]
 
                 if isinstance(entry_obj, WidgetEntry):
                     pass
