@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from datetime import datetime
 from inspect import isabstract
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar, cast
 
 if TYPE_CHECKING:
-    from lxml.etree import Element
-
     from labapi.user import User
 
 T = TypeVar("T")
@@ -31,35 +28,6 @@ class _MetaEntryFactory(Protocol):
 
 
 _entries_registry: dict[str, type[Entry[Any]]] = {}
-
-
-@dataclass(frozen=True)
-class EntryMetadata:
-    """Optional lifecycle metadata returned with an entry."""
-
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    version: int | None = None
-
-    @classmethod
-    def from_xml(cls, element: Element) -> EntryMetadata:
-        """Load lifecycle metadata from an entry XML element."""
-        created_at = element.findtext("./created-at")
-        updated_at = element.findtext("./updated-at")
-        version = element.findtext("./version")
-        return cls(
-            created_at=(
-                datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-                if created_at is not None
-                else None
-            ),
-            updated_at=(
-                datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-                if updated_at is not None
-                else None
-            ),
-            version=int(version) if version is not None else None,
-        )
 
 
 class Entry(Generic[T], ABC):
@@ -145,7 +113,9 @@ class Entry(Generic[T], ABC):
         self._id = eid
         self._data = data
         self._user = user
-        self._metadata = EntryMetadata()
+        self._created_at: datetime | None = None
+        self._updated_at: datetime | None = None
+        self._version: int | None = None
 
     def __init_subclass__(
         cls,
@@ -187,17 +157,17 @@ class Entry(Generic[T], ABC):
     @property
     def created_at(self) -> datetime | None:
         """Return when this entry was created, if supplied by the API."""
-        return self._metadata.created_at
+        return self._created_at
 
     @property
     def updated_at(self) -> datetime | None:
         """Return when this entry was last updated, if supplied by the API."""
-        return self._metadata.updated_at
+        return self._updated_at
 
     @property
     def version(self) -> int | None:
         """Return this entry's API version number, if supplied by the API."""
-        return self._metadata.version
+        return self._version
 
     @property
     @abstractmethod

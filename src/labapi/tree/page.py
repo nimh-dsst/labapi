@@ -21,8 +21,7 @@ from labapi.entry import (
     UnknownEntry,
     WidgetEntry,
 )
-from labapi.entry.entries.base import EntryMetadata
-from labapi.util import InsertBehavior, extract_etree
+from labapi.util import InsertBehavior, extract_etree, to_datetime
 
 from .mixins import AbstractTreeContainer, AbstractTreeNode
 
@@ -101,7 +100,15 @@ class NotebookPage(AbstractTreeNode):
                         "part-type": str,
                     },
                 )
-                entry_metadata = EntryMetadata.from_xml(entry)
+                entry_metadata = extract_etree(
+                    entry,
+                    {
+                        "created-at": to_datetime,
+                        "updated-at": to_datetime,
+                        "version": int,
+                    },
+                    raise_missing=False,
+                )
                 entry_content = extract_etree(
                     entry,
                     {"entry-data": str, "caption": str},
@@ -122,7 +129,15 @@ class NotebookPage(AbstractTreeNode):
                     data,
                     self._user,
                 )
-                entry_obj._metadata = entry_metadata  # pyright: ignore[reportPrivateUsage]
+                entry_obj._created_at = entry_metadata.get(  # pyright: ignore[reportPrivateUsage]
+                    "created-at"
+                )
+                entry_obj._updated_at = entry_metadata.get(  # pyright: ignore[reportPrivateUsage]
+                    "updated-at"
+                )
+                entry_obj._version = entry_metadata.get(  # pyright: ignore[reportPrivateUsage]
+                    "version"
+                )
 
                 if isinstance(entry_obj, WidgetEntry):
                     pass
