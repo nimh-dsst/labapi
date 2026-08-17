@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from datetime import datetime, timezone
 from io import BytesIO
 from unittest.mock import Mock
 
@@ -224,12 +225,43 @@ class TestNotebookPageIntegration:
 
         assert isinstance(entries, Entries)
         assert len(entries) == 2
+        assert entries[0].created_at is None
+        assert entries[0].updated_at is None
+        assert entries[0].version is None
 
         api_call = client.pop_api_call()
         assert api_call[0] == "tree_tools/get_entries_for_page"
         assert api_call[1]["page_tree_id"] == "page-1"
         assert api_call[1]["nbid"] == notebook_tree.id
         assert api_call[1]["entry_data"] is True
+        client.clear_api_calls()
+
+    def test_page_entries_extract_optional_metadata(
+        self, client, notebook_tree: Notebook
+    ):
+        """Test page entries preserve API timestamps and versions."""
+        page = notebook_tree[Index.Id : "page-1"].as_page()
+        client.clear_api_calls()
+        client.api_response = client.entries_response(
+            client.xml(
+                "entry",
+                client.xml("eid", "entry_1"),
+                client.xml("part-type", "text entry"),
+                client.xml("created-at", "2026-07-29T22:12:57Z"),
+                client.xml("updated-at", "2026-07-30T01:02:03Z"),
+                client.xml("version", "1"),
+                client.xml("entry-data", "<p>Test content</p>"),
+            ),
+            include_response=False,
+        )
+
+        entry = page.entries[0]
+
+        assert entry.created_at == datetime(
+            2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc
+        )
+        assert entry.updated_at == datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
+        assert entry.version == 1
         client.clear_api_calls()
 
     def test_page_entries_caching(self, client, notebook_tree: Notebook):

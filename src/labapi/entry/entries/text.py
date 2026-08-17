@@ -7,14 +7,9 @@ implementations for plain text, rich text, and header entries.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from typing_extensions import override
 
 from .base import Entry
-
-if TYPE_CHECKING:
-    from labapi.user import User
 
 
 class PlainTextEntry(Entry[str], part_type="plain text entry"):
@@ -24,15 +19,6 @@ class PlainTextEntry(Entry[str], part_type="plain text entry"):
     It also serves as the base class for string-content entries, providing the
     ``content`` getter and setter.
     """
-
-    def __init__(self, eid: str, data: str, user: User):
-        """Initialize a plain-text entry.
-
-        :param eid: The unique ID of the entry.
-        :param data: The text content of the entry.
-        :param user: The authenticated user.
-        """
-        super().__init__(eid, data, user)
 
     @property
     @override
