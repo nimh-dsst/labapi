@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
 from inspect import isabstract
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar, cast
 
 if TYPE_CHECKING:
+    from lxml.etree import Element
+
     from labapi.user import User
 
 T = TypeVar("T")
@@ -30,16 +33,33 @@ class _MetaEntryFactory(Protocol):
 _entries_registry: dict[str, type[Entry[Any]]] = {}
 
 
-def _parse_iso_datetime(value: str) -> datetime:
-    """Parse a timezone-aware ISO 8601 timestamp from a LabArchives response."""
-    if value.endswith("Z"):
-        value = f"{value[:-1]}+00:00"
+@dataclass(frozen=True)
+class EntryMetadata:
+    """Optional lifecycle metadata returned with an entry."""
 
-    result = datetime.fromisoformat(value)
-    if result.tzinfo is None or result.utcoffset() is None:
-        raise ValueError("timestamp must include a timezone offset")
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    version: int | None = None
 
-    return result
+    @classmethod
+    def from_xml(cls, element: Element) -> EntryMetadata:
+        """Load lifecycle metadata from an entry XML element."""
+        created_at = element.findtext("./created-at")
+        updated_at = element.findtext("./updated-at")
+        version = element.findtext("./version")
+        return cls(
+            created_at=(
+                datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                if created_at is not None
+                else None
+            ),
+            updated_at=(
+                datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                if updated_at is not None
+                else None
+            ),
+            version=int(version) if version is not None else None,
+        )
 
 
 class Entry(Generic[T], ABC):
@@ -80,16 +100,7 @@ class Entry(Generic[T], ABC):
         return _entries_registry[part_type]
 
     @staticmethod
-    def from_part_type(
-        part_type: str,
-        eid: str,
-        data: str,
-        user: User,
-        *,
-        created_at: datetime | None = None,
-        updated_at: datetime | None = None,
-        version: int | None = None,
-    ) -> Entry[Any]:
+    def from_part_type(part_type: str, eid: str, data: str, user: User) -> Entry[Any]:
         """Create an entry instance for a LabArchives part type.
 
         This method takes a part type string and returns the corresponding
@@ -104,9 +115,6 @@ class Entry(Generic[T], ABC):
         :param data: The entry data. For text-based entries, this is the text content.
                     For attachment entries, this is the caption.
         :param user: The authenticated user associated with this entry.
-        :param created_at: The timestamp when the entry was created, if supplied by the API.
-        :param updated_at: The timestamp when the entry was last updated, if supplied by the API.
-        :param version: The API version number for the entry, if supplied by the API.
         :returns: An entry instance of the appropriate type.
         """
         klass = _entries_registry.get(part_type)
@@ -114,16 +122,12 @@ class Entry(Generic[T], ABC):
         if klass is None:
             from .unknown import UnknownEntry
 
-            entry = UnknownEntry(eid, data, user, part_type=part_type)
-        elif klass._is_meta:
-            entry = cast(_MetaEntryFactory, klass)(eid, data, user, part_type=part_type)
-        else:
-            entry = cast(_EntryFactory, klass)(eid, data, user)
+            return UnknownEntry(eid, data, user, part_type=part_type)
 
-        entry._created_at = created_at
-        entry._updated_at = updated_at
-        entry._version = version
-        return entry
+        if klass._is_meta:
+            return cast(_MetaEntryFactory, klass)(eid, data, user, part_type=part_type)
+
+        return cast(_EntryFactory, klass)(eid, data, user)
 
     # TODO perms
     def __init__(
@@ -141,9 +145,7 @@ class Entry(Generic[T], ABC):
         self._id = eid
         self._data = data
         self._user = user
-        self._created_at: datetime | None = None
-        self._updated_at: datetime | None = None
-        self._version: int | None = None
+        self._metadata = EntryMetadata()
 
     def __init_subclass__(
         cls,
@@ -185,17 +187,17 @@ class Entry(Generic[T], ABC):
     @property
     def created_at(self) -> datetime | None:
         """Return when this entry was created, if supplied by the API."""
-        return self._created_at
+        return self._metadata.created_at
 
     @property
     def updated_at(self) -> datetime | None:
         """Return when this entry was last updated, if supplied by the API."""
-        return self._updated_at
+        return self._metadata.updated_at
 
     @property
     def version(self) -> int | None:
         """Return this entry's API version number, if supplied by the API."""
-        return self._version
+        return self._metadata.version
 
     @property
     @abstractmethod

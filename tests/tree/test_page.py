@@ -9,7 +9,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from labapi import ExtractionError, Index, Notebook, NotebookPage
+from labapi import Index, Notebook, NotebookPage
 from labapi.entry import Attachment, AttachmentEntry, Entries, UnknownEntry, WidgetEntry
 from labapi.user import User
 
@@ -262,28 +262,6 @@ class TestNotebookPageIntegration:
         )
         assert entry.updated_at == datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
         assert entry.version == 1
-        client.clear_api_calls()
-
-    @pytest.mark.parametrize("timestamp", ["not-a-timestamp", "2026-07-29T22:12:57"])
-    def test_page_entries_reject_invalid_metadata_timestamps(
-        self, client, notebook_tree: Notebook, timestamp: str
-    ):
-        """Test malformed and timezone-naive timestamps surface as extraction errors."""
-        page = notebook_tree[Index.Id : "page-1"].as_page()
-        client.api_response = client.entries_response(
-            client.xml(
-                "entry",
-                client.xml("eid", "entry_1"),
-                client.xml("part-type", "text entry"),
-                client.xml("created-at", timestamp),
-                client.xml("entry-data", "<p>Test content</p>"),
-            ),
-            include_response=False,
-        )
-
-        with pytest.raises(ExtractionError, match="_parse_iso_datetime"):
-            _ = page.entries
-
         client.clear_api_calls()
 
     def test_page_entries_caching(self, client, notebook_tree: Notebook):

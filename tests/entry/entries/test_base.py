@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -124,22 +123,3 @@ class TestEntryIntegration:
         assert isinstance(entry, UnknownEntry)
         assert entry.content_type == "unknown_type"
         assert entry.content == "Data"
-
-    def test_entry_from_part_type_applies_optional_metadata(self, user: User):
-        """Test factory metadata is assigned without changing subclass constructors."""
-        created_at = datetime(2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc)
-        updated_at = datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
-
-        entry = Entry.from_part_type(
-            "text entry",
-            "eid_123",
-            "data",
-            user,
-            created_at=created_at,
-            updated_at=updated_at,
-            version=1,
-        )
-
-        assert entry.created_at == created_at
-        assert entry.updated_at == updated_at
-        assert entry.version == 1
