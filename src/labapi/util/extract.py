@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Mapping
-from datetime import datetime
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 from labapi.exceptions import ExtractionError
@@ -74,11 +73,6 @@ def to_bool(s: str) -> bool:
             return False
         case _:
             raise ValueError(f"Cannot convert '{s}' to bool")
-
-
-def to_datetime(s: str) -> datetime:
-    """Convert a LabArchives ISO 8601 timestamp to a datetime."""
-    return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
 def extract_etree(

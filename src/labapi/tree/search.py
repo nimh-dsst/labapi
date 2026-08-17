@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from labapi.entry import Entry
-from labapi.util import extract_etree, to_datetime
+from labapi.util import extract_etree
 
 if TYPE_CHECKING:
     from .notebook import Notebook
@@ -80,15 +80,6 @@ class EntrySearch:
         entries: list[Entry[Any]] = []
         for entry_element in response.findall("./entries/entry"):
             entry_fields = extract_etree(entry_element, {"eid": str, "part-type": str})
-            entry_metadata = extract_etree(
-                entry_element,
-                {
-                    "created-at": to_datetime,
-                    "updated-at": to_datetime,
-                    "version": int,
-                },
-                raise_missing=False,
-            )
 
             entry_data = entry_element.find("./entry-data")
             caption = entry_element.find("./caption")
@@ -107,22 +98,14 @@ class EntrySearch:
             ):
                 data = caption.text
 
-            entry = Entry.from_part_type(
-                entry_fields["part-type"],
-                entry_fields["eid"],
-                data,
-                self._notebook.user,
+            entries.append(
+                Entry.from_part_type(
+                    entry_fields["part-type"],
+                    entry_fields["eid"],
+                    data,
+                    self._notebook.user,
+                )
             )
-            entry._created_at = entry_metadata.get(  # pyright: ignore[reportPrivateUsage]
-                "created-at"
-            )
-            entry._updated_at = entry_metadata.get(  # pyright: ignore[reportPrivateUsage]
-                "updated-at"
-            )
-            entry._version = entry_metadata.get(  # pyright: ignore[reportPrivateUsage]
-                "version"
-            )
-            entries.append(entry)
 
         page = EntrySearchPage(
             page_size=self._page_size,

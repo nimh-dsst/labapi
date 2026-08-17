@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 import pytest
 from lxml.etree import fromstring
 
 from labapi.tree.search import EntrySearch, EntrySearchPage
 
 
-def _search_response(
-    *, total_found: int, total_returned: int, entries_xml: str = ""
-) -> object:
+def _search_response(*, total_found: int, total_returned: int) -> object:
     """Build a minimal entry-search XML response."""
     return fromstring(
         f"<response>"
@@ -20,17 +16,13 @@ def _search_response(
         f"<total-found type='integer'>{total_found}</total-found>"
         f"<total-returned type='integer'>{total_returned}</total-returned>"
         f"</results>"
-        f"<entries>{entries_xml}</entries>"
+        f"<entries/>"
         f"</response>"
     )
 
 
 def _make_search(
-    returned_by_page: list[int],
-    *,
-    page_size: int = 2,
-    total_found: int | None = None,
-    entries_xml_by_page: dict[int, str] | None = None,
+    returned_by_page: list[int], *, page_size: int = 2, total_found: int | None = None
 ) -> EntrySearch:
     """Build an EntrySearch backed by a fake notebook/user.
 
@@ -51,14 +43,7 @@ def _make_search(
                 if page_number < len(returned_by_page)
                 else 0
             )
-            entries_xml = ""
-            if entries_xml_by_page is not None:
-                entries_xml = entries_xml_by_page.get(page_number, "")
-            return _search_response(
-                total_found=total_found,
-                total_returned=returned,
-                entries_xml=entries_xml,
-            )
+            return _search_response(total_found=total_found, total_returned=returned)
 
     class FakeNotebook:
         id = "nbid"
@@ -123,26 +108,3 @@ class TestEntrySearchIteration:
         search = _make_search([2], page_size=2)
         with pytest.raises(IndexError, match="out of range"):
             search.page(1)
-
-    def test_page_extracts_optional_entry_metadata(self) -> None:
-        """Search results preserve timezone-aware timestamps and versions."""
-        search = _make_search(
-            [1],
-            page_size=1,
-            entries_xml_by_page={
-                0: (
-                    "<entry><eid>entry_1</eid><part-type>text entry</part-type>"
-                    "<created-at>2026-07-29T22:12:57Z</created-at>"
-                    "<updated-at>2026-07-30T01:02:03Z</updated-at>"
-                    "<version>1</version><entry-data>Test content</entry-data></entry>"
-                )
-            },
-        )
-
-        entry = search.page(0).entries[0]
-
-        assert entry.created_at == datetime(
-            2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc
-        )
-        assert entry.updated_at == datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
-        assert entry.version == 1

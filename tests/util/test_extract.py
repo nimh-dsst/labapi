@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timezone
 from typing import Any
 
 import pytest
@@ -15,7 +14,6 @@ from labapi.util.extract import (
     _flatten_dict,
     extract_etree,
     to_bool,
-    to_datetime,
 )
 
 
@@ -121,13 +119,6 @@ def test_to_bool_invalid_raises(s: str):
     """Test to_bool raises ValueError for invalid strings."""
     with pytest.raises(ValueError, match=r"Cannot convert '.*' to bool"):
         to_bool(s)
-
-
-def test_to_datetime_parses_labarchives_timestamp():
-    """Test LabArchives UTC timestamps parse as aware datetimes."""
-    assert to_datetime("2026-07-29T22:12:57Z") == datetime(
-        2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc
-    )
 
 
 # Tests for extract_etree
