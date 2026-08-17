@@ -12,6 +12,7 @@ details that affect development workflows.
 
 ### Added
 
+- Entries now expose optional read-only creation, update, and version metadata.
 - `Client` request methods accept a `timeout` parameter.
 - `Notebook.backup()` downloads a notebook's native LabArchives backup archive
   or JSON response, with options to omit attachment payloads.

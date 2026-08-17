@@ -9,6 +9,7 @@ entries contained within the page.
 from __future__ import annotations
 
 import warnings
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from typing_extensions import Self, override
@@ -100,6 +101,15 @@ class NotebookPage(AbstractTreeNode):
                         "part-type": str,
                     },
                 )
+                entry_metadata = extract_etree(
+                    entry,
+                    {
+                        "created-at": str,
+                        "updated-at": str,
+                        "version": int,
+                    },
+                    raise_missing=False,
+                )
                 entry_content = extract_etree(
                     entry,
                     {"entry-data": str, "caption": str},
@@ -112,6 +122,8 @@ class NotebookPage(AbstractTreeNode):
                     or entry_content.get("caption")
                     or ""
                 )
+                created_at = entry_metadata.get("created-at")
+                updated_at = entry_metadata.get("updated-at")
 
                 # Cast extracted string values to ensure type checker knows they're not None
                 entry_obj = Entry.from_part_type(
@@ -119,6 +131,17 @@ class NotebookPage(AbstractTreeNode):
                     cast(str, entry_fields["eid"]),
                     data,
                     self._user,
+                    created_at=(
+                        datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                        if created_at is not None
+                        else None
+                    ),
+                    updated_at=(
+                        datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                        if updated_at is not None
+                        else None
+                    ),
+                    version=entry_metadata.get("version"),
                 )
 
                 if isinstance(entry_obj, WidgetEntry):
