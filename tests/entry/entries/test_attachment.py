@@ -66,6 +66,20 @@ class TestAttachmentEntryIntegration:
             "entries/entry_attachment", uid=user.id, eid="eid_att"
         )
 
+    def test_attachment_entry_prefers_listing_filename(self, client, user: User):
+        """A page-listing filename takes precedence over download headers."""
+        entry = AttachmentEntry("eid_att", "Caption", user)
+        entry._filename = "original.txt"  # pyright: ignore[reportPrivateUsage]
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Disposition": 'attachment; filename="generated.txt"',
+        }
+        mock_response.iter_content.return_value = [b"content"]
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        assert entry.get_attachment().filename == "original.txt"
+
     def test_attachment_entry_content_getter(self, client, user: User):
         """Test AttachmentEntry.content getter returns attachment."""
         entry = AttachmentEntry("eid_att", "Caption", user)
@@ -149,6 +163,28 @@ class TestAttachmentEntryIntegration:
     def test_attachment_entry_content_setter(self, client, user: User):
         """Test AttachmentEntry.content setter uploads attachment."""
         entry = AttachmentEntry("eid_att", "Old caption", user)
+        entry._filename = "old_file.txt"  # pyright: ignore[reportPrivateUsage]
+
+        old_response = Mock()
+        old_response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Disposition": 'attachment; filename="generated_old.txt"',
+        }
+        old_response.iter_content.return_value = [b"Old file content"]
+        new_response = Mock()
+        new_response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Disposition": 'attachment; filename="generated_new.txt"',
+        }
+        new_response.iter_content.return_value = [b"New file content"]
+        client.stream_api_get = Mock(
+            side_effect=[
+                StreamingResponse(old_response),
+                StreamingResponse(new_response),
+            ]
+        )
+
+        assert entry.get_attachment().read() == b"Old file content"
 
         # Create a new attachment to upload
         backing = BytesIO(b"New file content")
@@ -174,6 +210,11 @@ class TestAttachmentEntryIntegration:
         assert api_call[1]["filename"] == "new_file.txt"
         assert api_call[1]["caption"] == "New caption"
         assert api_call[1]["eid"] == "eid_att"
+        assert entry._filename == "new_file.txt"  # pyright: ignore[reportPrivateUsage]
+        updated_attachment = entry.get_attachment()
+        assert updated_attachment.filename == "new_file.txt"
+        assert updated_attachment.read() == b"New file content"
+        assert client.stream_api_get.call_count == 2
 
     def test_attachment_entry_content_setter_rewinds_seekable_stream(
         self, client, user: User
@@ -205,6 +246,11 @@ class TestAttachmentEntryIntegration:
     ):
         """Test 4999 attachment update errors include actionable context."""
         entry = AttachmentEntry("eid_att", "Old caption", user)
+        entry._filename = "old_file.txt"  # pyright: ignore[reportPrivateUsage]
+        cached_attachment = Attachment(
+            BytesIO(b"Old file content"), "text/plain", "old_file.txt", "Old caption"
+        )
+        entry._filedata = cached_attachment  # pyright: ignore[reportPrivateUsage]
         attachment = Attachment(
             BytesIO(b"New file content"),
             "text/plain",
@@ -229,6 +275,9 @@ class TestAttachmentEntryIntegration:
         assert "LabArchives returned [4999] Unknown Error" in message
         assert "retry with a fresh Attachment object" in message
         assert entry.caption == "Old caption"
+        assert entry._filename == "old_file.txt"  # pyright: ignore[reportPrivateUsage]
+        assert entry._filedata is cached_attachment  # pyright: ignore[reportPrivateUsage]
+        assert not cached_attachment.closed
         api_call = client.pop_api_call()
         assert api_call[0] == "entries/update_attachment"
         assert api_call[1]["eid"] == "eid_att"
@@ -239,6 +288,11 @@ class TestAttachmentEntryIntegration:
     ):
         """Test non-4999 attachment update errors pass through unchanged."""
         entry = AttachmentEntry("eid_att", "Old caption", user)
+        entry._filename = "old_file.txt"  # pyright: ignore[reportPrivateUsage]
+        cached_attachment = Attachment(
+            BytesIO(b"Old file content"), "text/plain", "old_file.txt", "Old caption"
+        )
+        entry._filedata = cached_attachment  # pyright: ignore[reportPrivateUsage]
         attachment = Attachment(
             BytesIO(b"New file content"),
             "text/plain",
@@ -256,6 +310,10 @@ class TestAttachmentEntryIntegration:
             raise AssertionError("Expected ApiError")
 
         assert preserved_error is raw_error
+        assert entry.caption == "Old caption"
+        assert entry._filename == "old_file.txt"  # pyright: ignore[reportPrivateUsage]
+        assert entry._filedata is cached_attachment  # pyright: ignore[reportPrivateUsage]
+        assert not cached_attachment.closed
         api_call = client.pop_api_call()
         assert api_call[0] == "entries/update_attachment"
         assert api_call[1]["eid"] == "eid_att"

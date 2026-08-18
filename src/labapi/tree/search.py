@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from labapi.entry import Entry
+from labapi.entry import AttachmentEntry, Entry
 from labapi.util import extract_etree
 
 if TYPE_CHECKING:
@@ -98,14 +98,16 @@ class EntrySearch:
             ):
                 data = caption.text
 
-            entries.append(
-                Entry.from_part_type(
-                    entry_fields["part-type"],
-                    entry_fields["eid"],
-                    data,
-                    self._notebook.user,
-                )
+            entry = Entry.from_part_type(
+                entry_fields["part-type"],
+                entry_fields["eid"],
+                data,
+                self._notebook.user,
             )
+            if isinstance(entry, AttachmentEntry):
+                entry._filename = entry_element.findtext("./attach-file-name") or None  # pyright: ignore[reportPrivateUsage]
+
+            entries.append(entry)
 
         page = EntrySearchPage(
             page_size=self._page_size,
