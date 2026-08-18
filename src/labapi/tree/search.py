@@ -80,9 +80,6 @@ class EntrySearch:
         entries: list[Entry[Any]] = []
         for entry_element in response.findall("./entries/entry"):
             entry_fields = extract_etree(entry_element, {"eid": str, "part-type": str})
-            attachment_filename = extract_etree(
-                entry_element, {"attach-file-name": str}, raise_missing=False
-            ).get("attach-file-name")
 
             entry_data = entry_element.find("./entry-data")
             caption = entry_element.find("./caption")
@@ -108,7 +105,7 @@ class EntrySearch:
                 self._notebook.user,
             )
             if isinstance(entry, AttachmentEntry):
-                entry._filename = attachment_filename or None  # pyright: ignore[reportPrivateUsage]
+                entry._filename = entry_element.findtext("./attach-file-name") or None  # pyright: ignore[reportPrivateUsage]
 
             entries.append(entry)
 

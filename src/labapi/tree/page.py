@@ -9,6 +9,7 @@ entries contained within the page.
 from __future__ import annotations
 
 import warnings
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from typing_extensions import Self, override
@@ -101,21 +102,27 @@ class NotebookPage(AbstractTreeNode):
                         "part-type": str,
                     },
                 )
-                attachment_filename = extract_etree(
-                    entry, {"attach-file-name": str}, raise_missing=False
-                ).get("attach-file-name")
-                entry_content = extract_etree(
+                entry_optional = extract_etree(
                     entry,
-                    {"entry-data": str, "caption": str},
+                    {
+                        "entry-data": str,
+                        "caption": str,
+                        "attach-file-name": str,
+                        "created-at": str,
+                        "updated-at": str,
+                        "version": int,
+                    },
                     raise_missing=False,
                 )
 
                 part_type = entry_fields["part-type"]
                 data = (
-                    entry_content.get("entry-data")
-                    or entry_content.get("caption")
+                    entry_optional.get("entry-data")
+                    or entry_optional.get("caption")
                     or ""
                 )
+                created_at = entry_optional.get("created-at")
+                updated_at = entry_optional.get("updated-at")
 
                 # Cast extracted string values to ensure type checker knows they're not None
                 entry_obj = Entry.from_part_type(
@@ -123,10 +130,21 @@ class NotebookPage(AbstractTreeNode):
                     cast(str, entry_fields["eid"]),
                     data,
                     self._user,
+                    created_at=(
+                        datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                        if created_at is not None
+                        else None
+                    ),
+                    updated_at=(
+                        datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                        if updated_at is not None
+                        else None
+                    ),
+                    version=entry_optional.get("version"),
                 )
 
                 if isinstance(entry_obj, AttachmentEntry):
-                    entry_obj._filename = attachment_filename or None  # pyright: ignore[reportPrivateUsage]
+                    entry_obj._filename = entry_optional.get("attach-file-name") or None  # pyright: ignore[reportPrivateUsage]
 
                 if isinstance(entry_obj, WidgetEntry):
                     pass
