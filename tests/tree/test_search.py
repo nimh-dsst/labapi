@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from lxml.etree import fromstring
 
+from labapi.entry import AttachmentEntry
 from labapi.tree.search import EntrySearch, EntrySearchPage
 
 
@@ -108,3 +109,29 @@ class TestEntrySearchIteration:
         search = _make_search([2], page_size=2)
         with pytest.raises(IndexError, match="out of range"):
             search.page(1)
+
+    def test_attachment_result_preserves_listing_filename(self) -> None:
+        """Attachment search results retain their original filename metadata."""
+        response = fromstring(
+            "<response>"
+            "<results><total-found type='integer'>1</total-found>"
+            "<total-returned type='integer'>1</total-returned></results>"
+            "<entries><entry><eid>eid_att</eid><part-type>Attachment</part-type>"
+            "<caption>Caption</caption><attach-file-name>original.txt</attach-file-name>"
+            "</entry></entries></response>"
+        )
+
+        class FakeUser:
+            def api_get(self, _method: str, **_kw: object) -> object:
+                return response
+
+        class FakeNotebook:
+            id = "nbid"
+            user = FakeUser()
+
+        result = EntrySearch(FakeNotebook(), "q", page_size=2).page(0)  # type: ignore[arg-type]
+
+        assert len(result.entries) == 1
+        attachment = result.entries[0]
+        assert isinstance(attachment, AttachmentEntry)
+        assert attachment._filename == "original.txt"  # pyright: ignore[reportPrivateUsage]
