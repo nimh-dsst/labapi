@@ -22,6 +22,10 @@ details that affect development workflows.
   archives; the default source falls back to the live API when needed.
 - `Notebook.url` and `NotebookPage.url` return authenticated LabArchives Web UI
   links, backed by a new `Client.web_url`.
+- Entries returned by `Notebook.search()` now carry the same `created_at`,
+  `updated_at`, and `version` metadata as entries loaded from a page.
+- `to_datetime()` converts LabArchives ISO-8601 timestamps and can be used as
+  an `extract_etree()` mapper.
 
 ### Changed
 
@@ -33,6 +37,10 @@ details that affect development workflows.
 - The LabArchives `4999` error is no longer reproducible against the current
   API and has been removed from the limitations guide. The handling in
   `AttachmentEntry.content` is unchanged.
+- `extract_etree(..., raise_missing=False)` now omits a value its mapper
+  rejects, warning rather than raising `ExtractionError`, so one malformed
+  optional value no longer aborts the whole extraction. Strict extraction is
+  unchanged.
 - Updated the locked indirect Pillow dependency from 12.2.0 to 12.3.0.
 - Updated the locked `cryptography` dependency from 48.0.1 to 50.0.0.
 

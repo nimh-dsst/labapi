@@ -46,11 +46,11 @@ and :attr:`~labapi.entry.entries.base.Entry.version` is an integer.
 
 .. note::
    Lifecycle metadata is best effort. ``labapi`` populates it for entries
-   loaded from a page, and a field a response leaves out is ``None`` rather
-   than an error. It is not populated at all for entries returned by
-   :meth:`~labapi.tree.notebook.Notebook.search`, nor for an entry you have
-   just made with :meth:`~labapi.entry.collection.Entries.create`; reload the
-   page to pick it up.
+   loaded from a page and for search results alike, and a field a response
+   leaves out is ``None`` rather than an error. It is not populated for an
+   entry you have just made with
+   :meth:`~labapi.entry.collection.Entries.create`; reload the page to pick
+   it up.
 
 Attachment entries add a :attr:`~labapi.entry.entries.attachment.AttachmentEntry.caption`,
 and the :class:`~labapi.entry.attachment.Attachment` returned by their

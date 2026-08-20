@@ -72,7 +72,7 @@ Using ``extract_etree``
    print(f"Notebook Name: {data['name']}")
    print(f"Is Student: {data['is-student']}")
 
-By default a missing element raises
+By default a missing element, or a value a mapper rejects, raises
 :class:`~labapi.exceptions.ExtractionError`. For responses where fields are
 genuinely optional, pass ``raise_missing=False`` to omit them from the result
 instead, and read them with :meth:`dict.get`:
@@ -86,6 +86,11 @@ instead, and read them with :meth:`dict.get`:
    )
 
    filename = data.get("attach-file-name")
+
+Optional extraction omits a missing element silently. A value that is present
+but that the mapper rejects is also omitted, but raises a
+:class:`RuntimeWarning` first, since a value the API did send and that will not
+parse is an anomaly rather than a routine absence.
 
 Raw and Streaming Responses
 ---------------------------
