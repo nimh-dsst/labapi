@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Mapping
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 from labapi.exceptions import ExtractionError
@@ -73,6 +74,19 @@ def to_bool(s: str) -> bool:
             return False
         case _:
             raise ValueError(f"Cannot convert '{s}' to bool")
+
+
+def to_datetime(s: str) -> datetime:
+    """Convert a LabArchives ISO-8601 timestamp to a datetime.
+
+    LabArchives spells UTC as a trailing ``Z``, which
+    :meth:`datetime.datetime.fromisoformat` does not accept before Python 3.11.
+
+    :param s: The timestamp to convert.
+    :returns: The parsed datetime.
+    :raises ValueError: If the string is not a valid ISO-8601 timestamp.
+    """
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
 def extract_etree(
