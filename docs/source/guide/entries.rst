@@ -24,6 +24,40 @@ A :class:`~labapi.tree.page.NotebookPage` exposes ``entries``, an :class:`~labap
    # Access an entry by index
    first_entry = page.entries[0]
 
+Entry Metadata
+--------------
+
+Every entry carries its LabArchives identifier and part type:
+:attr:`~labapi.entry.entries.base.Entry.id` and
+:attr:`~labapi.entry.entries.base.Entry.content_type`.
+
+Entries also expose read-only lifecycle metadata:
+:attr:`~labapi.entry.entries.base.Entry.created_at` and
+:attr:`~labapi.entry.entries.base.Entry.updated_at` are
+:class:`~datetime.datetime` objects parsed from the API's ISO-8601 timestamps,
+and :attr:`~labapi.entry.entries.base.Entry.version` is an integer.
+
+.. code-block:: python
+
+   entry = page.entries[0]
+
+   print(f"{entry.id} ({entry.content_type})")
+   print(f"Version {entry.version}, last updated {entry.updated_at}")
+
+.. note::
+   Lifecycle metadata is best effort. ``labapi`` populates it for entries
+   loaded from a page and for search results alike, and a field a response
+   leaves out is ``None`` rather than an error. It is not populated for an
+   entry you have just made with
+   :meth:`~labapi.entry.collection.Entries.create`; reload the page to pick
+   it up.
+
+Attachment entries add a :attr:`~labapi.entry.entries.attachment.AttachmentEntry.caption`,
+and the :class:`~labapi.entry.attachment.Attachment` returned by their
+``content`` carries :attr:`~labapi.entry.attachment.Attachment.filename`,
+:attr:`~labapi.entry.attachment.Attachment.mime_type`, and its own
+:attr:`~labapi.entry.attachment.Attachment.caption`.
+
 Searching Entries
 -----------------
 

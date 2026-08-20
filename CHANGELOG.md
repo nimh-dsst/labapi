@@ -8,25 +8,41 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
-## 1.2.0 - Unreleased
+## 1.2.0 - 2026-08-19
 
 ### Added
 
 - Entries now expose optional read-only creation, update, and version metadata.
-- `Client` request methods accept a `timeout` parameter.
+- `Client` accepts a `timeout` parameter, applied to every request it makes.
 - `Notebook.backup()` downloads a notebook's native LabArchives backup archive
   or JSON response, with options to omit attachment payloads.
 - `Notebook.export()` materializes a notebook as a local directory tree,
   preserving empty directories and pages, entry ordering, attachments, and
   per-page metadata. The optional `labapi[export]` extra reads native backup
   archives; the default source falls back to the live API when needed.
+- `Notebook.url` and `NotebookPage.url` return authenticated LabArchives Web UI
+  links, backed by a new `Client.web_url`.
+- Entries returned by `Notebook.search()` now carry the same `created_at`,
+  `updated_at`, and `version` metadata as entries loaded from a page.
+- `to_datetime()` converts LabArchives ISO-8601 timestamps and can be used as
+  an `extract_etree()` mapper.
 
 ### Changed
 
+- The project is now distributed under the MIT License, replacing CC0-1.0.
 - Client base URLs now discard fragments and warn when they contain query
   parameters that cannot be preserved in API requests.
 - Versioned documentation shows only the newest release candidate and keeps
   the root and `latest/` aliases on the newest final release.
+- The LabArchives `4999` error is no longer reproducible against the current
+  API and has been removed from the limitations guide. The handling in
+  `AttachmentEntry.content` is unchanged.
+- `extract_etree(..., raise_missing=False)` now omits a value its mapper
+  rejects, warning rather than raising `ExtractionError`, so one malformed
+  optional value no longer aborts the whole extraction. Strict extraction is
+  unchanged.
+- Updated the locked indirect Pillow dependency from 12.2.0 to 12.3.0.
+- Updated the locked `cryptography` dependency from 48.0.1 to 50.0.0.
 
 ### Fixed
 
@@ -47,8 +63,22 @@ details that affect development workflows.
 - `PlainTextEntry.content` rejects non-string values before an API request,
   the public parse exceptions are available from `labapi`, and the API
   Deleted Items directory cannot be deleted accidentally.
+- Attachment downloads recover the original filename from a redirected Amazon
+  S3 URL when the response headers omit one.
+- Attachment entries keep the filename LabArchives reports in page and search
+  listings, and the filename supplied at upload time, in preference to a
+  generated download filename.
+- Entry parsing tolerates missing optional fields: `extract_etree()` accepts
+  `raise_missing=False`, and pages load entries that omit `entry-data` or
+  `caption`.
+- Browser detection falls back to the remaining candidates when a configured
+  browser probe raises an error, instead of failing outright.
+- `default_authenticate()` reports missing `labapi[builtin-auth]` dependencies
+  only for browser setup, so an unrelated `ImportError` raised later in the
+  authentication flow is no longer masked by that message.
 - The model-logging example escapes metadata and uses an ASCII-safe success
   message.
+- The `csv_table` example preserves spaces around inline markup.
 
 ### Security
 
