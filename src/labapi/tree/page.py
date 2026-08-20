@@ -16,6 +16,7 @@ from typing_extensions import Self, override
 
 from labapi.entry import (
     Attachment,
+    AttachmentEntry,
     Entries,
     Entry,
     UnimplementedEntry,
@@ -101,29 +102,27 @@ class NotebookPage(AbstractTreeNode):
                         "part-type": str,
                     },
                 )
-                entry_metadata = extract_etree(
+                entry_optional = extract_etree(
                     entry,
                     {
+                        "entry-data": str,
+                        "caption": str,
+                        "attach-file-name": str,
                         "created-at": str,
                         "updated-at": str,
                         "version": int,
                     },
                     raise_missing=False,
                 )
-                entry_content = extract_etree(
-                    entry,
-                    {"entry-data": str, "caption": str},
-                    raise_missing=False,
-                )
 
                 part_type = entry_fields["part-type"]
                 data = (
-                    entry_content.get("entry-data")
-                    or entry_content.get("caption")
+                    entry_optional.get("entry-data")
+                    or entry_optional.get("caption")
                     or ""
                 )
-                created_at = entry_metadata.get("created-at")
-                updated_at = entry_metadata.get("updated-at")
+                created_at = entry_optional.get("created-at")
+                updated_at = entry_optional.get("updated-at")
 
                 # Cast extracted string values to ensure type checker knows they're not None
                 entry_obj = Entry.from_part_type(
@@ -141,8 +140,11 @@ class NotebookPage(AbstractTreeNode):
                         if updated_at is not None
                         else None
                     ),
-                    version=entry_metadata.get("version"),
+                    version=entry_optional.get("version"),
                 )
+
+                if isinstance(entry_obj, AttachmentEntry):
+                    entry_obj._filename = entry_optional.get("attach-file-name") or None  # pyright: ignore[reportPrivateUsage]
 
                 if isinstance(entry_obj, WidgetEntry):
                     pass

@@ -281,6 +281,7 @@ class TestEntriesIntegration:
         assert isinstance(entry, AttachmentEntry)
         assert entry.id == "new_attachment_eid"
         assert entry.caption == "Test file"
+        assert entry._filename == "test.txt"  # pyright: ignore[reportPrivateUsage]
         assert len(entries) == 1
 
         # Verify API call

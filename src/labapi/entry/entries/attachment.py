@@ -77,6 +77,8 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
             version=version,
         )
         self._filedata: Attachment | None = None
+        # Filename reported by the page listing (or supplied at upload time).
+        # This is more stable than a generated download filename.
         self._filename: str | None = None
         self._mime_type: str | None = None
 
@@ -96,7 +98,7 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
                     msg["Content-Disposition"] = content_disposition
 
                 mime_type = msg.get_content_type()
-                filename = msg.get_filename()
+                filename = self._filename or msg.get_filename()
                 if filename is not None and not filename.strip():
                     filename = None
                 if filename is None and attachment_stream.response.history:
@@ -205,6 +207,7 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
             ) from exc
 
         self._data = value.caption
+        self._filename = value.filename or None
 
         if self._filedata:
             self._filedata.close()
