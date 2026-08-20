@@ -27,8 +27,11 @@ A :class:`~labapi.tree.page.NotebookPage` exposes ``entries``, an :class:`~labap
 Entry Metadata
 --------------
 
-Entries loaded from a page or a search result carry read-only lifecycle
-metadata when LabArchives supplies it:
+Every entry carries its LabArchives identifier and part type:
+:attr:`~labapi.entry.entries.base.Entry.id` and
+:attr:`~labapi.entry.entries.base.Entry.content_type`.
+
+Entries also expose read-only lifecycle metadata:
 :attr:`~labapi.entry.entries.base.Entry.created_at` and
 :attr:`~labapi.entry.entries.base.Entry.updated_at` are
 :class:`~datetime.datetime` objects parsed from the API's ISO-8601 timestamps,
@@ -38,14 +41,20 @@ and :attr:`~labapi.entry.entries.base.Entry.version` is an integer.
 
    entry = page.entries[0]
 
-   if entry.updated_at is not None:
-       print(f"Last updated {entry.updated_at:%Y-%m-%d %H:%M %Z}")
-   print(f"Version: {entry.version}")
+   print(f"{entry.id} ({entry.content_type})")
+   print(f"Last updated {entry.updated_at:%Y-%m-%d %H:%M %Z}, version {entry.version}")
 
 .. note::
-   All three are ``None`` when the API response omits them, and on entries you
-   construct yourself rather than load from the API. Always check for ``None``
-   before using them.
+   Lifecycle metadata is best effort. LabArchives supplies it for entries
+   loaded from a page or a search result, but ``labapi`` does not require it:
+   if a response leaves a field out, that attribute is ``None`` rather than an
+   error.
+
+Attachment entries add a :attr:`~labapi.entry.entries.attachment.AttachmentEntry.caption`,
+and the :class:`~labapi.entry.attachment.Attachment` returned by their
+``content`` carries :attr:`~labapi.entry.attachment.Attachment.filename`,
+:attr:`~labapi.entry.attachment.Attachment.mime_type`, and its own
+:attr:`~labapi.entry.attachment.Attachment.caption`.
 
 Searching Entries
 -----------------

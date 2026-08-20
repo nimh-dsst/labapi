@@ -93,6 +93,15 @@ Raw and Streaming Responses
 When you need response metadata, raw bytes, or streaming, use the lower-level
 :class:`~labapi.client.Client` methods directly.
 
+.. note::
+   Every request a client makes is bounded by the ``timeout`` given to
+   :class:`~labapi.client.Client`, in seconds, defaulting to 60. Long
+   streaming downloads are the usual reason to raise it:
+
+   .. code-block:: python
+
+      client = Client(timeout=300)
+
 Raw Responses
 ~~~~~~~~~~~~~
 

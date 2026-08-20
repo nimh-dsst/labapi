@@ -118,14 +118,6 @@ API URL, Access Key ID, and Access Password in several ways:
              akpass="your_access_password",
          )
 
-      Pass ``timeout`` to bound how long every request from this client waits
-      for the server. It accepts a float, a ``(connect, read)`` tuple, or
-      ``None`` to wait indefinitely, and defaults to 60 seconds:
-
-      .. code-block:: python
-
-         client = Client(timeout=(5, 30))
-
 Sign In
 -------
 
