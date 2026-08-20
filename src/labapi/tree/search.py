@@ -80,9 +80,12 @@ class EntrySearch:
         entries: list[Entry[Any]] = []
         for entry_element in response.findall("./entries/entry"):
             entry_fields = extract_etree(entry_element, {"eid": str, "part-type": str})
-            entry_metadata = extract_etree(
+            entry_optional = extract_etree(
                 entry_element,
                 {
+                    "entry-data": str,
+                    "caption": str,
+                    "attach-file-name": str,
                     "created-at": to_datetime,
                     "updated-at": to_datetime,
                     "version": int,
@@ -90,34 +93,22 @@ class EntrySearch:
                 raise_missing=False,
             )
 
-            entry_data = entry_element.find("./entry-data")
-            caption = entry_element.find("./caption")
-
-            data = ""
-            if (
-                entry_data is not None
-                and entry_data.get("nil") != "true"
-                and entry_data.text is not None
-            ):
-                data = entry_data.text
-            elif (
-                caption is not None
-                and caption.get("nil") != "true"
-                and caption.text is not None
-            ):
-                data = caption.text
+            # Nil elements carry no text, so they fall through to the caption.
+            data = (
+                entry_optional.get("entry-data") or entry_optional.get("caption") or ""
+            )
 
             entry = Entry.from_part_type(
                 entry_fields["part-type"],
                 entry_fields["eid"],
                 data,
                 self._notebook.user,
-                created_at=entry_metadata.get("created-at"),
-                updated_at=entry_metadata.get("updated-at"),
-                version=entry_metadata.get("version"),
+                created_at=entry_optional.get("created-at"),
+                updated_at=entry_optional.get("updated-at"),
+                version=entry_optional.get("version"),
             )
             if isinstance(entry, AttachmentEntry):
-                entry._filename = entry_element.findtext("./attach-file-name") or None  # pyright: ignore[reportPrivateUsage]
+                entry._filename = entry_optional.get("attach-file-name") or None  # pyright: ignore[reportPrivateUsage]
 
             entries.append(entry)
 
