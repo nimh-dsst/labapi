@@ -72,11 +72,40 @@ Using ``extract_etree``
    print(f"Notebook Name: {data['name']}")
    print(f"Is Student: {data['is-student']}")
 
+By default a missing element, or a value a mapper rejects, raises
+:class:`~labapi.exceptions.ExtractionError`. For responses where fields are
+genuinely optional, pass ``raise_missing=False`` to omit them from the result
+instead, and read them with :meth:`dict.get`:
+
+.. code-block:: python
+
+   data = extract_etree(
+       xml_response,
+       {"caption": str, "attach-file-name": str},
+       raise_missing=False,
+   )
+
+   filename = data.get("attach-file-name")
+
+Optional extraction omits a missing element silently. A value that is present
+but that the mapper rejects is also omitted, but raises a
+:class:`RuntimeWarning` first, since a value the API did send and that will not
+parse is an anomaly rather than a routine absence.
+
 Raw and Streaming Responses
 ---------------------------
 
 When you need response metadata, raw bytes, or streaming, use the lower-level
 :class:`~labapi.client.Client` methods directly.
+
+.. note::
+   Every request a client makes is bounded by the ``timeout`` given to
+   :class:`~labapi.client.Client`, in seconds, defaulting to 60. Long
+   streaming downloads are the usual reason to raise it:
+
+   .. code-block:: python
+
+      client = Client(timeout=300)
 
 Raw Responses
 ~~~~~~~~~~~~~
