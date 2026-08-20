@@ -29,6 +29,9 @@ details that affect development workflows.
   parameters that cannot be preserved in API requests.
 - Versioned documentation shows only the newest release candidate and keeps
   the root and `latest/` aliases on the newest final release.
+- The LabArchives `4999` error is no longer reproducible against the current
+  API and has been removed from the limitations guide. The handling in
+  `AttachmentEntry.content` is unchanged.
 - Updated the locked indirect Pillow dependency from 12.2.0 to 12.3.0.
 - Updated the locked `cryptography` dependency from 48.0.1 to 50.0.0.
 
@@ -53,6 +56,9 @@ details that affect development workflows.
   Deleted Items directory cannot be deleted accidentally.
 - Attachment downloads recover the original filename from a redirected Amazon
   S3 URL when the response headers omit one.
+- Attachment entries keep the filename LabArchives reports in page and search
+  listings, and the filename supplied at upload time, in preference to a
+  generated download filename.
 - Entry parsing tolerates missing optional fields: `extract_etree()` accepts
   `raise_missing=False`, and pages load entries that omit `entry-data` or
   `caption`.
