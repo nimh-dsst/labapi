@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from labapi.entry import AttachmentEntry, Entry
-from labapi.util import extract_etree
+from labapi.util import extract_etree, to_datetime
 
 if TYPE_CHECKING:
     from .notebook import Notebook
@@ -80,6 +80,15 @@ class EntrySearch:
         entries: list[Entry[Any]] = []
         for entry_element in response.findall("./entries/entry"):
             entry_fields = extract_etree(entry_element, {"eid": str, "part-type": str})
+            entry_metadata = extract_etree(
+                entry_element,
+                {
+                    "created-at": to_datetime,
+                    "updated-at": to_datetime,
+                    "version": int,
+                },
+                raise_missing=False,
+            )
 
             entry_data = entry_element.find("./entry-data")
             caption = entry_element.find("./caption")
@@ -103,6 +112,9 @@ class EntrySearch:
                 entry_fields["eid"],
                 data,
                 self._notebook.user,
+                created_at=entry_metadata.get("created-at"),
+                updated_at=entry_metadata.get("updated-at"),
+                version=entry_metadata.get("version"),
             )
             if isinstance(entry, AttachmentEntry):
                 entry._filename = entry_element.findtext("./attach-file-name") or None  # pyright: ignore[reportPrivateUsage]

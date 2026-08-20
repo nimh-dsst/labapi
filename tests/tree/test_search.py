@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 from lxml.etree import fromstring
 
@@ -135,3 +137,60 @@ class TestEntrySearchIteration:
         attachment = result.entries[0]
         assert isinstance(attachment, AttachmentEntry)
         assert attachment._filename == "original.txt"  # pyright: ignore[reportPrivateUsage]
+
+    def test_result_entries_carry_lifecycle_metadata(self) -> None:
+        """Search results expose the metadata entry_search returns."""
+        response = fromstring(
+            "<response>"
+            "<results><total-found type='integer'>1</total-found>"
+            "<total-returned type='integer'>1</total-returned></results>"
+            "<entries><entry><eid>eid_1</eid><part-type>text entry</part-type>"
+            "<entry-data>Data</entry-data>"
+            "<created-at>2026-07-29T22:12:57Z</created-at>"
+            "<updated-at>2026-07-30T01:02:03Z</updated-at>"
+            "<version type='integer'>3</version>"
+            "</entry></entries></response>"
+        )
+
+        class FakeUser:
+            def api_get(self, _method: str, **_kw: object) -> object:
+                return response
+
+        class FakeNotebook:
+            id = "nbid"
+            user = FakeUser()
+
+        result = EntrySearch(FakeNotebook(), "q", page_size=2).page(0)  # type: ignore[arg-type]
+
+        entry = result.entries[0]
+        assert entry.created_at == datetime(
+            2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc
+        )
+        assert entry.updated_at == datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
+        assert entry.version == 3
+
+    def test_result_entries_tolerate_absent_metadata(self) -> None:
+        """Entries omitting the metadata yield None rather than raising."""
+        response = fromstring(
+            "<response>"
+            "<results><total-found type='integer'>1</total-found>"
+            "<total-returned type='integer'>1</total-returned></results>"
+            "<entries><entry><eid>eid_1</eid><part-type>text entry</part-type>"
+            "<entry-data>Data</entry-data>"
+            "</entry></entries></response>"
+        )
+
+        class FakeUser:
+            def api_get(self, _method: str, **_kw: object) -> object:
+                return response
+
+        class FakeNotebook:
+            id = "nbid"
+            user = FakeUser()
+
+        result = EntrySearch(FakeNotebook(), "q", page_size=2).page(0)  # type: ignore[arg-type]
+
+        entry = result.entries[0]
+        assert entry.created_at is None
+        assert entry.updated_at is None
+        assert entry.version is None

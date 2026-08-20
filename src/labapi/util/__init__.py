@@ -7,7 +7,7 @@ indexing mechanisms, and data structures for notebook initialization.
 
 from .browser import detect_default_browser
 from .env import getenv
-from .extract import extract_etree, to_bool
+from .extract import extract_etree, to_bool, to_datetime
 from .path import NotebookPath
 from .types import (
     IdIndex,
@@ -32,4 +32,5 @@ __all__ = [
     "extract_etree",
     "getenv",
     "to_bool",
+    "to_datetime",
 ]
