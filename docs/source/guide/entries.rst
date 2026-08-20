@@ -24,6 +24,29 @@ A :class:`~labapi.tree.page.NotebookPage` exposes ``entries``, an :class:`~labap
    # Access an entry by index
    first_entry = page.entries[0]
 
+Entry Metadata
+--------------
+
+Entries loaded from a page or a search result carry read-only lifecycle
+metadata when LabArchives supplies it:
+:attr:`~labapi.entry.entries.base.Entry.created_at` and
+:attr:`~labapi.entry.entries.base.Entry.updated_at` are
+:class:`~datetime.datetime` objects parsed from the API's ISO-8601 timestamps,
+and :attr:`~labapi.entry.entries.base.Entry.version` is an integer.
+
+.. code-block:: python
+
+   entry = page.entries[0]
+
+   if entry.updated_at is not None:
+       print(f"Last updated {entry.updated_at:%Y-%m-%d %H:%M %Z}")
+   print(f"Version: {entry.version}")
+
+.. note::
+   All three are ``None`` when the API response omits them, and on entries you
+   construct yourself rather than load from the API. Always check for ``None``
+   before using them.
+
 Searching Entries
 -----------------
 

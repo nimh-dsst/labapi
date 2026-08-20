@@ -72,6 +72,21 @@ Using ``extract_etree``
    print(f"Notebook Name: {data['name']}")
    print(f"Is Student: {data['is-student']}")
 
+By default a missing element raises
+:class:`~labapi.exceptions.ExtractionError`. For responses where fields are
+genuinely optional, pass ``raise_missing=False`` to omit them from the result
+instead, and read them with :meth:`dict.get`:
+
+.. code-block:: python
+
+   data = extract_etree(
+       xml_response,
+       {"caption": str, "attach-file-name": str},
+       raise_missing=False,
+   )
+
+   filename = data.get("attach-file-name")
+
 Raw and Streaming Responses
 ---------------------------
 
