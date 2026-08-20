@@ -90,13 +90,16 @@ def extract_etree(
     :param schema: A dictionary defining the structure and extraction logic.
                    Keys are XML element tags (or paths), and values are either
                    nested `EtreeExtractorDict` or callable functions to process the text.
-    :param raise_missing: Whether to raise :class:`ExtractionError` when a
-                           requested element is missing. When false, missing
-                           values are omitted from the result.
+    :param raise_missing: Whether to treat absent or unmappable values as
+                           errors. When true, either raises
+                           :class:`ExtractionError`. When false, the value is
+                           omitted from the result instead: silently if the
+                           element is absent, and with a :class:`RuntimeWarning`
+                           if it is present but a callable extractor rejects it.
     :returns: A dictionary containing the extracted and processed data.
-    :raises ExtractionError: If a requested element is missing while
-                             ``raise_missing`` is true, or if a callable
-                             extractor fails to process a value.
+    :raises ExtractionError: If ``raise_missing`` is true and a requested
+                             element is missing, or a callable extractor fails
+                             to process a value.
     """
     flat = _flatten_dict(schema)
 
@@ -127,9 +130,18 @@ def extract_etree(
             items[leaf] = mapper(value)
         except ValueError as err:
             mapper_name = getattr(mapper, "__name__", repr(mapper))
-            raise ExtractionError(
+            message = (
                 f"Could not map value {value!r} with {mapper_name} for "
                 f"{message_path!r} while parsing element at {etree_path}"
-            ) from err
+            )
+
+            if raise_missing:
+                raise ExtractionError(message) from err
+
+            # The caller declared these values optional, so a value that will
+            # not map is treated like one that is absent. Warn rather than
+            # skip silently: an unmappable value is a real anomaly, unlike an
+            # element the response simply omits.
+            warnings.warn(message, RuntimeWarning, stacklevel=2)
 
     return items
