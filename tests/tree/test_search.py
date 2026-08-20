@@ -135,3 +135,39 @@ class TestEntrySearchIteration:
         attachment = result.entries[0]
         assert isinstance(attachment, AttachmentEntry)
         assert attachment._filename == "original.txt"  # pyright: ignore[reportPrivateUsage]
+
+    @pytest.mark.parametrize(
+        ("entry_data_xml", "expected"),
+        [
+            ("<entry-data>Data</entry-data>", "Data"),
+            ("<entry-data nil='true'/>", "Caption"),
+            ("<entry-data/>", "Caption"),
+            ("", "Caption"),
+        ],
+    )
+    def test_result_data_falls_back_to_caption(
+        self, entry_data_xml: str, expected: str
+    ) -> None:
+        """Missing, empty, or nil entry data falls back to the caption."""
+        response = fromstring(
+            "<response>"
+            "<results><total-found type='integer'>1</total-found>"
+            "<total-returned type='integer'>1</total-returned></results>"
+            "<entries><entry><eid>eid_att</eid><part-type>Attachment</part-type>"
+            f"{entry_data_xml}<caption>Caption</caption>"
+            "</entry></entries></response>"
+        )
+
+        class FakeUser:
+            def api_get(self, _method: str, **_kw: object) -> object:
+                return response
+
+        class FakeNotebook:
+            id = "nbid"
+            user = FakeUser()
+
+        result = EntrySearch(FakeNotebook(), "q", page_size=2).page(0)  # type: ignore[arg-type]
+
+        attachment = result.entries[0]
+        assert isinstance(attachment, AttachmentEntry)
+        assert attachment.caption == expected
