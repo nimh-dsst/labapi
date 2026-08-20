@@ -44,6 +44,12 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups
 
+      - name: Keep only the current release candidate docs
+        run: |
+          git tag --list 'v*rc*' |
+            grep -vxF "$GITHUB_REF_NAME" |
+            xargs --no-run-if-empty git tag --delete
+
       - name: Build versioned Sphinx docs
         run: uv run sphinx-multiversion docs/source docs/_build/html
 
@@ -57,7 +63,7 @@ jobs:
           fi
 
           touch docs/_build/html/.nojekyll
-          # Stable alias so deep links (e.g. from the README) survive releases.
+          # Release candidates are versioned only; the default always stays final.
           cp -r "docs/_build/html/${latest}" docs/_build/html/latest
           cat > docs/_build/html/index.html <<EOF
           <!doctype html>

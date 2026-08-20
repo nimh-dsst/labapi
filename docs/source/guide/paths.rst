@@ -9,6 +9,20 @@ avoid long chains of indexing when structures are deeply nested.
 .. seealso::
    :ref:`index_access` for duplicate-name and first-match lookup behavior.
 
+Web URLs
+--------
+
+Notebook and page ``url`` properties return direct LabArchives Web UI links.
+They are not Share URLs: only signed-in users authorized to access the target
+can view it.
+For a custom API host, pass its Web UI base URL explicitly to
+``Client(..., web_url="https://notebooks.example.com")``.
+
+.. code-block:: python
+
+    print(notebook.url)
+    print(page.url)
+
 .. code-block:: python
 
     from labapi import TraversalError

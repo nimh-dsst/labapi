@@ -9,6 +9,7 @@ entries contained within the page.
 from __future__ import annotations
 
 import warnings
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from typing_extensions import Self, override
@@ -66,6 +67,11 @@ class NotebookPage(AbstractTreeNode):
         return super().id
 
     @property
+    def url(self) -> str:
+        """Return this page's LabArchives Web UI URL."""
+        return f"{self.user.client.web_url}/{self.root.id}/page/{self.id}"
+
+    @property
     def entries(self) -> Entries:
         """Return this page's entries, loading them from the API on first access.
 
@@ -88,39 +94,68 @@ class NotebookPage(AbstractTreeNode):
             )
 
             for entry in entries_tree.iterfind(".//entry"):
-                entry_data = extract_etree(
+                entry_fields = extract_etree(
                     entry,
                     {
                         "eid": str,
                         "part-type": str,
-                        "attach-file-name": str,
-                        "attach-content-type": str,
-                        "entry-data": str,
                     },
                 )
+                entry_metadata = extract_etree(
+                    entry,
+                    {
+                        "created-at": str,
+                        "updated-at": str,
+                        "version": int,
+                    },
+                    raise_missing=False,
+                )
+                entry_content = extract_etree(
+                    entry,
+                    {"entry-data": str, "caption": str},
+                    raise_missing=False,
+                )
 
-                part_type = entry_data["part-type"]
+                part_type = entry_fields["part-type"]
+                data = (
+                    entry_content.get("entry-data")
+                    or entry_content.get("caption")
+                    or ""
+                )
+                created_at = entry_metadata.get("created-at")
+                updated_at = entry_metadata.get("updated-at")
 
                 # Cast extracted string values to ensure type checker knows they're not None
                 entry_obj = Entry.from_part_type(
                     part_type,
-                    cast(str, entry_data["eid"]),
-                    cast(str, entry_data["entry-data"]),
+                    cast(str, entry_fields["eid"]),
+                    data,
                     self._user,
+                    created_at=(
+                        datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                        if created_at is not None
+                        else None
+                    ),
+                    updated_at=(
+                        datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                        if updated_at is not None
+                        else None
+                    ),
+                    version=entry_metadata.get("version"),
                 )
 
                 if isinstance(entry_obj, WidgetEntry):
                     pass
                 elif isinstance(entry_obj, UnimplementedEntry):
                     warnings.warn(
-                        f"Entry type '{part_type}' (ID: {entry_data['eid']}) is recognized but not "
+                        f"Entry type '{part_type}' (ID: {entry_fields['eid']}) is recognized but not "
                         f"implemented in labapi. Wrapping as UnimplementedEntry.",
                         UserWarning,
                         stacklevel=2,
                     )
                 elif isinstance(entry_obj, UnknownEntry):
                     warnings.warn(
-                        f"Unknown entry type '{part_type}' (ID: {entry_data['eid']}) encountered. "
+                        f"Unknown entry type '{part_type}' (ID: {entry_fields['eid']}) encountered. "
                         f"Wrapping as UnknownEntry.",
                         RuntimeWarning,
                         stacklevel=2,

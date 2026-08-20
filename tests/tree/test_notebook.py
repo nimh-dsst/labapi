@@ -8,8 +8,10 @@ import pytest
 
 from labapi import (
     AttachmentEntry,
+    Client,
     HeaderEntry,
     Notebook,
+    NotebookPage,
     PlainTextEntry,
     TextEntry,
     UnknownEntry,
@@ -47,6 +49,62 @@ class TestNotebookUnit:
         assert notebook.name == "Test Notebook"
         assert notebook.is_default is True
         assert notebook.root is notebook
+
+    @pytest.mark.parametrize(
+        ("base_url", "expected_web_url", "configured_web_url"),
+        [
+            (
+                "https://api.labarchives.com",
+                "https://mynotebook.labarchives.com",
+                None,
+            ),
+            (
+                "https://api.labarchives-gov.com",
+                "https://mynotebook.labarchives-gov.com",
+                None,
+            ),
+            (
+                "https://auapi.labarchives.com",
+                "https://au-mynotebook.labarchives.com",
+                None,
+            ),
+            (
+                "https://caapi.labarchives.com",
+                "https://ca-mynotebook.labarchives.com",
+                None,
+            ),
+            (
+                "https://euapi.labarchives.com",
+                "https://eu-mynotebook.labarchives.com",
+                None,
+            ),
+            (
+                "https://ukapi.labarchives.com",
+                "https://uk-mynotebook.labarchives.com",
+                None,
+            ),
+            (
+                "https://api.example.com/api",
+                "https://notebooks.example.com/eln",
+                "https://notebooks.example.com/eln",
+            ),
+        ],
+    )
+    def test_notebook_and_page_urls(
+        self, base_url, expected_web_url, configured_web_url
+    ):
+        """Test notebooks and pages build Web UI URLs from their IDs."""
+        with Client(base_url, "test", "test", web_url=configured_web_url) as client:
+            user = User("test-user", "test@example.com", [], client)
+            notebook = Notebook(
+                NotebookInit("notebook-token", "Test Notebook", False),
+                user,
+                user.notebooks,
+            )
+            page = NotebookPage("page-1", "Test Page", notebook, notebook, user)
+
+            assert notebook.url == f"{expected_web_url}/notebook-token"
+            assert page.url == f"{expected_web_url}/notebook-token/page/page-1"
 
     def test_search_is_lazy(self):
         """Test Notebook.search does not call the API until a page is requested."""

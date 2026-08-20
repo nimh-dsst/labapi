@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import shutil
+import warnings
+from datetime import datetime
 from email.message import Message
 from io import BytesIO
+from mimetypes import guess_extension
+from pathlib import PurePosixPath
 from tempfile import TemporaryFile
 from typing import IO, TYPE_CHECKING
+from urllib.parse import unquote, urlsplit
 
 from typing_extensions import override
 
@@ -23,6 +28,23 @@ def _make_backing_io(use_tempfile: bool) -> IO[bytes]:
     return TemporaryFile() if use_tempfile else BytesIO()
 
 
+def _s3_filename_from_url(url: str) -> str | None:
+    """Return a filename from a redirected Amazon S3 object URL, if valid."""
+    parsed_url = urlsplit(url)
+    if not parsed_url.hostname or not parsed_url.hostname.endswith(".amazonaws.com"):
+        return None
+
+    path = unquote(parsed_url.path)
+    if not path or path.endswith("/"):
+        return None
+
+    filename = PurePosixPath(path).name
+    if not filename.strip() or filename in {".", ".."}:
+        return None
+
+    return filename
+
+
 class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
     """Represents an attachment entry on a LabArchives page.
 
@@ -30,40 +52,71 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
     providing access to the attachment's content, filename, and caption.
     """
 
-    def __init__(self, eid: str, caption: str, user: User):
+    def __init__(
+        self,
+        eid: str,
+        caption: str,
+        user: User,
+        *,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        version: int | None = None,
+    ):
         """Initialize an attachment entry.
 
         :param eid: The unique ID of the entry.
         :param caption: The caption associated with the attachment.
         :param user: The authenticated user.
         """
-        super().__init__(eid, caption, user)
+        super().__init__(
+            eid,
+            caption,
+            user,
+            created_at=created_at,
+            updated_at=updated_at,
+            version=version,
+        )
         self._filedata: Attachment | None = None
         self._filename: str | None = None
         self._mime_type: str | None = None
 
     def _ensure_attachment(self, use_tempfile: bool) -> None:
         if self._filedata is None or self._filedata.closed:
-            output = _make_backing_io(use_tempfile)
-
             with self._user.client.stream_api_get(
                 "entries/entry_attachment", uid=self._user.id, eid=self.id
             ) as attachment_stream:
+                headers = attachment_stream.headers
+
+                msg = Message()
+                msg["Content-Type"] = (
+                    headers.get("Content-Type") or "application/octet-stream"
+                )
+                content_disposition = headers.get("Content-Disposition")
+                if content_disposition is not None:
+                    msg["Content-Disposition"] = content_disposition
+
+                mime_type = msg.get_content_type()
+                filename = msg.get_filename()
+                if filename is not None and not filename.strip():
+                    filename = None
+                if filename is None and attachment_stream.response.history:
+                    filename = _s3_filename_from_url(attachment_stream.url)
+
+                if filename is None:
+                    extension = guess_extension(mime_type, strict=False) or ".bin"
+                    filename = f"{self.id}{extension}"
+                    warnings.warn(
+                        "Could not determine filename from API response headers "
+                        "or redirected S3 URL; using attachment entry EID "
+                        f"{self.id!r} with MIME-derived extension {extension!r} "
+                        f"as filename {filename!r}.",
+                        RuntimeWarning,
+                        stacklevel=2,
+                    )
+
+                output = _make_backing_io(use_tempfile)
                 for chunk in attachment_stream:
                     output.write(chunk)
-
-            headers = attachment_stream.headers
-
-            msg = Message()
-            msg["Content-Type"] = (
-                headers.get("Content-Type") or "application/octet-stream"
-            )
-            msg["Content-Disposition"] = headers.get("Content-Disposition")
-            filename = msg.get_filename()
-            mime_type = msg.get_content_type()
-
-            if filename is None:
-                raise ApiError("Could not determine filename from API response headers")
 
             self._filedata = Attachment(output, mime_type, filename, self._data)
 

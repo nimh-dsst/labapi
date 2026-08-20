@@ -8,10 +8,11 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
-## 1.2.0 - 2026-07-23
+## 1.2.0 - Unreleased
 
 ### Added
 
+- Entries now expose optional read-only creation, update, and version metadata.
 - `Client` request methods accept a `timeout` parameter.
 - `Notebook.backup()` downloads a notebook's native LabArchives backup archive
   or JSON response, with options to omit attachment payloads.
@@ -19,12 +20,17 @@ details that affect development workflows.
   preserving empty directories and pages, entry ordering, attachments, and
   per-page metadata. The optional `labapi[export]` extra reads native backup
   archives; the default source falls back to the live API when needed.
+- `Notebook.url` and `NotebookPage.url` return authenticated LabArchives Web UI
+  links, backed by a new `Client.web_url`.
 
 ### Changed
 
 - Client base URLs now discard fragments and warn when they contain query
   parameters that cannot be preserved in API requests.
+- Versioned documentation shows only the newest release candidate and keeps
+  the root and `latest/` aliases on the newest final release.
 - Updated the locked indirect Pillow dependency from 12.2.0 to 12.3.0.
+- Updated the locked `cryptography` dependency from 48.0.1 to 50.0.0.
 
 ### Fixed
 
@@ -45,8 +51,16 @@ details that affect development workflows.
 - `PlainTextEntry.content` rejects non-string values before an API request,
   the public parse exceptions are available from `labapi`, and the API
   Deleted Items directory cannot be deleted accidentally.
+- Attachment downloads recover the original filename from a redirected Amazon
+  S3 URL when the response headers omit one.
+- Entry parsing tolerates missing optional fields: `extract_etree()` accepts
+  `raise_missing=False`, and pages load entries that omit `entry-data` or
+  `caption`.
+- Browser detection falls back to the remaining candidates when a configured
+  browser probe raises an error, instead of failing outright.
 - The model-logging example escapes metadata and uses an ASCII-safe success
   message.
+- The `csv_table` example preserves spaces around inline markup.
 
 ### Security
 
