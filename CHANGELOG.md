@@ -8,7 +8,7 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
-## 1.2.0 - Unreleased
+## 1.2.0 - 2026-08-19
 
 ### Added
 
