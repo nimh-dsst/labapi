@@ -42,13 +42,14 @@ and :attr:`~labapi.entry.entries.base.Entry.version` is an integer.
    entry = page.entries[0]
 
    print(f"{entry.id} ({entry.content_type})")
-   print(f"Last updated {entry.updated_at:%Y-%m-%d %H:%M %Z}, version {entry.version}")
+   print(f"Version {entry.version}, last updated {entry.updated_at}")
 
 .. note::
-   Lifecycle metadata is best effort. LabArchives supplies it for entries
-   loaded from a page or a search result, but ``labapi`` does not require it:
-   if a response leaves a field out, that attribute is ``None`` rather than an
-   error.
+   Lifecycle metadata is best effort. ``labapi`` populates it for entries
+   loaded from a page, and a field a response leaves out is ``None`` rather
+   than an error. Entries returned by
+   :meth:`~labapi.tree.notebook.Notebook.search` do not carry it at all, so
+   ``created_at``, ``updated_at``, and ``version`` are always ``None`` there.
 
 Attachment entries add a :attr:`~labapi.entry.entries.attachment.AttachmentEntry.caption`,
 and the :class:`~labapi.entry.attachment.Attachment` returned by their

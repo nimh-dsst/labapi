@@ -25,6 +25,7 @@ details that affect development workflows.
 
 ### Changed
 
+- The project is now distributed under the MIT License, replacing CC0-1.0.
 - Client base URLs now discard fragments and warn when they contain query
   parameters that cannot be preserved in API requests.
 - Versioned documentation shows only the newest release candidate and keeps
@@ -64,6 +65,9 @@ details that affect development workflows.
   `caption`.
 - Browser detection falls back to the remaining candidates when a configured
   browser probe raises an error, instead of failing outright.
+- `default_authenticate()` reports missing `labapi[builtin-auth]` dependencies
+  only for browser setup, so an unrelated `ImportError` raised later in the
+  authentication flow is no longer masked by that message.
 - The model-logging example escapes metadata and uses an ASCII-safe success
   message.
 - The `csv_table` example preserves spaces around inline markup.
