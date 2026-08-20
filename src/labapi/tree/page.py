@@ -9,7 +9,6 @@ entries contained within the page.
 from __future__ import annotations
 
 import warnings
-from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from typing_extensions import Self, override
@@ -23,7 +22,7 @@ from labapi.entry import (
     UnknownEntry,
     WidgetEntry,
 )
-from labapi.util import InsertBehavior, extract_etree
+from labapi.util import InsertBehavior, extract_etree, to_datetime
 
 from .mixins import AbstractTreeContainer, AbstractTreeNode
 
@@ -108,8 +107,8 @@ class NotebookPage(AbstractTreeNode):
                         "entry-data": str,
                         "caption": str,
                         "attach-file-name": str,
-                        "created-at": str,
-                        "updated-at": str,
+                        "created-at": to_datetime,
+                        "updated-at": to_datetime,
                         "version": int,
                     },
                     raise_missing=False,
@@ -121,25 +120,14 @@ class NotebookPage(AbstractTreeNode):
                     or entry_optional.get("caption")
                     or ""
                 )
-                created_at = entry_optional.get("created-at")
-                updated_at = entry_optional.get("updated-at")
-
                 # Cast extracted string values to ensure type checker knows they're not None
                 entry_obj = Entry.from_part_type(
                     part_type,
                     cast(str, entry_fields["eid"]),
                     data,
                     self._user,
-                    created_at=(
-                        datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-                        if created_at is not None
-                        else None
-                    ),
-                    updated_at=(
-                        datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-                        if updated_at is not None
-                        else None
-                    ),
+                    created_at=entry_optional.get("created-at"),
+                    updated_at=entry_optional.get("updated-at"),
                     version=entry_optional.get("version"),
                 )
 
