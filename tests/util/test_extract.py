@@ -216,6 +216,34 @@ def test_extract_etree_can_skip_missing_elements():
     assert result == {"name": "Test", "empty": ""}
 
 
+def test_extract_etree_optional_mapper_failure_warns_and_omits():
+    """Test optional extraction warns instead of raising when a mapper fails."""
+    element = etree.fromstring(b"<root><name>Test</name><flag>not_a_bool</flag></root>")
+
+    with pytest.warns(RuntimeWarning, match=r"Could not map value 'not_a_bool'"):
+        result = extract_etree(
+            element,
+            {"name": str, "flag": to_bool},
+            raise_missing=False,
+        )
+
+    assert result == {"name": "Test"}
+
+
+def test_extract_etree_optional_mapper_failure_does_not_stop_extraction():
+    """Test a failed optional mapper does not discard later values."""
+    element = etree.fromstring(b"<root><flag>not_a_bool</flag><name>Test</name></root>")
+
+    with pytest.warns(RuntimeWarning):
+        result = extract_etree(
+            element,
+            {"flag": to_bool, "name": str},
+            raise_missing=False,
+        )
+
+    assert result == {"name": "Test"}
+
+
 def test_extract_etree_mapper_fails_raises():
     """Test extract_etree raises ValueError when mapper fails."""
     xml = """<?xml version="1.0" encoding="UTF-8"?>
