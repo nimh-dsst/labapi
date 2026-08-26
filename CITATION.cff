@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+
+title: "labapi"
+abstract: >-
+  labapi is a Python library that translates the flat LabArchives API into a
+  Python object model following the existing hierarchy of the web interface,
+  allowing workflows to navigate and modify notebook content through familiar
+  paths.
+
+authors:
+  - family-names: "Li"
+    given-names: "Christoph"
+    orcid: "https://orcid.org/0009-0009-4624-2578"
+    affiliation: "Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health, Bethesda, MD, USA"
+
+  - family-names: "Lawrimore"
+    given-names: "Josh"
+    orcid: "https://orcid.org/0000-0003-2301-9073"
+    affiliation: "Frederick National Laboratory for Cancer Research, Leidos Biomedical Research, Inc., Frederick, MD, USA"
+
+  - family-names: "Moraczewski"
+    given-names: "Dustin"
+    orcid: "https://orcid.org/0000-0002-0422-3135"
+    affiliation: "Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health, Bethesda, MD, USA"
+
+  - family-names: "Thomas"
+    given-names: "Adam"
+    orcid: "https://orcid.org/0000-0002-2850-1419"
+    affiliation: "Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health, Bethesda, MD, USA"
+
+doi: "10.5281/zenodo.19599400"
+
+repository-code: "https://github.com/nimh-dsst/labapi"
+url: "https://nimh-dsst.github.io/labapi/"
+license: MIT
+
+keywords:
+  - "electronic lab notebook"
+  - "ELN"
+  - "LabArchives"
+  - "Python"
+  - "research data management"
+  - "reproducibility"

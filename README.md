@@ -1,13 +1,21 @@
 # labapi
 
-A Python client for the LabArchives API.
+A high-level Python interface to LabArchives notebooks.
 
 [![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://github.com/nimh-dsst/labapi/actions/workflows/unit_tests.yml/badge.svg?branch=main)](https://github.com/nimh-dsst/labapi/actions/workflows/unit_tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19599400.svg)](https://doi.org/10.5281/zenodo.19599400)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 
-`labapi` authenticates with LabArchives, navigates notebook trees, and creates or updates notebook content from Python.
+`labapi` allows you to work with the LabArchives API through familiar lab
+notebook concepts. It represents notebooks, folders, pages, and entries as
+Python objects. It provides easy, path-based navigation and unified access to
+LabArchives attachments, as well as convenience methods for common higher-level
+operations like searching notebook entries and getting or creating pages and
+folders by path.
+
+The library handles authentication, request signing, XML response parsing,
+search-result pagination, and entry-type decoding.
 
 [Source](https://github.com/nimh-dsst/labapi) | [Docs](https://nimh-dsst.github.io/labapi/) | [Issues](https://github.com/nimh-dsst/labapi/issues)
 
