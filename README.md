@@ -171,6 +171,10 @@ uv run pyright
 
 Integration tests are opt-in and require live credentials. See [CONTRIBUTING.md](https://github.com/nimh-dsst/labapi/blob/main/CONTRIBUTING.md) for the full setup, including `AUTH_EMAIL` and `AUTH_KEY`.
 
+## AI Usage Disclosure
+
+The authors designed `labapi`'s foundational architecture and implemented its core. Generative AI subsequently assisted with development, testing, maintenance, release work, and project documentation. The authors retain final control over the library's scope, behavior, and public interface and take responsibility for the software, reviewing and accepting AI-assisted changes through public pull requests.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](https://github.com/nimh-dsst/labapi/blob/main/LICENSE) file for details.
