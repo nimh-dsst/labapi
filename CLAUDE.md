@@ -20,7 +20,7 @@ pytest
 
 # Run specific test file
 pytest tests/test_unit.py
-pytest tests/test_integration.py  # requires LA_KEY and LA_EMAIL env vars
+pytest tests/test_integration.py  # requires AUTH_EMAIL and AUTH_KEY env vars
 
 # Lint and format
 ruff check .
@@ -67,7 +67,7 @@ ACCESS_PWD=your_password             # required
 ```
 
 **Other environment variables:**
-- `LA_KEY`, `LA_EMAIL` - Required for integration tests
+- `AUTH_EMAIL`, `AUTH_KEY` - Required for non-interactive integration test login
 - `LA_AUTH_BROWSER` - Browser for OAuth flows (chrome, firefox, edge)
 - `AUTH_INTERACTIVE` - Enable interactive authentication mode
 - `NOTEBOOK` - Target notebook name for testing
