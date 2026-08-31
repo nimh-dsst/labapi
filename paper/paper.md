@@ -130,7 +130,7 @@ Author contributions are described using the [CRediT taxonomy](https://credit.ni
 
 **Author Review:** The authors retain final control over the software's scope, behavior, and public interface and take responsibility for the software and manuscript. They reviewed and accepted AI-assisted software and documentation changes through public pull requests and reviewed and revised all AI-assisted manuscript text. GitHub Actions runs unit tests on every push and pull request and live LabArchives integration tests when triggered.
 
-**Tools:** Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Sonnet 4.6, Sonnet 5, and Fable) and HHS Enterprise ChatGPT (5.4, 5.5, Luna, Sol, and Terra).
+**Tools:** Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Sonnet 4.6, Sonnet 5, and Fable) and HHS Enterprise ChatGPT Codex (5.4, 5.5, Luna, Sol, and Terra).
 
 # Acknowledgements
 
