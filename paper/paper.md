@@ -23,7 +23,7 @@ authors:
 affiliations:
   - name: Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health, Bethesda, MD, USA
     index: 1
-  - name: Frederick National Laboratory for Cancer Research, Leidos Biomedical Research, Inc., Frederick, MD, USA
+  - name: Clinical Monitoring Research Program Directorate, Frederick National Laboratory for Cancer Research, Frederick, MD, USA
     index: 2
 date: 31 August 2026
 bibliography: paper.bib
