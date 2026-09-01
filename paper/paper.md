@@ -10,6 +10,7 @@ tags:
 authors:
   - name: Christoph Li
     orcid: 0009-0009-4624-2578
+    corresponding: true
     affiliation: 1
   - name: Josh Lawrimore
     orcid: 0000-0003-2301-9073
@@ -17,13 +18,13 @@ authors:
   - name: Dustin Moraczewski
     orcid: 0000-0002-0422-3135
     affiliation: 1
-  - name: Adam Thomas
+  - name: Adam G. Thomas
     orcid: 0000-0002-2850-1419
     affiliation: 1
 affiliations:
   - name: Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health, Bethesda, MD, USA
     index: 1
-  - name: Frederick National Laboratory for Cancer Research, Leidos Biomedical Research, Inc., Frederick, MD, USA
+  - name: Clinical Monitoring Research Program Directorate, Frederick National Laboratory for Cancer Research, Frederick, MD, USA
     index: 2
 date: 31 August 2026
 bibliography: paper.bib
@@ -108,7 +109,7 @@ and the uploaded figure.
 
 # Research impact statement
 
-`labapi` underpins laboratory record-keeping tools in use beyond the authors' team. The authors develop two applications built on `labapi` that other NIMH intramural laboratories use in their research: `muronto` writes neuro-behavioral experiment outputs to LabArchives, and `save-my-jupyter` deposits Jupyter notebook snapshots [@muronto; @save_my_jupyter]. The library's notebook-backup support was developed in coordination with the Systems Neuroscience Imaging Resource (SNIR), a core facility providing imaging and image-analysis support to NIMH intramural investigators, which uses `labapi` to automate backups of its LabArchives notebooks [@labapi_issue_264]. NIH policy also requires intramural researchers to use an approved electronic notebook for new research [@nih_eln_policy], and LabArchives publishes no official client library; `labapi` fills that gap for laboratories that need to automate this record-keeping.
+`labapi` underpins laboratory record-keeping tools in use beyond the authors' team, including the `muronto` and `save-my-jupyter` applications described above [@muronto; @save_my_jupyter]. The library's notebook-backup support was developed in coordination with the Systems Neuroscience Imaging Resource (SNIR), a core facility providing imaging and image-analysis support to NIMH intramural investigators, which uses `labapi` to automate backups of its LabArchives notebooks [@labapi_issue_264]. NIH policy also requires intramural researchers to use an approved electronic notebook for new research [@nih_eln_policy], and LabArchives publishes no official client library; `labapi` fills that gap for laboratories that need to automate this record-keeping.
 
 # Availability
 
@@ -130,7 +131,7 @@ Author contributions are described using the [CRediT taxonomy](https://credit.ni
 
 **Author Review:** The authors retain final control over the software's scope, behavior, and public interface and take responsibility for the software and manuscript. They reviewed and accepted AI-assisted software and documentation changes through public pull requests and reviewed and revised all AI-assisted manuscript text. GitHub Actions runs unit tests on every push and pull request and live LabArchives integration tests when triggered.
 
-**Tools:** Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Sonnet 4.6, Sonnet 5, and Fable) and HHS Enterprise ChatGPT Codex (5.4, 5.5, Luna, Sol, and Terra).
+**Tools:** Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Sonnet 4.6, Sonnet 5, and Fable) and OpenAI's Codex (5.4, 5.5, Luna, Sol, and Terra), the latter accessed through the HHS Enterprise agreement.
 
 # Acknowledgements
 
