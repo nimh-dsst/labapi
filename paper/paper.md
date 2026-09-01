@@ -18,7 +18,7 @@ authors:
   - name: Dustin Moraczewski
     orcid: 0000-0002-0422-3135
     affiliation: 1
-  - name: Adam Thomas
+  - name: Adam G. Thomas
     orcid: 0000-0002-2850-1419
     affiliation: 1
 affiliations:
