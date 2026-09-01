@@ -36,3 +36,46 @@ jobs:
           name: paper
           # The generated PDF is written next to paper.md.
           path: paper/paper.pdf
+
+  # Builds an unbranded preprint PDF from the same paper.md, suitable for
+  # bioRxiv. The JOSS draft PDF above carries a DRAFT watermark, line numbers,
+  # and JOSS branding ("DOI: unavailable"), none of which belong on a preprint
+  # server. Inara's `preprint` output emits plain LaTeX, which is compiled
+  # here inside the same Inara image (it ships a full TeX Live).
+  preprint:
+    runs-on: ubuntu-latest
+    name: Preprint PDF (for bioRxiv)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate preprint LaTeX with Inara
+        run: |
+          docker run --rm -v "$PWD":/data -u "$(id -u):$(id -g)" \
+            openjournals/inara -o preprint -v paper/paper.md
+
+      - name: Compile preprint PDF
+        # LaTeX cannot include SVG figures directly, so convert them to PDF
+        # (rsvg-convert ships in the Inara image) and point the TeX source at
+        # the converted files before compiling.
+        run: |
+          docker run --rm -v "$PWD":/data -u "$(id -u):$(id -g)" \
+            --entrypoint /bin/sh openjournals/inara -c '
+            set -e
+            cd /data/paper
+            for f in figures/*.svg; do
+              [ -e "$f" ] || continue
+              rsvg-convert -f pdf -o "${f%.svg}.pdf" "$f"
+            done
+            sed -i "s/\.svg}/.pdf}/g" paper.preprint.tex
+            sed -i "/\\\\usepackage{svg}/d" paper.preprint.tex
+            sed -i "s/\\\\includesvg/\\\\includegraphics/g" paper.preprint.tex
+            sed -i "s/\\\\pandocbounded{/{/g" paper.preprint.tex
+            sed -i "s/\\\\begin{document}/\\\\usepackage[margin=1in]{geometry}\\\\begin{document}/" paper.preprint.tex
+            latexmk -lualatex -interaction=nonstopmode paper.preprint.tex'
+
+      - name: Upload preprint PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: preprint
+          path: paper/paper.preprint.pdf
