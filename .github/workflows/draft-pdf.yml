@@ -71,6 +71,7 @@ jobs:
             sed -i "/\\\\usepackage{svg}/d" paper.preprint.tex
             sed -i "s/\\\\includesvg/\\\\includegraphics/g" paper.preprint.tex
             sed -i "s/\\\\pandocbounded{/{/g" paper.preprint.tex
+            sed -i "s/\\\\begin{document}/\\\\usepackage[margin=1in]{geometry}\\\\begin{document}/" paper.preprint.tex
             latexmk -lualatex -interaction=nonstopmode paper.preprint.tex'
 
       - name: Upload preprint PDF
