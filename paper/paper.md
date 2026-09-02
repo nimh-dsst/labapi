@@ -30,7 +30,7 @@ affiliations:
     index: 1
   - name: Clinical Monitoring Research Program Directorate, Frederick National Laboratory for Cancer Research, Frederick, MD, USA
     index: 2
-date: 31 August 2026
+date: 2 September 2026
 bibliography: paper.bib
 ---
 
@@ -100,7 +100,11 @@ records = [json.load(page.entries[0].content) for page in qc.children]
 summary, figure_path = summarize(records)
 dashboard = notebook.page("Dashboards/Cohort QC")
 dashboard.entries.create_json_entry(summary)
+```
 
+Finally, the workflow attaches the figure to the same page.
+
+```python
 attachment = labapi.Attachment.from_file(figure_path)
 dashboard.entries.create(labapi.AttachmentEntry, attachment)
 ```
@@ -135,7 +139,7 @@ Author contributions are described using the [CRediT taxonomy](https://credit.ni
 
 **Author Review:** The authors retain final control over the software's scope, behavior, and public interface and take responsibility for the software and manuscript. They reviewed and accepted AI-assisted software and documentation changes through public pull requests and reviewed and revised all AI-assisted manuscript text. GitHub Actions runs unit tests on every push and pull request and live LabArchives integration tests when triggered.
 
-**Tools:** Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Sonnet 4.6, Sonnet 5, and Fable) and OpenAI's Codex (5.4, 5.5, Luna, Sol, and Terra), the latter accessed through the HHS Enterprise agreement.
+**Tools:** Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Sonnet 4.6, Sonnet 5, and Fable 5) and OpenAI's Codex (GPT-5.4, GPT-5.5, and GPT-5.6 Luna, Sol, and Terra), the latter accessed through the HHS Enterprise agreement.
 
 # Acknowledgements
 
