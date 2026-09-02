@@ -8,6 +8,12 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
+## Unreleased
+
+### Added
+
+- Official support for Python 3.14; the CI matrix now tests against it.
+
 ## 1.2.0 - 2026-08-19
 
 ### Added
