@@ -11,9 +11,11 @@ Current Capabilities
 ``labapi`` supports these workflows reliably:
 
 * Navigating notebooks, directories, and pages by path or index.
+* Searching notebook entries with paginated results.
 * Creating and editing text entries (rich text, plain text, and headers).
 * Uploading and updating attachment entries.
 * Copying pages and directories for supported entry types.
+* Creating notebooks and downloading native whole-notebook backups.
 * Refreshing cached tree/page state when collaborating across sessions.
 
 Known Limitations and Caveats
@@ -75,6 +77,31 @@ Entry deletion is not available
 Deleting individual entries (text, headers, attachments, widgets) is not currently supported by the API client.
 Only page and directory deletion/move-to-trash workflows are available.
 
+Comments are not available
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``labapi`` exposes a placeholder :class:`~labapi.entry.comment.Comment` type,
+but it does not currently provide operations for reading, creating, updating,
+or deleting entry comments.
+
+Notebook creation has no matching deletion operation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:meth:`~labapi.tree.collection.Notebooks.create_notebook` creates an empty
+notebook, but ``labapi`` cannot delete a notebook. Automated jobs that create
+notebooks must therefore account for the persistent resources they leave
+behind.
+
+Native backups operate on an entire notebook
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:meth:`~labapi.tree.notebook.Notebook.backup` downloads a native backup of the
+whole notebook; it cannot limit the request to one directory or page. Excluding
+attachment payloads can reduce the download size, but the backup still covers
+the entire notebook. LabArchives also restricts this operation to the notebook
+owner, so a user with shared access may be able to navigate the notebook but
+not download its native backup.
+
 Planning Guidance
 -----------------
 
@@ -85,6 +112,9 @@ For production integrations:
   re-fetch child objects.
 - Validate copied content, especially attachments and specialized entries.
 - Add explicit handlers for unsupported entry types.
+- Reuse a designated notebook for recurring automation unless permanent
+  notebook creation is intentional.
+- Plan whole-notebook backup storage and authenticate as the notebook owner.
 
 Related Pages
 -------------
