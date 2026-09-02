@@ -11,7 +11,9 @@ requires-python = ">=3.10"
 license = "MIT"
 authors = [
   { name = "Christoph Li", email = "christoph.li@nih.gov" },
-  { name = "Joshua Lawrimore", email = "josh.lawrimore@nih.gov"},
+  { name = "Josh Lawrimore", email = "josh.lawrimore@nih.gov"},
+  { name = "Dustin Moraczewski", email = "dustin.moraczewski@nih.gov" },
+  { name = "Adam G. Thomas", email = "adamt@nih.gov" },
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
