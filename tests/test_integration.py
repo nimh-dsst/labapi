@@ -366,6 +366,40 @@ def test_delete_subject(test_env):
     assert deleted_subject.name.startswith("subj_3 - Deleted at")
 
 
+def load_qc_records(qc: LA.NotebookDirectory) -> list[dict[str, str | float]]:
+    """Load JSON attachments from the demonstration's subject pages."""
+    records: list[dict[str, str | float]] = []
+    for subject_page in qc.children:
+        for entry in subject_page.as_page().entries:
+            if not isinstance(entry, LA.AttachmentEntry):
+                continue
+            downloaded = entry.content
+            try:
+                if downloaded.filename.endswith(".json"):
+                    records.append(json.load(downloaded))
+            finally:
+                downloaded.close()
+    return records
+
+
+def summarize_qc_records(
+    records: list[dict[str, str | float]],
+) -> list[dict[str, str | int | float]]:
+    """Return dependency-free group counts and mean DVARS values."""
+    values_by_group: dict[str, list[float]] = {}
+    for record in records:
+        group = str(record["group"])
+        values_by_group.setdefault(group, []).append(float(record["mean_dvars"]))
+    return [
+        {
+            "group": group,
+            "count": len(values),
+            "mean_dvars": sum(values) / len(values),
+        }
+        for group, values in sorted(values_by_group.items())
+    ]
+
+
 def test_paper_qc_workflow(test_env: LA.NotebookDirectory, tmp_path: Path) -> None:
     """Exercise the path, JSON-entry, refresh, and attachment workflow from the paper."""
     add_readme(
@@ -374,42 +408,52 @@ def test_paper_qc_workflow(test_env: LA.NotebookDirectory, tmp_path: Path) -> No
         "Created subject JSON records and a dashboard with summary data and a figure.",
     )
     qc = test_env.dir("Partly Cloudy QC")
-    subjects = ("sub-alpha", "sub-beta", "sub-gamma")
+    # Rounded fixtures preserve the demonstration's child/adult contrast without
+    # adding its neuroimaging and plotting dependencies to the package test suite.
+    qc_records = (
+        {"subject": "pixar008", "group": "child", "mean_dvars": 47.9},
+        {"subject": "pixar066", "group": "child", "mean_dvars": 19.5},
+        {"subject": "pixar112", "group": "child", "mean_dvars": 18.5},
+        {"subject": "pixar123", "group": "adult", "mean_dvars": 15.0},
+        {"subject": "pixar139", "group": "adult", "mean_dvars": 12.0},
+    )
 
-    for subject in subjects:
-        page = qc.page(subject)
+    for record in qc_records:
+        subject = record["subject"]
+        page = qc.page(f"sub-{subject}")
         page.entries.create_json_entry(
-            {"subject": subject, "group": "partly cloudy", "mean_dvars": 1.25},
-            filename=f"{subject}.json",
+            record,
+            filename=f"sub-{subject}_qc.json",
+            caption=f"QC: sub-{subject}",
         )
 
     qc = test_env.refresh().traverse("Partly Cloudy QC").as_dir()
-    records = []
-    for subject in subjects:
-        page = qc.traverse(subject).as_page()
-        assert [type(entry) for entry in page.entries] == [
-            LA.AttachmentEntry,
-            LA.TextEntry,
-        ]
-        attachment_entry = page.entries[0]
-        preview = page.entries[1].content
-        downloaded = attachment_entry.content
-        try:
-            assert downloaded.filename == f"{subject}.json"
-            downloaded.seek(0)
-            records.append(json.load(downloaded))
-        finally:
-            downloaded.close()
-        assert subject in preview
+    assert isinstance(qc, LA.NotebookDirectory)
+    records = load_qc_records(qc)
 
-    assert [record["subject"] for record in records] == list(subjects)
+    assert sorted(record["subject"] for record in records) == sorted(
+        record["subject"] for record in qc_records
+    )
+
+    summary = summarize_qc_records(records)
+    assert summary[0]["group"] == "adult"
+    assert summary[1]["group"] == "child"
+    assert float(summary[1]["mean_dvars"]) > float(summary[0]["mean_dvars"])
 
     dashboard = test_env.page("Dashboards/Cohort QC")
     dashboard.entries.create_json_entry(
-        {"subjects": len(records), "mean_dvars": 1.25}, filename="summary.json"
+        summary,
+        filename="cohort_qc.json",
+        caption="Cohort QC",
     )
-    source = tmp_path / "qc-figure.svg"
-    source_bytes = b'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'
+    source = tmp_path / "cohort_dvars.svg"
+    source_bytes = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="80">'
+        "<title>Cohort DVARS by age group</title>"
+        f'<text x="10" y="30">adult: {summary[0]["mean_dvars"]:.2f}</text>'
+        f'<text x="10" y="60">child: {summary[1]["mean_dvars"]:.2f}</text>'
+        "</svg>"
+    ).encode()
     source.write_bytes(source_bytes)
     source_attachment = LA.Attachment.from_file(source)
     try:
@@ -425,14 +469,11 @@ def test_paper_qc_workflow(test_env: LA.NotebookDirectory, tmp_path: Path) -> No
     ]
     summary_attachment = dashboard.entries[0].content
     try:
-        assert summary_attachment.filename == "summary.json"
-        assert json.load(summary_attachment) == {
-            "subjects": len(subjects),
-            "mean_dvars": 1.25,
-        }
+        assert summary_attachment.filename == "cohort_qc.json"
+        assert json.load(summary_attachment) == summary
     finally:
         summary_attachment.close()
-    assert "mean_dvars" in dashboard.entries[1].content
+    assert "Cohort QC" in dashboard.entries[1].content
     figure = dashboard.entries[2].content
     try:
         assert figure.filename == source.name
