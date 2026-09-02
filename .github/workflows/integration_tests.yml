@@ -40,4 +40,4 @@ jobs:
         AUTH_KEY: ${{ github.event.inputs.la_key }}
         AUTH_EMAIL: ${{ github.event.inputs.la_email }}
         NOTEBOOK: ${{ secrets.NOTEBOOK }}
-      run: uv run pytest tests/test_integration.py
+      run: uv run pytest --integration tests/test_integration.py
