@@ -1,0 +1,85 @@
+{
+  "@context": "https://w3id.org/codemeta/3.1",
+  "@type": "SoftwareSourceCode",
+  "name": "labapi",
+  "description": "A Python library that translates the flat LabArchives API into a Python object model following the hierarchy of the web interface, allowing workflows to navigate and modify notebook content through familiar paths.",
+  "codeRepository": "https://github.com/nimh-dsst/labapi",
+  "issueTracker": "https://github.com/nimh-dsst/labapi/issues",
+  "license": "https://spdx.org/licenses/MIT",
+  "version": "1.2.0",
+  "identifier": "https://doi.org/10.5281/zenodo.22021367",
+  "dateCreated": "2025-12-15",
+  "datePublished": "2026-08-20",
+  "developmentStatus": "active",
+  "programmingLanguage": "Python",
+  "runtimePlatform": "Python 3.10 or later",
+  "operatingSystem": "Cross-platform",
+  "applicationCategory": "Research software",
+  "keywords": [
+    "electronic lab notebook",
+    "ELN",
+    "LabArchives",
+    "Python",
+    "research data management",
+    "reproducibility",
+    "FAIR"
+  ],
+  "author": [
+    {
+      "@id": "https://orcid.org/0009-0009-4624-2578",
+      "@type": "Person",
+      "givenName": "Christoph",
+      "familyName": "Li",
+      "email": "christoph.li@nih.gov",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health"
+      }
+    },
+    {
+      "@id": "https://orcid.org/0000-0003-2301-9073",
+      "@type": "Person",
+      "givenName": "Josh",
+      "familyName": "Lawrimore",
+      "email": "josh.lawrimore@nih.gov",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Clinical Monitoring Research Program Directorate, Frederick National Laboratory for Cancer Research"
+      }
+    },
+    {
+      "@id": "https://orcid.org/0000-0002-0422-3135",
+      "@type": "Person",
+      "givenName": "Dustin",
+      "familyName": "Moraczewski",
+      "email": "dustin.moraczewski@nih.gov",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health"
+      }
+    },
+    {
+      "@id": "https://orcid.org/0000-0002-2850-1419",
+      "@type": "Person",
+      "givenName": "Adam G.",
+      "familyName": "Thomas",
+      "email": "adamt@nih.gov",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health"
+      }
+    }
+  ],
+  "maintainer": {
+    "@id": "https://orcid.org/0009-0009-4624-2578",
+    "@type": "Person",
+    "givenName": "Christoph",
+    "familyName": "Li",
+    "email": "christoph.li@nih.gov"
+  },
+  "readme": "https://github.com/nimh-dsst/labapi/blob/main/README.md",
+  "softwareHelp": "https://nimh-dsst.github.io/labapi/",
+  "buildInstructions": "https://github.com/nimh-dsst/labapi/blob/main/CONTRIBUTING.md",
+  "continuousIntegration": "https://github.com/nimh-dsst/labapi/actions",
+  "relatedLink": "https://pypi.org/project/labapi/1.2.0/"
+}
