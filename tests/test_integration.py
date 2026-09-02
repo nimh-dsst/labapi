@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from io import BytesIO
@@ -193,6 +194,41 @@ def test_add_session_notes(test_env):
         .as_page()
     )
     assert notes_page.entries[note.id].content == "fell asleep during test"
+
+
+def test_search_entries(
+    root_test_dir: LA.NotebookDirectory, test_notebook: LA.Notebook
+) -> None:
+    """Find a persisted entry through the live notebook search endpoint."""
+    marker = "labapi-live-search-integration-marker"
+    search_page = root_test_dir.page("search fixture")
+    matching_entries = [
+        entry
+        for entry in search_page.entries
+        if isinstance(entry, LA.PlainTextEntry) and entry.content == marker
+    ]
+    searchable_entry = (
+        matching_entries[0]
+        if matching_entries
+        else search_page.entries.create(LA.PlainTextEntry, marker)
+    )
+
+    # LabArchives search indexing may lag behind entry creation briefly.
+    for attempt in range(6):
+        result_pages = list(test_notebook.search(marker, page_size=1))
+        results = [entry for page in result_pages for entry in page.entries]
+        matches = [entry for entry in results if entry.id == searchable_entry.id]
+        if matches:
+            break
+        if attempt < 5:
+            time.sleep(5)
+    else:
+        pytest.fail(
+            "The persisted integration marker was not indexed within 25 seconds."
+        )
+
+    assert isinstance(matches[0], LA.PlainTextEntry)
+    assert matches[0].content == marker
 
 
 def test_move_and_merge_sessions(test_env):
