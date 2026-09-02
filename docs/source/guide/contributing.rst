@@ -31,8 +31,9 @@ Run the full suite, including integration tests, with:
 Unit Tests
 ~~~~~~~~~~
 
-Unit tests use a ``MockClient`` that replays pre-recorded API responses, so
-they run entirely offline.
+Unit tests use a ``MockClient`` with synthetic XML responses constructed from
+the LabArchives API documentation. They contain no recorded production
+responses or user data and run entirely offline.
 
 .. code-block:: bash
 
