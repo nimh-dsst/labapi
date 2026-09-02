@@ -32,6 +32,13 @@ jobs:
     - name: Install dependencies
       run: uv sync --all-groups
 
+    - name: Mask transient authentication inputs
+      run: |
+        auth_key="$(jq -r '.inputs.la_key' "$GITHUB_EVENT_PATH")"
+        auth_email="$(jq -r '.inputs.la_email' "$GITHUB_EVENT_PATH")"
+        echo "::add-mask::$auth_key"
+        echo "::add-mask::$auth_email"
+
     - name: Run tests with pytest
       env:
         API_URL: ${{ secrets.API_URL }}
