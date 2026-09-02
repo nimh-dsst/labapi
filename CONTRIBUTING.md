@@ -27,8 +27,9 @@ uv run pytest --integration
 
 ### Unit Tests
 
-Unit tests use `MockClient` to replay pre-recorded API responses, so they run
-entirely offline:
+Unit tests use `MockClient` with synthetic XML responses constructed from the
+LabArchives API documentation. They contain no recorded production responses
+or user data and run entirely offline:
 
 ```bash
 uv run pytest
