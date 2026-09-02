@@ -11,15 +11,19 @@ authors:
   - name: Christoph Li
     orcid: 0009-0009-4624-2578
     corresponding: true
+    email: christoph.li@nih.gov
     affiliation: 1
   - name: Josh Lawrimore
     orcid: 0000-0003-2301-9073
+    email: josh.lawrimore@nih.gov
     affiliation: 2
   - name: Dustin Moraczewski
     orcid: 0000-0002-0422-3135
+    email: dustin.moraczewski@nih.gov
     affiliation: 1
   - name: Adam G. Thomas
     orcid: 0000-0002-2850-1419
+    email: adamt@nih.gov
     affiliation: 1
 affiliations:
   - name: Data Science and Sharing Team, National Institute of Mental Health, National Institutes of Health, Bethesda, MD, USA
