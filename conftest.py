@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import IO, Any, NamedTuple
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -68,7 +68,10 @@ class MockClient(LA.Client):
         query = dict(parse_qsl(querystring))
 
         if isinstance(expires_in, timedelta):
-            expiry = round((datetime.fromtimestamp(0) + expires_in).timestamp() * 1000)
+            expiry = round(
+                (datetime.fromtimestamp(0, tz=timezone.utc) + expires_in).timestamp()
+                * 1000
+            )
         else:
             expiry = round(expires_in.timestamp() * 1000)
         sig = self._signature(api_method, expiry)

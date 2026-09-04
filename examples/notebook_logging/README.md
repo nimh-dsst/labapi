@@ -45,14 +45,15 @@ pip install -e ".[dotenv,builtin-auth]"
 1. **Initialize the Logger**:
    ```python
    from notebook_logger import NotebookLogger
+
    logger = NotebookLogger(notebook_name="Your LabArchives Notebook")
    ```
 
 2. **Track Output Files**:
    If your code generates a file you want to save alongside your results:
    ```python
-   df.to_csv('results.csv')
-   logger.track_file('results.csv')
+   df.to_csv("results.csv")
+   logger.track_file("results.csv")
    ```
 
 3. **Show the Save UI**:
@@ -80,10 +81,11 @@ If you modify the `notebook_logger.py` script and need to re-import it, you can 
 ```python
 import importlib
 import notebook_logger
+
 importlib.reload(notebook_logger)
 
 # Reuse existing user if already defined
-user = logger.user if 'logger' in locals() else None
+user = logger.user if "logger" in locals() else None
 
 logger = NotebookLogger(notebook_name="Your Notebook", user=user)
 ```

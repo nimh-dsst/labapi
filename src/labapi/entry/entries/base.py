@@ -47,7 +47,7 @@ class _MetaEntryFactory(Protocol):
 _entries_registry: dict[str, type[Entry[Any]]] = {}
 
 
-class Entry(Generic[T], ABC):
+class Entry(ABC, Generic[T]):
     """Abstract base class for all entry types on a LabArchives page.
 
     This class provides a common interface for different entry types such as

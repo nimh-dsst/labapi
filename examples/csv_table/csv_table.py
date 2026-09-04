@@ -198,7 +198,7 @@ def _parse_html_table(html: str) -> _CsvTable:
     """
     table_node = BeautifulSoup(html, "html.parser").find("table")
     if not isinstance(table_node, Tag):
-        raise ValueError("No tables found in HTML content")
+        raise TypeError("No tables found in HTML content")
 
     # Prefer an explicit table header when present. Tables without ``thead`` are
     # still supported by treating every row as body data.
@@ -308,7 +308,8 @@ def _run(argv: Sequence[str] | None = None) -> int:
                 )
 
         return 0
-    except Exception as err:
+    # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
+    except Exception as err:  # noqa: BLE001
         print(f"Error: {err}", file=sys.stderr)
         return 1
 

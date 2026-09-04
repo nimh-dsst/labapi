@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import socket
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
 from os import getenv
 from threading import Thread
@@ -215,7 +215,7 @@ class TestClientUnit:
     def test_client_generate_auth_url_uses_longer_expiry(self):
         """Test auth URLs use a longer auth-specific expiration window."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now
@@ -229,7 +229,7 @@ class TestClientUnit:
     def test_client_construct_url_defaults_to_sixty_second_expiry(self):
         """Test ordinary signed URLs still use the default 60 second TTL."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now
@@ -243,7 +243,7 @@ class TestClientUnit:
     def test_client_construct_url_accepts_absolute_datetime_expiry(self):
         """Test construct_url preserves explicit absolute expiration datetimes."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
         absolute_expiry = fixed_now + timedelta(minutes=5)
 
         with patch("labapi.client.datetime") as mock_datetime:
@@ -274,7 +274,7 @@ class TestClientUnit:
     def test_client_construct_url_rejects_expired_absolute_datetime(self):
         """Test explicit expired absolute datetime expiries are rejected."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now
@@ -867,7 +867,8 @@ class TestClientUnit:
                     timeout=2.0,
                 ) as auth_response_collector:
                     result["user"] = auth_response_collector.wait()
-            except BaseException as exc:
+            # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
+            except BaseException as exc:  # noqa: BLE001
                 errors.append(exc)
 
         with patch.object(client, "login", login):
@@ -904,7 +905,8 @@ class TestClientUnit:
             try:
                 with client.collect_auth_response(port=port, timeout=1.0) as collector:
                     collector.wait()
-            except BaseException as exc:
+            # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
+            except BaseException as exc:  # noqa: BLE001
                 errors.append(exc)
 
         thread = Thread(target=run_collect_auth_response, daemon=True)
@@ -936,7 +938,8 @@ class TestClientUnit:
                     timeout=2.0,
                 ) as auth_response_collector:
                     auth_response_collector.wait()
-            except BaseException:
+            # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
+            except BaseException:  # noqa: BLE001, S110
                 pass
 
         with patch.object(client, "login", login):

@@ -93,7 +93,8 @@ def main() -> None:
             user = client.default_authenticate()
             print("✓ Authenticated successfully")
             populate_notebook(user, args.notebook)
-    except Exception as e:
+    # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
+    except Exception as e:  # noqa: BLE001
         print(f"Error authenticating: {e}")
         sys.exit(1)
 

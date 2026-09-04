@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import pytest
+
+import labapi.util.env
+
+
+@pytest.fixture(autouse=True)
+def _reset_dotenv_loaded(monkeypatch):
+    """Isolate tests from the developer's real .env and reset the cached flag."""
+    if importlib.util.find_spec("dotenv") is not None:
+        monkeypatch.setattr("dotenv.load_dotenv", lambda *_args, **_kwargs: None)
+    labapi.util.env._loaded = False
 
 
 def pytest_addoption(parser: pytest.Parser):
