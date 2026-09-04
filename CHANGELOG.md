@@ -21,6 +21,15 @@ details that affect development workflows.
   from 4.15.0 to 4.16.0, `python-dotenv` from 1.2.2 to 1.2.3, `selenium` from
   4.39.0 to 4.48.0, and the indirect `certifi` from 2025.11.12 to 2026.7.22.
 
+### Security
+
+- Raised the minimum `cryptography` (to 50.0.0), `lxml` (to 6.1.1), and
+  `requests` (to 2.33.0) requirements to versions carrying published security
+  fixes: cryptography's PKCS#7 padding-oracle fix (CVE-2026-69247), lxml's
+  `xlink:href` sanitization and bundled libxslt fixes (CVE-2026-49825,
+  CVE-2025-7424, CVE-2025-11731), and requests' `extract_zipped_paths` fix
+  (CVE-2026-25645).
+
 ## 1.2.0 - 2026-08-19
 
 ### Added
