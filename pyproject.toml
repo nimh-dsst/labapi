@@ -65,7 +65,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "pyright>=1.1.406",
     "radon>=6.0.1",
-    "ruff>=0.14.11",
+    "ruff>=0.16.6",
     "types-lxml>=2026.1.1",
     "pre-commit>=4.5.1",
     "sphinx>=8.1.3,<8.2",
@@ -73,7 +73,7 @@ dev = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1,<0.7",
     "sphinx-multiversion>=0.2.4,<0.3",
-    "ty>=0.0.29",
+    "ty>=0.0.78",
 ]
 
 [tool.setuptools.packages.find]
@@ -141,6 +141,8 @@ convention = "pep257"
 "docs/source/conf.py" = ["INP001"]
 "examples/**/*.py" = ["PLR0912"]
 "examples/notebook_logging/notebook_logger.py" = ["INP001"]
+"docs/**" = ["DTZ"]
+"examples/**" = ["DTZ"]
 
 [tool.uv]
 cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]

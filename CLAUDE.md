@@ -43,6 +43,7 @@ The codebase follows a hierarchical tree structure mirroring LabArchives organiz
 **Entry point pattern:**
 ```python
 from labapi import Client
+
 client = Client(base_url, akid, password)  # or Client() to load from .env
 auth_url = client.generate_auth_url(redirect_url)
 user = client.login_authcode(user_email, auth_code)

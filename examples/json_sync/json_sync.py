@@ -99,7 +99,8 @@ def upload_json_files(
             results.append(
                 FileResult(file_path.name, file_path, False, f"Invalid JSON: {exc}")
             )
-        except Exception as exc:
+        # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
+        except Exception as exc:  # noqa: BLE001
             results.append(FileResult(file_path.name, file_path, False, str(exc)))
         else:
             results.append(FileResult(file_path.name, file_path, True))
@@ -140,7 +141,8 @@ def download_json_files(
         # retrieval is recorded per-entry so later entries still process.
         try:
             attachment = entry.content
-        except Exception as exc:
+        # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
+        except Exception as exc:  # noqa: BLE001
             results.append(FileResult(entry.id, folder, False, str(exc)))
             continue
 
@@ -180,7 +182,8 @@ def download_json_files(
                 data = cast(JsonData, json.load(attachment))
                 with output_path.open("w", encoding="utf-8") as file:
                     json.dump(data, file, indent=2)
-            except Exception as exc:
+            # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
+            except Exception as exc:  # noqa: BLE001
                 results.append(FileResult(filename, output_path, False, str(exc)))
             else:
                 results.append(FileResult(filename, output_path, True))
@@ -281,7 +284,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     print(f"Could not download {result.name}: {result.error}")
 
             return 0 if all(result.success for result in download_results) else 1
-    except Exception as exc:
+    # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
+    except Exception as exc:  # noqa: BLE001
         print(f"Error: {exc}")
         return 1
 

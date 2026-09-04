@@ -29,7 +29,7 @@ with Client() as client:
         metrics={"f1": 0.88, "accuracy": 0.92, "loss": 0.15},
         results=b"Prediction results data...",
         figures=[b"Figure 1 data...", b"Figure 2 data..."],
-        commit="a1b2c3d4e5f6..."
+        commit="a1b2c3d4e5f6...",
     )
 ```
 

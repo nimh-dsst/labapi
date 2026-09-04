@@ -213,7 +213,8 @@ def _download_entry(
     """Download one page entry and return error details when it fails."""
     try:
         _write_entry(entry, entry_index, page_dir)
-    except Exception as exc:
+    # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
+    except Exception as exc:  # noqa: BLE001
         error_file = page_dir / f"{entry_index:03d}_error.txt"
         with error_file.open("w", encoding="utf-8") as handle:
             handle.write(
@@ -330,7 +331,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     path=args.path,
                 ),
             )
-    except Exception as exc:
+    # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
+    except Exception as exc:  # noqa: BLE001
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 

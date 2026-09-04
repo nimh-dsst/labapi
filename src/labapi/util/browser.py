@@ -90,7 +90,8 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
     # so match on the same substring basis autodetection uses.
     try:
         installed = installed_browsers.browsers()
-    except Exception:
+    # TODO(BLE001): intentional broad catch — installed-browsers probe may raise; fall back to an empty list; narrow if a specific type becomes known.
+    except Exception:  # noqa: BLE001
         installed = []
     for entry in installed:
         if _parse_detectable(entry.get("name")) == browser:
@@ -134,7 +135,8 @@ def _autodetect_browser() -> _DetectableBrowser | None:
             stacklevel=2,
         )
         return None
-    except Exception as exc:
+    # TODO(BLE001): intentional broad catch — auto browser detection may raise anything; fall back to terminal/manual auth; narrow if a specific type becomes known.
+    except Exception as exc:  # noqa: BLE001
         warnings.warn(
             f"Automatic browser detection failed: {exc}. Falling back to terminal/manual auth.",
             RuntimeWarning,

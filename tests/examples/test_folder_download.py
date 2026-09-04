@@ -10,6 +10,7 @@ from types import TracebackType
 from typing import cast
 
 import pytest
+from typing_extensions import Self
 
 from labapi import (
     Attachment,
@@ -122,7 +123,7 @@ class _ClientDouble:
         """Initialize the client double with an authenticated user."""
         self._user = user
 
-    def __enter__(self) -> _ClientDouble:
+    def __enter__(self) -> Self:
         """Return this client double."""
         return self
 

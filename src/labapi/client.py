@@ -11,7 +11,7 @@ import warnings
 from base64 import b64encode
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import suppress
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
 from operator import itemgetter
 from secrets import token_urlsafe
@@ -119,7 +119,7 @@ class StreamingResponse:
         self._response.close()
         self._closed = True
 
-    def __enter__(self) -> StreamingResponse:
+    def __enter__(self) -> Self:
         """Enter a context that guarantees connection cleanup on exit."""
         return self
 
@@ -161,7 +161,8 @@ def _close_auth_driver(driver: Any) -> None:
     """Close an auth browser driver without masking authentication results."""
     try:
         driver.quit()
-    except Exception as exc:
+    # TODO(BLE001): intentional broad catch — warn on auth-driver cleanup failure without masking the auth result; narrow if a specific type becomes known.
+    except Exception as exc:  # noqa: BLE001
         warnings.warn(
             f"Failed to close authentication browser driver: {exc}",
             RuntimeWarning,
@@ -496,7 +497,8 @@ class Client:
                 if code_text is not None:
                     error_code = int(code_text)
                     error_desc = tree.findtext(".//error-description")
-            except Exception:
+            # TODO(BLE001): intentional broad catch — best-effort error-XML parse; fall through to the generic error path on any parse failure; narrow if a specific type becomes known.
+            except Exception:  # noqa: BLE001, S110
                 pass
 
             if error_code is not None:
@@ -507,7 +509,7 @@ class Client:
 
             parts = urlsplit(response.url)
             query = dict(parse_qsl(parts.query, keep_blank_values=True))
-            for key in {"akid", "sig", "expires", "password", "login_or_email"}:
+            for key in ("akid", "sig", "expires", "password", "login_or_email"):
                 if key in query:
                     query[key] = "***"
             clean_url = urlunsplit(parts._replace(query=urlencode(query)))
@@ -733,19 +735,25 @@ class Client:
                 try:
                     match detect_default_browser():
                         case "chrome":
-                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                            from selenium import (
+                                webdriver,  # pyright: ignore[reportMissingImports]
+                            )
 
                             driver = webdriver.Chrome(options=webdriver.ChromeOptions())
                             print("Opening Chrome for authentication...")
                         case "firefox":
-                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                            from selenium import (
+                                webdriver,  # pyright: ignore[reportMissingImports]
+                            )
 
                             driver = webdriver.Firefox(
                                 options=webdriver.FirefoxOptions()
                             )
                             print("Opening Firefox for authentication...")
                         case "edge" | "msedge":
-                            import selenium.webdriver as webdriver  # pyright: ignore[reportMissingImports]
+                            from selenium import (
+                                webdriver,  # pyright: ignore[reportMissingImports]
+                            )
 
                             driver = webdriver.Edge(options=webdriver.EdgeOptions())
                             print("Opening Edge for authentication...")
@@ -909,10 +917,10 @@ class Client:
         if isinstance(expires_in, timedelta):
             if expires_in <= timedelta(0):
                 raise ValueError("expires_in must be a positive duration")
-            expiry = round((datetime.now() + expires_in).timestamp() * 1000)
+            expiry = round((datetime.now(timezone.utc) + expires_in).timestamp() * 1000)
         else:
             expiry = round(expires_in.timestamp() * 1000)
-            if expiry <= round(datetime.now().timestamp() * 1000):
+            if expiry <= round(datetime.now(timezone.utc).timestamp() * 1000):
                 raise ValueError("expires_in must be a future datetime")
         sig = self._signature(api_method, expiry)
 

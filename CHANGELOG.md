@@ -8,6 +8,19 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
+## Unreleased
+
+### Changed
+
+- Refreshed the development toolchain and adopted ruff 0.16's expanded default
+  lint rules. Bumped the locked and floored versions of `ruff` (0.16.6), `ty`
+  (0.0.78), `pytest`, `pytest-cov`, `pyright`, and `pre-commit`, and updated the
+  pre-commit `ruff` hook to match. Internal timestamps are now timezone-aware
+  and intentional broad-exception fallbacks are annotated; runtime behavior is
+  unchanged.
+- The type-check CI job now installs the optional extras so the built-in-auth
+  and dotenv code paths are type-checked.
+
 ## 1.2.0 - 2026-08-19
 
 ### Added
