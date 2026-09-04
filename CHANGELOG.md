@@ -14,6 +14,13 @@ details that affect development workflows.
 
 - Official support for Python 3.14; the CI matrix now tests against it.
 
+### Changed
+
+- Refreshed locked dependencies: `cryptography` from 50.0.0 to 50.0.1, `lxml`
+  from 6.1.0 to 6.1.3, `requests` from 2.33.0 to 2.34.2, `typing-extensions`
+  from 4.15.0 to 4.16.0, `python-dotenv` from 1.2.2 to 1.2.3, `selenium` from
+  4.39.0 to 4.48.0, and the indirect `certifi` from 2025.11.12 to 2026.7.22.
+
 ## 1.2.0 - 2026-08-19
 
 ### Added
