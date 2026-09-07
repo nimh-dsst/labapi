@@ -81,9 +81,6 @@ def _normalize_web_url(web_url: str) -> str:
     )
 
 
-context = ssl.create_default_context()
-
-
 class StreamingResponse:
     """Wrapper for streamed API responses.
 
@@ -834,7 +831,7 @@ class Client:
         if isinstance(api_method_uri, str):
             api_method_uri = api_method_uri.split("/")
 
-        raw_method_parts = tuple([part for part in api_method_uri if part.strip()])
+        raw_method_parts = tuple(part for part in api_method_uri if part.strip())
         method_parts = (
             raw_method_parts[1:]
             if raw_method_parts and raw_method_parts[0] == "api"
