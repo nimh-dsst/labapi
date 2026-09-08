@@ -526,12 +526,12 @@ class AbstractTreeContainer(
     def all_keys(self) -> Sequence[str]:
         """Return child names in container order, preserving duplicates."""
         self._ensure_populated()
-        return tuple([node.name for node in self.children])
+        return tuple(node.name for node in self.children)
 
     def all_items(self) -> Sequence[tuple[str, AbstractBaseTreeNode]]:
         """Return ``(name, child)`` pairs in container order, preserving duplicates."""
         self._ensure_populated()
-        return tuple([(node.name, node) for node in self.children])
+        return tuple((node.name, node) for node in self.children)
 
     def all_values(self) -> Sequence[AbstractBaseTreeNode]:
         """Return child nodes in container order, preserving duplicates."""
