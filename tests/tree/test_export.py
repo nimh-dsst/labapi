@@ -113,6 +113,72 @@ def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
     assert (exported / "2_Empty").is_dir()
 
 
+def test_backup_tree_generates_name_for_null_attach_file_name(tmp_path):
+    """A NULL attach_file_name falls back to a generated name instead of raising.
+
+    Regression test for #324: ``Path(None).name`` raises ``TypeError`` and
+    used to abort the entire backup export.
+    """
+    py7zr = pytest.importorskip("py7zr")
+    backup = tmp_path / "backup" / "notebook"
+    attachment = backup / "attachments" / "20" / "1" / "original" / "attachment_20"
+    attachment.parent.mkdir(parents=True)
+    attachment.write_bytes(b"no filename on record")
+
+    database = sqlite3.connect(backup / "db.sqlite3")
+    database.executescript(
+        """
+        CREATE TABLE tree_nodes (
+            id INTEGER PRIMARY KEY,
+            parent_id INTEGER,
+            relative_position REAL,
+            entry_id INTEGER,
+            display_text TEXT
+        );
+        CREATE TABLE entry_parts (
+            id INTEGER PRIMARY KEY,
+            entry_id INTEGER,
+            part_type INTEGER,
+            entry_data TEXT,
+            relative_position REAL,
+            attach_file_name TEXT,
+            version INTEGER
+        );
+        INSERT INTO tree_nodes VALUES (1, 0, 1, 10, NULL);
+        INSERT INTO entry_parts VALUES (19, 10, 0, 'Page', 1, NULL, 1);
+        INSERT INTO entry_parts VALUES (20, 10, 2, NULL, 2, NULL, 1);
+        """
+    )
+    database.close()
+
+    archive_path = tmp_path / "backup.7z"
+    with py7zr.SevenZipFile(archive_path, "w") as archive:
+        archive.write(backup / "db.sqlite3", "notebook/db.sqlite3")
+        archive.write(attachment, "notebook/attachments/20/1/original/attachment_20")
+
+    class Notebook:
+        def backup(self, destination, **_kwargs):
+            shutil.copy2(archive_path, destination)
+            return destination
+
+    work = tmp_path / "work"
+    work.mkdir()
+    tree = _backup_tree(cast(LA.Notebook, Notebook()), work)
+    exported = _write_tree(tree, tmp_path / "export")
+
+    page = exported / "1_Page"
+    assert (page / "1_attachment_20").read_bytes() == b"no filename on record"
+    metadata = json.loads((page / ".labarchives.json").read_text(encoding="utf-8"))
+    assert metadata["entries"] == [
+        {
+            "file": "1_attachment_20",
+            "id": "20",
+            "type": "Attachment",
+            "filename": "attachment_20",
+        }
+    ]
+
+
 def test_walk_tree_stages_all_entries(monkeypatch, tmp_path):
     """The live collector writes text and attachment entries to temporary files."""
     user = cast(LA.User, None)

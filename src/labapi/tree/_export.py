@@ -110,7 +110,12 @@ def _backup_tree(notebook: Notebook, tmpdir: Path) -> dict:
                             / str(part["version"])
                             / "original"
                         )
-                        attachment_name = Path(part["attach_file_name"]).name
+                        attach_file_name = part["attach_file_name"]
+                        attachment_name = (
+                            Path(attach_file_name).name
+                            if attach_file_name is not None
+                            else f"attachment_{part['id']}"
+                        )
                         source = original / attachment_name
                         filename = _writable_name(prefix + attachment_name)
                         page[filename] = source
