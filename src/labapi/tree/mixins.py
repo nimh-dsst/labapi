@@ -497,13 +497,21 @@ class AbstractTreeContainer(
     def __contains__(self, key: object) -> bool:
         """Return whether the container contains the given key.
 
+        A single-node lookup (by name or ``Index.Id``) is present when it
+        resolves without raising -- even an empty child directory, which is
+        falsy via ``__len__``. An ``Index.Name`` lookup returns a list, so it
+        is present only when that list is non-empty.
+
         :param key: The key or indexed selector to check for.
-        :returns: True if the key is found and not empty, False otherwise.
+        :returns: True if the key is found, False otherwise.
         """
         try:
-            return bool(self[key])  # type: ignore  # pyright: ignore[reportArgumentType]
+            result = self[key]  # type: ignore  # pyright: ignore[reportArgumentType]
         except (KeyError, TypeError):
             return False
+        if isinstance(result, AbstractBaseTreeNode):
+            return True
+        return len(result) > 0
 
     @override
     def keys(self) -> KeysView[str]:

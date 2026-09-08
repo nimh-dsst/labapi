@@ -63,6 +63,24 @@ class TestNotebooksUnit:
 
         assert result == []
 
+    def test_notebooks_contains(self):
+        """__contains__ matches getitem semantics, including empty Name lists."""
+        mock_user = Mock(spec=User)
+        notebooks_init = [
+            NotebookInit(id="nb1", name="Test", is_default=True),
+            NotebookInit(id="nb2", name="Test", is_default=False),
+        ]
+        notebooks = Notebooks(notebooks_init, mock_user)
+
+        assert "Test" in notebooks
+        assert "Nonexistent" not in notebooks
+        assert slice(Index.Id, "nb1") in notebooks
+        assert slice(Index.Id, "missing") not in notebooks
+        assert slice(Index.Name, "Test") in notebooks
+        # Regression: the default Mapping.__contains__ returned True here
+        # because the Index.Name branch never raises KeyError.
+        assert slice(Index.Name, "Nonexistent") not in notebooks
+
     def test_notebooks_getitem_by_string_raises(self):
         """Test Notebooks.__getitem__ with string raises KeyError if not found."""
         mock_user = Mock(spec=User)

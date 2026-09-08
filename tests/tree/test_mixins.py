@@ -311,6 +311,23 @@ class TestTreeMixinsIntegration:
         assert slice(Index.Name, "Test Folder A") in notebook_tree
         assert slice(Index.Name, "Missing Folder") not in notebook_tree
 
+    def test_contains_empty_directory(self, notebook_tree: Notebook):
+        """An existing but empty child directory is contained, not falsy-skipped."""
+        empty_dir = NotebookDirectory(
+            "empty-dir",
+            "Empty Folder",
+            notebook_tree,
+            notebook_tree,
+            notebook_tree.user,
+        )
+        empty_dir._populated = True  # pyright: ignore[reportPrivateUsage]
+        notebook_tree._children.append(empty_dir)  # pyright: ignore[reportPrivateUsage]
+
+        assert len(empty_dir) == 0
+        assert "Empty Folder" in notebook_tree
+        assert slice(Index.Id, "empty-dir") in notebook_tree
+        assert slice(Index.Name, "Empty Folder") in notebook_tree
+
     def test_mapping_methods(self, notebook_tree: Notebook):
         """Test keys(), values(), and items() on a container."""
         keys = notebook_tree.keys()
