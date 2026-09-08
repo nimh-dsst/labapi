@@ -194,7 +194,8 @@ class NotebookPage(AbstractTreeNode):
                 # entry or preserve source attachment IDs.
                 assert entry_content is not None
                 new_page.entries.create(cast(Any, entry.__class__), entry_content)
-            except Exception as exc:
+            # TODO(BLE001): intentional broad catch — copy_to skips an entry it cannot copy and warns; one failure must not abort the whole copy; narrow if a specific type becomes known.
+            except Exception as exc:  # noqa: BLE001
                 warnings.warn(
                     f"Failed to copy entry {entry.id!r} ({entry.content_type!r}) from page "
                     f"{self.id!r} to page {new_page.id!r}: {exc}. This entry was skipped.",

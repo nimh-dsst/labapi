@@ -41,7 +41,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --all-groups
+        run: uv sync --all-groups --all-extras
 
       - name: Run check
         run: ${{ inputs.command }}${{ inputs.append_python_version_arg && format(' --python-version {0}', matrix.python-version) || '' }}
