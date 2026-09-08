@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import copy
+import pickle
 import tempfile
 from io import BytesIO
 from pathlib import Path
@@ -199,6 +201,65 @@ def test_attachment_getattr_delegation():
     attachment.seek(0)
     content = attachment.read(5)
     assert content == b"Hello"
+
+
+def test_attachment_getattr_missing_backing_raises_attribute_error():
+    """Test that __getattr__ raises AttributeError instead of recursing.
+
+    Regression test for #320: accessing an attribute before ``_backing`` is
+    set (e.g. on a partially-constructed instance) must not recurse into
+    __getattr__ forever.
+    """
+    attachment = Attachment.__new__(Attachment)
+
+    with pytest.raises(AttributeError):
+        _ = attachment.name
+
+
+def test_attachment_can_be_copied():
+    """Test that copy.copy(Attachment) succeeds without RecursionError."""
+    attachment = Attachment(
+        backing=BytesIO(b"Test data"),
+        mime_type="text/plain",
+        filename="test.txt",
+        caption="Test",
+    )
+
+    copied = copy.copy(attachment)
+
+    assert copied.filename == "test.txt"
+
+
+def test_attachment_can_be_deepcopied():
+    """Test that copy.deepcopy(Attachment) succeeds without RecursionError."""
+    attachment = Attachment(
+        backing=BytesIO(b"Test data"),
+        mime_type="text/plain",
+        filename="test.txt",
+        caption="Test",
+    )
+
+    copied = copy.deepcopy(attachment)
+
+    assert copied.filename == "test.txt"
+    assert copied.read() == b"Test data"
+
+
+def test_attachment_can_be_pickled():
+    """Test that pickling and unpickling an Attachment succeeds."""
+    attachment = Attachment(
+        backing=BytesIO(b"Test data"),
+        mime_type="text/plain",
+        filename="test.txt",
+        caption="Test",
+    )
+
+    restored = pickle.loads(pickle.dumps(attachment))
+
+    assert restored.filename == "test.txt"
+    assert restored.mime_type == "text/plain"
+    assert restored.caption == "Test"
+    assert restored.read() == b"Test data"
 
 
 def test_attachment_seeks_to_beginning():
