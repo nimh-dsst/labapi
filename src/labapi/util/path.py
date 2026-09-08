@@ -383,37 +383,40 @@ class NotebookPath(Sequence[UnescapedSegment]):
         """Return node name(s)."""
         return self._parts[idx]
 
-    @override
-    def __hash__(self) -> int:
-        """Hash the resolved path so equal paths hash equally.
+    def _comparison_key(self) -> tuple[bool, tuple[UnescapedSegment, ...]]:
+        """Return the value that equality and hashing are based on.
 
-        Mirrors ``__eq__``, which compares resolved paths. An unresolvable
-        relative path (no parent anchor) falls back to its unresolved state;
-        such a path is only ever equal to itself.
+        Uses the resolved path when it can be resolved; an unresolvable
+        relative path (no parent anchor) falls back to its own normalized
+        ``(absoluteness, segments)`` state. ``__eq__`` and ``__hash__`` share
+        this key so the hash/eq contract holds for every path -- including two
+        equal unanchored relative paths, which resolve() cannot resolve.
         """
         try:
             resolved = self.resolve()
         except PathError:
-            return hash((self._absolute, tuple(self._parts)))
-        return hash((resolved._absolute, tuple(resolved._parts)))
+            return (self._absolute, tuple(self._parts))
+        return (resolved._absolute, tuple(resolved._parts))
+
+    @override
+    def __hash__(self) -> int:
+        """Hash equal paths equally; see :meth:`_comparison_key`."""
+        return hash(self._comparison_key())
 
     @override
     def __eq__(self, other: object) -> bool:
         """Return ``True`` if ``other`` has the same path semantics.
 
-        Equality compares absoluteness, normalized segments, and any stored
-        parent anchor.
+        Compares the resolved path when possible; two equal unanchored
+        relative paths (which cannot be resolved) still compare equal via the
+        shared :meth:`_comparison_key`, keeping equality consistent with
+        ``__hash__``.
         """
         if self is other:
             return True
         if not isinstance(other, NotebookPath):
             return False
-        try:
-            a = self.resolve()
-            b = other.resolve()
-            return a._absolute == b._absolute and a._parts == b._parts
-        except PathError:
-            return False
+        return self._comparison_key() == other._comparison_key()
 
     @override
     def __repr__(self) -> str:
