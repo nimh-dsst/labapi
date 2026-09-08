@@ -187,6 +187,36 @@ class TestNotebookPageUnit:
             succeeding_entry.__class__, succeeding_entry.content
         )
 
+    def test_copy_to_warns_and_continues_when_entry_content_is_none(self):
+        """Test NotebookPage.copy_to raises explicitly when content is None.
+
+        Regression test for #81: the None-content check must raise an
+        explicit exception (not a stripped-under-``-O`` ``assert``), and
+        that exception is still caught and reported as a per-entry warning.
+        """
+        source_page = Mock(spec=NotebookPage)
+        source_page.name = "Source Page"
+        source_page.id = "source-page-id"
+
+        empty_entry = Mock()
+        empty_entry.id = "entry-empty-1"
+        empty_entry.content_type = "Text"
+        empty_entry.content = None
+        source_page.entries = [empty_entry]
+
+        new_page_entries = Mock()
+        new_page = Mock(spec=NotebookPage)
+        new_page.id = "new-page-id"
+        new_page.entries = new_page_entries
+
+        destination = Mock()
+        destination.create.return_value = new_page
+
+        with pytest.warns(RuntimeWarning, match="has no content to copy"):
+            NotebookPage.copy_to(source_page, destination)
+
+        new_page_entries.create.assert_not_called()
+
 
 class TestNotebookPageIntegration:
     """Integration tests with real objects and mocked API."""

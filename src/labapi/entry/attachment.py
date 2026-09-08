@@ -112,7 +112,12 @@ class Attachment:
             with Path(file).open("rb") as stream:
                 return Attachment.from_file(cast(NamedBinaryIO, stream))
 
-        assert not isinstance(file, PathLike)
+        if isinstance(file, PathLike):
+            raise TypeError(
+                "Attachment.from_file does not support PathLike objects whose "
+                "__fspath__() returns bytes; pass a str path or a file-like "
+                "object instead"
+            )
 
         if not Attachment._is_seekable(file):
             raise ValueError("Attachment.from_file requires a seekable file object")
