@@ -15,6 +15,7 @@ from urllib.parse import parse_qsl, urlsplit
 import pytest
 from lxml.etree import XMLSyntaxError
 from requests import Response
+from requests.exceptions import RequestException
 
 from labapi import Client, User
 from labapi.exceptions import ApiError, AuthenticationError
@@ -397,6 +398,30 @@ class TestClientUnit:
         assert "normal=true" in error_msg
         assert "=secret" not in error_msg
         assert "=pass" not in error_msg
+
+    def test_transport_exception_masks_credentials(self):
+        """A transport failure must not leak the signed URL or the auth code."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        auth_code = "super-secret-auth-code"
+
+        def fail(url: str, **_kwargs: object) -> Response:
+            # requests embeds the full request URL in transport exceptions.
+            raise RequestException(f"Max retries exceeded with url: {url}")
+
+        client.session.get = Mock(side_effect=fail)
+
+        with pytest.raises(ApiError) as exc_info:
+            client.raw_api_get(
+                "users/user_access_info",
+                login_or_email="user@example.com",
+                password=auth_code,
+            )
+
+        msg = str(exc_info.value)
+        assert auth_code not in msg
+        assert "test_akid" not in msg
+        assert "user@example.com" not in msg
+        assert "password=%2A%2A%2A" in msg
 
     def test_raw_api_get_returns_response(self):
         """Test raw_api_get returns the raw response and calls session.get directly."""
