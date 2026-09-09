@@ -28,6 +28,23 @@ def _make_backing_io(use_tempfile: bool) -> IO[bytes]:
     return TemporaryFile() if use_tempfile else BytesIO()
 
 
+def _safe_basename(name: str | None) -> str | None:
+    r"""Reduce a possibly-hostile filename to a sanitized basename.
+
+    Rejects `None`/empty input and path-traversal components (`.`, `..`),
+    and treats backslashes as path separators so Windows-style traversal
+    sequences (e.g. ``..\..\x``) are also reduced correctly.
+    """
+    if name is None:
+        return None
+
+    basename = PurePosixPath(name.replace("\\", "/")).name
+    if not basename.strip() or basename in {".", ".."}:
+        return None
+
+    return basename
+
+
 def _s3_filename_from_url(url: str) -> str | None:
     """Return a filename from a redirected Amazon S3 object URL, if valid."""
     parsed_url = urlsplit(url)
@@ -38,11 +55,7 @@ def _s3_filename_from_url(url: str) -> str | None:
     if not path or path.endswith("/"):
         return None
 
-    filename = PurePosixPath(path).name
-    if not filename.strip() or filename in {".", ".."}:
-        return None
-
-    return filename
+    return _safe_basename(path)
 
 
 class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
@@ -98,7 +111,7 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
                     msg["Content-Disposition"] = content_disposition
 
                 mime_type = msg.get_content_type()
-                filename = self._filename or msg.get_filename()
+                filename = self._filename or _safe_basename(msg.get_filename())
                 if filename is not None and not filename.strip():
                     filename = None
                 if filename is None and attachment_stream.response.history:
