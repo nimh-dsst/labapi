@@ -9,7 +9,7 @@ from __future__ import annotations
 import ssl
 import warnings
 from base64 import b64encode
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler
@@ -24,7 +24,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from cryptography.hazmat.primitives.hashes import SHA512
 from cryptography.hazmat.primitives.hmac import HMAC
 from lxml.etree import Element, fromstring
-from requests import Response, Session
+from requests import RequestException, Response, Session
 from requests.adapters import HTTPAdapter
 from typing_extensions import override
 
@@ -88,6 +88,24 @@ def _normalize_web_url(web_url: str) -> str:
             "",
         )
     )
+
+
+_SENSITIVE_QUERY_KEYS = ("akid", "sig", "expires", "password", "login_or_email")
+
+
+def _mask_sensitive_url(url: str) -> str:
+    """Return ``url`` with credential and signature query parameters masked.
+
+    Signed request URLs carry ``akid``/``sig``/``expires`` and, for login,
+    ``login_or_email``/``password`` (the one-hour auth code). Masking keeps
+    these out of error messages, logs, and tracebacks.
+    """
+    parts = urlsplit(url)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    for key in _SENSITIVE_QUERY_KEYS:
+        if key in query:
+            query[key] = "***"
+    return urlunsplit(parts._replace(query=urlencode(query)))
 
 
 class StreamingResponse:
@@ -626,17 +644,27 @@ class Client:
                     raise AuthenticationError(message, error_code)
                 raise ApiError(message, error_code)
 
-            parts = urlsplit(response.url)
-            query = dict(parse_qsl(parts.query, keep_blank_values=True))
-            for key in ("akid", "sig", "expires", "password", "login_or_email"):
-                if key in query:
-                    query[key] = "***"
-            clean_url = urlunsplit(parts._replace(query=urlencode(query)))
-
             raise ApiError(
                 f"API request failed with status code {response.status_code} "
-                f"for URL {clean_url}: {response.text}"
+                f"for URL {_mask_sensitive_url(response.url)}: {response.text}"
             )
+
+    def _send(self, send: Callable[[], Response], url: str) -> Response:
+        """Run a request, masking credentials if the transport itself fails.
+
+        ``requests`` embeds the full (signed) URL in transport-level
+        exceptions (DNS, connect, TLS, proxy). Those are raised before any
+        response exists, so they bypass :meth:`_handle_request_status`'s
+        masking. Re-raise such failures as an :class:`ApiError` whose message
+        has the sensitive query parameters masked, so a signed URL or auth
+        code cannot leak into logs or tracebacks.
+        """
+        try:
+            return send()
+        except RequestException as exc:
+            masked = _mask_sensitive_url(url)
+            detail = str(exc).replace(url, masked)
+            raise ApiError(f"Request to {masked} failed: {detail}") from None
 
     def stream_api_get(
         self, api_method_uri: str | Sequence[str], **kwargs: Any
@@ -657,10 +685,9 @@ class Client:
         :raises ApiError: If LabArchives returns any other non-success response.
         """
         self._ensure_open()
-        request = self.session.get(
-            self.construct_url(api_method_uri, query=kwargs),
-            stream=True,
-            timeout=self.timeout,
+        url = self.construct_url(api_method_uri, query=kwargs)
+        request = self._send(
+            lambda: self.session.get(url, stream=True, timeout=self.timeout), url
         )
         try:
             Client._handle_request_status(request)
@@ -693,11 +720,12 @@ class Client:
         :raises ApiError: If LabArchives returns any other non-success response.
         """
         self._ensure_open()
-        request = self.session.post(
-            self.construct_url(api_method_uri, query=kwargs),
-            data=body,
-            stream=True,
-            timeout=self.timeout,
+        url = self.construct_url(api_method_uri, query=kwargs)
+        request = self._send(
+            lambda: self.session.post(
+                url, data=body, stream=True, timeout=self.timeout
+            ),
+            url,
         )
         try:
             Client._handle_request_status(request)
@@ -726,9 +754,8 @@ class Client:
         :raises ApiError: If LabArchives returns any other non-success response.
         """
         self._ensure_open()
-        request = self.session.get(
-            self.construct_url(api_method_uri, query=kwargs), timeout=self.timeout
-        )
+        url = self.construct_url(api_method_uri, query=kwargs)
+        request = self._send(lambda: self.session.get(url, timeout=self.timeout), url)
         Client._handle_request_status(request)
 
         return request
@@ -756,10 +783,9 @@ class Client:
         :raises ApiError: If LabArchives returns any other non-success response.
         """
         self._ensure_open()
-        request = self.session.post(
-            self.construct_url(api_method_uri, query=kwargs),
-            data=body,
-            timeout=self.timeout,
+        url = self.construct_url(api_method_uri, query=kwargs)
+        request = self._send(
+            lambda: self.session.post(url, data=body, timeout=self.timeout), url
         )
         Client._handle_request_status(request)
 
