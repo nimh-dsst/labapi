@@ -198,6 +198,49 @@ class TestTreeMixinsIntegration:
         assert api_call[0] == "tree_tools/update_node"
         assert api_call[1]["parent_tree_id"] == folder_a.tree_id
 
+    def test_move_to_unpopulated_destination(self, client, notebook_tree: Notebook):
+        """Test moving a node into a never-populated destination isn't discarded."""
+        page = expect_page(notebook_tree[Index.Id : "page-1"])
+        destination = expect_dir(
+            notebook_tree.traverse("/Test Folder B/Dir2 Subfolder A")
+        )
+        old_parent = page.parent
+
+        # Simulate a destination that has never been accessed/populated.
+        destination._children = []  # pyright: ignore[reportPrivateUsage]
+        destination._populated = False  # pyright: ignore[reportPrivateUsage]
+
+        client.api_response = client.xml("success")
+
+        page.move_to(destination)
+
+        assert page.parent is destination
+        assert page not in old_parent.children
+
+        # Because the destination was never populated, move_to must not have
+        # appended locally (that append would just get wiped out below).
+        assert destination._populated is False  # pyright: ignore[reportPrivateUsage]
+        assert destination._children == []  # pyright: ignore[reportPrivateUsage]
+
+        # Triggering population now must reflect the moved node, not discard it.
+        client.api_response = client.tree_level_response(
+            client.tree_level_node(
+                tree_id="page-1",
+                display_text="Test Page 1",
+                is_page=True,
+            )
+        )
+
+        assert any(child.id == "page-1" for child in destination.children)
+
+        update_call = client.pop_api_call()
+        assert update_call[0] == "tree_tools/update_node"
+        assert update_call[1]["parent_tree_id"] == destination.tree_id
+
+        populate_call = client.pop_api_call()
+        assert populate_call[0] == "tree_tools/get_tree_level"
+        assert populate_call[1]["parent_tree_id"] == destination.tree_id
+
     def test_move_to_invalidates_descendant_path_cache(
         self, client, notebook_tree: Notebook
     ):
