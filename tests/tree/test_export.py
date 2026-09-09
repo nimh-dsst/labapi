@@ -198,6 +198,69 @@ def test_walk_tree_stages_all_entries(monkeypatch, tmp_path):
     assert attachment_entry._filedata is None
 
 
+def _iter_sources(tree):
+    """Yield every staged ``Path`` referenced by an export tree."""
+    for value in tree.values():
+        if isinstance(value, Path):
+            yield value
+        else:
+            yield from _iter_sources(value)
+
+
+def test_walk_tree_sanitizes_hostile_entry_ids(monkeypatch, tmp_path):
+    """A hostile API-supplied id cannot stage files outside the temp dir."""
+    user = cast(LA.User, None)
+    hostile_attachment = AttachmentEntry("../../evil-attachment", "caption", user)
+    monkeypatch.setattr(
+        hostile_attachment,
+        "get_attachment",
+        lambda **_kwargs: Attachment(
+            BytesIO(b"attachment"), "text/plain", "report.txt", "caption"
+        ),
+    )
+
+    class Page:
+        def __init__(self):
+            self.name = "Page"
+            self.id = "../../evil-page"
+            self.entries = [
+                TextEntry("../../evil-text", "<p>html</p>", user),
+                hostile_attachment,
+            ]
+
+        @staticmethod
+        def is_dir():
+            return False
+
+        def as_page(self):
+            return self
+
+    class Notebook:
+        def __init__(self):
+            self.children = [Page()]
+
+    tree = _walk_tree(cast(LA.Notebook, Notebook()), tmp_path)
+    entries_dir = tmp_path / "entries"
+
+    sources = list(_iter_sources(tree))
+    assert sources, "expected staged entries to inspect"
+    for source in sources:
+        # Every staged file must live directly inside the entries directory:
+        # a hostile id must not be able to escape it via "../" components.
+        assert source.parent == entries_dir
+        assert source.exists()
+
+    exported = _write_tree(tree, tmp_path / "export")
+    page = exported / "1_Page"
+
+    assert (page / "1_text.html").read_text(encoding="utf-8") == "<p>html</p>"
+    assert (page / "2_report.txt").read_bytes() == b"attachment"
+    metadata = json.loads((page / ".labarchives.json").read_text(encoding="utf-8"))
+    assert metadata["id"] == "../../evil-page"
+    assert metadata["entries"][0]["id"] == "../../evil-text"
+    assert metadata["entries"][1]["id"] == "../../evil-attachment"
+
+
 def test_write_tree_creates_an_empty_notebook(tmp_path):
     """An empty export tree still creates the notebook directory."""
     exported = _write_tree({}, tmp_path / "export")

@@ -173,7 +173,7 @@ def _walk_tree(notebook: Notebook, tmpdir: Path) -> dict:
                 prefix = f"{entry_number:0{entry_width}d}_"
 
                 if isinstance(entry, AttachmentEntry):
-                    source = entries / entry.id
+                    source = entries / _writable_name(entry.id)
                     try:
                         attachment = entry.get_attachment(use_tempfile=True)
                         with closing(attachment), source.open("wb") as file:
@@ -194,7 +194,9 @@ def _walk_tree(notebook: Notebook, tmpdir: Path) -> dict:
                     continue
 
                 suffix = "text.html" if isinstance(entry, TextEntry) else "text.txt"
-                source = entries / f"{entry.id}.{suffix.rsplit('.', 1)[1]}"
+                source = (
+                    entries / f"{_writable_name(entry.id)}.{suffix.rsplit('.', 1)[1]}"
+                )
                 source.write_text(str(entry.content), encoding="utf-8")
                 filename = prefix + suffix
                 files[filename] = source
@@ -202,7 +204,7 @@ def _walk_tree(notebook: Notebook, tmpdir: Path) -> dict:
                     {"file": filename, "id": entry.id, "type": entry.content_type}
                 )
 
-            source = entries / f"{page.id}.json"
+            source = entries / f"{_writable_name(page.id)}.json"
             source.write_text(
                 json.dumps({"id": page.id, "entries": metadata}, indent=2) + "\n",
                 encoding="utf-8",
