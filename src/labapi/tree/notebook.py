@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from os import PathLike
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import override
@@ -205,7 +205,26 @@ class Notebook(AbstractTreeContainer):
             raise
 
         path = Path(destination)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with stream, path.open("wb") as file:
-            file.writelines(stream)
+        with stream:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # Write to a temp file in the destination directory and atomically
+            # replace it, so an interrupted download never truncates an
+            # existing archive or leaves a corrupt file at the destination.
+            tmp: Path | None = None
+            try:
+                with NamedTemporaryFile(
+                    dir=path.parent,
+                    prefix=f"{path.name}.",
+                    suffix=".part",
+                    delete=False,
+                ) as file:
+                    tmp = Path(file.name)
+                    file.writelines(stream)
+                tmp.replace(path)
+            except BaseException:
+                # Remove the partial temp file on any failure (including
+                # KeyboardInterrupt), then re-raise; the destination is untouched.
+                if tmp is not None:
+                    tmp.unlink(missing_ok=True)
+                raise
         return path
