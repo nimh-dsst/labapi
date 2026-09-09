@@ -376,6 +376,43 @@ class TestAttachmentEntryIntegration:
         assert client.stream_api_get.call_count == 1
         assert attachment3.read() == b"Content"
 
+    def test_ensure_attachment_closes_backing_on_download_error(
+        self, client, user: User, monkeypatch
+    ):
+        """Test _ensure_attachment closes the backing buffer if the download raises mid-stream."""
+        entry = AttachmentEntry("eid_att", "Caption", user)
+
+        created_backings: list[BytesIO] = []
+
+        def _tracking_make_backing_io(use_tempfile: bool) -> BytesIO:  # noqa: ARG001
+            io_obj = BytesIO()
+            created_backings.append(io_obj)
+            return io_obj
+
+        monkeypatch.setattr(
+            "labapi.entry.entries.attachment._make_backing_io",
+            _tracking_make_backing_io,
+        )
+
+        def _raising_chunks():
+            yield b"partial content"
+            raise OSError("boom")
+
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Disposition": 'attachment; filename="test.txt"',
+        }
+        mock_response.iter_content.return_value = _raising_chunks()
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        with pytest.raises(OSError, match="boom"):
+            entry.get_attachment()
+
+        assert entry._filedata is None  # pyright: ignore[reportPrivateUsage]
+        assert len(created_backings) == 1
+        assert created_backings[0].closed is True
+
     def test_get_attachment_tempfile_copies_in_chunks(self, client, user: User):
         """get_attachment(use_tempfile=True) must not read the full payload at once.
 
