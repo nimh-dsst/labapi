@@ -130,6 +130,9 @@ class Attachment:
         try:
             file.seek(0)
             shutil.copyfileobj(file, backing)
+        except Exception:
+            backing.close()
+            raise
         finally:
             file.seek(original_position)
         backing.seek(0)

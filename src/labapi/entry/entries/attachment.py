@@ -117,8 +117,12 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
                     )
 
                 output = _make_backing_io(use_tempfile)
-                for chunk in attachment_stream:
-                    output.write(chunk)
+                try:
+                    for chunk in attachment_stream:
+                        output.write(chunk)
+                except Exception:
+                    output.close()
+                    raise
 
             self._filedata = Attachment(output, mime_type, filename, self._data)
 
