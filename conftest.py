@@ -73,7 +73,12 @@ class MockClient(LA.Client):
                 * 1000
             )
         else:
-            expiry = round(expires_in.timestamp() * 1000)
+            expires_dt = (
+                expires_in
+                if expires_in.tzinfo is not None
+                else expires_in.replace(tzinfo=timezone.utc)
+            )
+            expiry = round(expires_dt.timestamp() * 1000)
         sig = self._signature(api_method, expiry)
 
         query["akid"] = self._akid
