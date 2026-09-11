@@ -959,6 +959,67 @@ class TestClientUnit:
             connection.close()
             thread.join(timeout=5)
 
+    def test_collect_auth_response_drops_stalled_connection_and_still_succeeds(self):
+        """Test a connection that never finishes its request is dropped, not left open forever."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        login = Mock(return_value=Mock(spec=User))
+        port = reserve_local_port()
+        result: dict[str, User] = {}
+        errors: list[BaseException] = []
+
+        def run_collect_auth_response() -> None:
+            try:
+                with client.collect_auth_response(
+                    port=port,
+                    callback_path="/expected/",
+                    timeout=5.0,
+                ) as auth_response_collector:
+                    result["user"] = auth_response_collector.wait()
+            # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
+            except BaseException as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        with (
+            patch("labapi.client._AUTH_CALLBACK_CONNECTION_TIMEOUT", 0.2),
+            patch.object(client, "login", login),
+        ):
+            thread = Thread(target=run_collect_auth_response, daemon=True)
+            thread.start()
+            wait_for_local_listener(port)
+
+            # Connect and send an incomplete request line, then go silent —
+            # this simulates a stray/slow client that never completes its
+            # request. Without a per-connection read timeout on the handler,
+            # this would block the handler (and the overall auth wait)
+            # indefinitely.
+            stalled_socket = socket.create_connection(("127.0.0.1", port), timeout=2)
+            try:
+                stalled_socket.sendall(b"GET ")
+                start = monotonic()
+                stalled_socket.settimeout(2)
+                # The server must close the connection once its bounded
+                # per-connection timeout elapses, well before our 2s guard.
+                assert stalled_socket.recv(1) == b""
+                assert monotonic() - start < 2.0
+            finally:
+                stalled_socket.close()
+
+            # The accept loop must still be alive afterwards, and the
+            # legitimate callback must still succeed within the overall
+            # auth timeout.
+            status, _ = local_get(
+                port,
+                "/expected/?auth_code=good-code&email=user%40example.com",
+            )
+            assert status == 200
+
+            thread.join(timeout=5)
+
+        assert not thread.is_alive()
+        assert not errors
+        assert result["user"] is login.return_value
+        login.assert_called_once_with("user@example.com", "good-code")
+
     def test_stream_api_get_yields_chunks_and_returns_response(self):
         """Test stream_api_get yields streamed chunks and returns the response."""
         client = Client("https://api.test.com", "test_akid", "test_password")
