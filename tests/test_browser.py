@@ -243,3 +243,14 @@ def test_configured_browser_linear_search_iteration_error_falls_back(
     mock_installed_browsers.browsers.side_effect = lambda: raising_browsers()
 
     assert browser_module.detect_default_browser() == "terminal"
+
+
+def test_browser_msedge_resolves_via_fallback(
+    browser_module, mock_installed_browsers, monkeypatch
+):
+    """LA_AUTH_BROWSER=msedge resolves when Edge is installed under a different key."""
+    monkeypatch.setenv("LA_AUTH_BROWSER", "msedge")
+    mock_installed_browsers.do_i_have_installed.return_value = False
+    mock_installed_browsers.browsers.return_value = [{"name": "Microsoft Edge"}]
+
+    assert browser_module.detect_default_browser() == "msedge"
