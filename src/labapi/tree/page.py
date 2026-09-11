@@ -177,34 +177,56 @@ class NotebookPage(AbstractTreeNode):
         - attachment resources opened during copy are always released,
         - any per-entry copy failure is reported via warning and that entry is skipped.
 
-        :raises RuntimeWarning: Emitted when an individual entry fails to copy.
+        Failure invariant:
+
+        - a per-entry failure is warned about and skipped, so it never aborts the copy;
+        - a failure that aborts the copy (e.g. the source entries cannot be loaded)
+          rolls back the destination page created here before re-raising, so a failed
+          copy never leaves a partially populated destination page behind.
+
+        :raises RuntimeWarning: Emitted when an individual entry fails to copy, or
+            when best-effort rollback of an aborted copy fails.
         """
         new_page = destination.create(
             NotebookPage, self.name, if_exists=InsertBehavior.Ignore
         )
 
-        for entry in self.entries:
-            entry_content: Any | None = None
+        try:
+            for entry in self.entries:
+                entry_content: Any | None = None
+                try:
+                    entry_content = entry.content
+                    # Re-upload behavior is intentional: copy_to creates a new entry on the
+                    # destination page using the source entry's runtime class and content.
+                    # For attachments, Entries.create uploads the payload and returns a
+                    # distinct destination attachment entry; it does not mutate the source
+                    # entry or preserve source attachment IDs.
+                    assert entry_content is not None
+                    new_page.entries.create(cast(Any, entry.__class__), entry_content)
+                # TODO(BLE001): intentional broad catch — copy_to skips an entry it cannot copy and warns; one failure must not abort the whole copy; narrow if a specific type becomes known.
+                except Exception as exc:  # noqa: BLE001
+                    warnings.warn(
+                        f"Failed to copy entry {entry.id!r} ({entry.content_type!r}) from page "
+                        f"{self.id!r} to page {new_page.id!r}: {exc}. This entry was skipped.",
+                        RuntimeWarning,
+                        stacklevel=2,
+                    )
+                finally:
+                    if isinstance(entry_content, Attachment):
+                        entry_content.close()
+        # Broad by design: any error that escapes the per-entry handling aborts the
+        # copy, so roll back the page created above before re-raising.
+        except Exception:
             try:
-                entry_content = entry.content
-                # Re-upload behavior is intentional: copy_to creates a new entry on the
-                # destination page using the source entry's runtime class and content.
-                # For attachments, Entries.create uploads the payload and returns a
-                # distinct destination attachment entry; it does not mutate the source
-                # entry or preserve source attachment IDs.
-                assert entry_content is not None
-                new_page.entries.create(cast(Any, entry.__class__), entry_content)
-            # TODO(BLE001): intentional broad catch — copy_to skips an entry it cannot copy and warns; one failure must not abort the whole copy; narrow if a specific type becomes known.
-            except Exception as exc:  # noqa: BLE001
+                new_page.delete()
+            except Exception as cleanup_exc:  # noqa: BLE001
                 warnings.warn(
-                    f"Failed to copy entry {entry.id!r} ({entry.content_type!r}) from page "
-                    f"{self.id!r} to page {new_page.id!r}: {exc}. This entry was skipped.",
+                    f"Failed to roll back partially copied page {new_page.id!r} after a "
+                    f"copy failure: {cleanup_exc}. The destination may contain a partial page.",
                     RuntimeWarning,
                     stacklevel=2,
                 )
-            finally:
-                if isinstance(entry_content, Attachment):
-                    entry_content.close()
+            raise
 
         return new_page
 
