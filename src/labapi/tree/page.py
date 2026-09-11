@@ -177,7 +177,11 @@ class NotebookPage(AbstractTreeNode):
         - attachment resources opened during copy are always released,
         - any per-entry copy failure is reported via warning and that entry is skipped.
 
-        :raises RuntimeWarning: Emitted when an individual entry fails to copy.
+        .. note::
+           A per-entry copy failure emits a :class:`RuntimeWarning` (it is
+           *not* raised as an exception) and the entry is skipped, so a partial
+           copy does not abort. To detect skipped entries, capture warnings with
+           ``warnings.catch_warnings(record=True)``.
         """
         new_page = destination.create(
             NotebookPage, self.name, if_exists=InsertBehavior.Ignore
