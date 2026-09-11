@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import socket
 from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
@@ -17,6 +18,7 @@ from lxml.etree import XMLSyntaxError
 from requests import Response
 
 from labapi import Client, User
+from labapi.client import StreamingResponse
 from labapi.exceptions import ApiError, AuthenticationError
 
 
@@ -1051,6 +1053,15 @@ class TestClientUnit:
         # Closing is idempotent even though both iterator and context manager clean up.
         response.close.assert_called_once()
 
+    def test_streaming_response_getattr_no_recursion_without_response(self):
+        """__getattr__ raises AttributeError (not RecursionError) when _response is unset."""
+        orphan = StreamingResponse.__new__(StreamingResponse)
+        with pytest.raises(AttributeError):
+            _ = orphan.headers  # would RecursionError before the guard
+
+        stream = StreamingResponse(make_response(200, "body"))
+        assert copy.copy(stream).status_code == 200
+
     def test_client_initialization_with_params(self):
         """Test Client initializes correctly with explicit parameters."""
         client = Client("https://test.api/", "test_akid", "test_akpass")
@@ -1191,6 +1202,31 @@ class TestClientIntegration:
         assert api_call[0] == "users/user_access_info"
         assert api_call[1]["login_or_email"] == "test@example.com"
         assert api_call[1]["password"] == "authcode123"
+
+    def test_client_login_keeps_notebook_without_is_default(self, client):
+        """A notebook missing is-default is kept, defaulting is_default to False."""
+        client.api_response = client.xml(
+            "users",
+            client.xml("id", "uid"),
+            client.xml(
+                "notebooks",
+                client.xml(
+                    "notebook",
+                    client.xml("name", "No Default"),
+                    client.xml("id", "nb1"),
+                ),
+                type="array",
+            ),
+        )
+
+        user = client.login("e@x.com", "code")
+
+        assert len(user.notebooks) == 1
+        notebook = user.notebooks.all_values()[0]
+        assert notebook.name == "No Default"
+        assert notebook.is_default is False
+
+        client.pop_api_call()
 
     def test_mock_client_xml_builder_supports_nested_responses(self, client):
         """Test MockClient XML builders create nested responses without raw strings."""

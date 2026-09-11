@@ -107,6 +107,9 @@ class TestTreeMixinsIntegration:
         assert err.value.path == "/Test Page 1/Something"
         assert err.value.segment == "Something"
         assert err.value.available_children is None
+        # The message names the non-directory node (Test Page 1), not the
+        # unreached child segment.
+        assert '"/Test Page 1" is not a directory' in str(err.value)
 
     def test_getitem_invalid_key_type_raises(self, notebook_tree: Notebook):
         """Test __getitem__ raises TypeError for unsupported key types."""
