@@ -222,11 +222,13 @@ class NotebookPage(AbstractTreeNode):
 
         This method clears the internal entries cache, forcing the page
         to re-fetch its entries from the LabArchives API on the next access.
+        Removed or replaced entries therefore no longer appear after a
+        refresh.
 
         .. note::
            Entry objects obtained before the refresh are not invalidated and
-           may be stale.
+           may be stale; re-resolve them from the refreshed page via
+           :attr:`entries`.
         """
-        # TODO: Properly invalidate all entry objects before clearing
         self._entries = None
         return self

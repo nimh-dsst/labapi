@@ -415,6 +415,41 @@ class TestTreeMixinsIntegration:
             child.name == "Snapshot Test Page" for child in notebook_tree.children
         )
 
+    def test_container_refresh_reflects_changed_children(
+        self, client, notebook_tree: Notebook
+    ):
+        """Test container refresh re-fetches children and drops removed ones."""
+        old_folder_a = notebook_tree[Index.Id : "dir-1"]
+        assert old_folder_a.name == "Test Folder A"
+        client.clear_api_calls()
+
+        notebook_tree.refresh()
+
+        # The server now reports a different child set: "Test Folder A" is gone
+        # and a new page has appeared.
+        client.api_response = client.tree_level_response(
+            client.tree_level_node(
+                tree_id="dir-2",
+                display_text="Test Folder B",
+                is_page=False,
+            ),
+            client.tree_level_node(
+                tree_id="page-9",
+                display_text="Brand New Page",
+                is_page=True,
+            ),
+        )
+
+        refreshed_children = notebook_tree.children
+
+        api_call = client.pop_api_call()
+        assert api_call[0] == "tree_tools/get_tree_level"
+        client.clear_api_calls()
+
+        names = {child.name for child in refreshed_children}
+        assert "Test Folder A" not in names
+        assert names == {"Test Folder B", "Brand New Page"}
+
     def test_children_parse_failure_has_context(self, client, notebook_tree: Notebook):
         """Test malformed tree children raise errors with container and node context."""
         dir_1 = notebook_tree[Index.Id : "dir-1"].as_dir()

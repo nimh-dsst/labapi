@@ -866,10 +866,14 @@ class AbstractTreeContainer(
 
         This method clears the internal children cache, forcing the container
         to re-fetch its children from the LabArchives API on the next access.
+        Removed or replaced children therefore no longer appear after a
+        refresh.
+
+        .. note::
+           Child nodes obtained before the refresh are not invalidated and may
+           be stale; re-resolve them from the refreshed parent via
+           :attr:`children` or a lookup.
         """
-        # TODO if a child node is removed it won't know about it.
-        for child in self._children:
-            child.refresh()
         self._children = []
         self._populated = False
 
