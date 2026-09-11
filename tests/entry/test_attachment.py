@@ -150,6 +150,21 @@ def test_attachment_from_file_requires_seekable_file():
         Attachment.from_file(file)
 
 
+def test_attachment_from_file_rejects_bytes_pathlike():
+    """Test cloning rejects PathLike objects whose __fspath__ returns bytes.
+
+    Regression test for #81: this rejection must be an explicit ``TypeError``
+    rather than a stripped-under-``-O`` ``assert``.
+    """
+
+    class BytesPath:
+        def __fspath__(self) -> bytes:
+            return b"/tmp/example.bin"
+
+    with pytest.raises(TypeError, match="PathLike"):
+        Attachment.from_file(BytesPath())  # type: ignore[arg-type]
+
+
 def test_attachment_initialization():
     """Test Attachment initialization with all parameters."""
     backing = BytesIO(b"Test data")

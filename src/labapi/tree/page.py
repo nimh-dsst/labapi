@@ -192,7 +192,11 @@ class NotebookPage(AbstractTreeNode):
                 # For attachments, Entries.create uploads the payload and returns a
                 # distinct destination attachment entry; it does not mutate the source
                 # entry or preserve source attachment IDs.
-                assert entry_content is not None
+                if entry_content is None:
+                    raise ValueError(
+                        f"Entry {entry.id!r} ({entry.content_type!r}) has no "
+                        "content to copy"
+                    )
                 new_page.entries.create(cast(Any, entry.__class__), entry_content)
             # TODO(BLE001): intentional broad catch — copy_to skips an entry it cannot copy and warns; one failure must not abort the whole copy; narrow if a specific type becomes known.
             except Exception as exc:  # noqa: BLE001
