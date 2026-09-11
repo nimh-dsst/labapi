@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import socket
 from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
@@ -958,6 +959,60 @@ class TestClientUnit:
 
             connection.close()
             thread.join(timeout=5)
+
+    def test_collect_auth_response_records_code_when_response_write_fails(self):
+        """Regression (#372): a valid auth code is recorded even when writing the browser response raises."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        login = Mock(return_value=Mock(spec=User))
+        port = reserve_local_port()
+        result: dict[str, object] = {}
+        errors: list[BaseException] = []
+
+        def run_collect_auth_response() -> None:
+            try:
+                with client.collect_auth_response(
+                    port=port,
+                    callback_path="/expected/",
+                    timeout=2.0,
+                ) as auth_response_collector:
+                    httpd = auth_response_collector._httpd
+                    assert httpd is not None
+                    # Simulate the browser resetting the connection: the response
+                    # write fails after the callback query has been parsed.
+                    with patch.object(
+                        httpd.RequestHandlerClass,
+                        "_write_response",
+                        side_effect=BrokenPipeError("browser reset the connection"),
+                    ):
+                        user = auth_response_collector.wait()
+                    result["auth_code"] = auth_response_collector._auth_code
+                    result["email"] = auth_response_collector._email
+                    result["user"] = user
+            # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
+            except BaseException as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        with patch.object(client, "login", login):
+            thread = Thread(target=run_collect_auth_response, daemon=True)
+            thread.start()
+            wait_for_local_listener(port)
+
+            # The server never writes a response (the write raises), so the
+            # client sees a dropped connection; that is expected here.
+            with contextlib.suppress(OSError):
+                local_get(
+                    port,
+                    "/expected/?auth_code=good-code&email=user%40example.com",
+                )
+
+            thread.join(timeout=5)
+
+        assert not thread.is_alive()
+        assert not errors
+        assert result["auth_code"] == "good-code"
+        assert result["email"] == "user@example.com"
+        assert result["user"] is login.return_value
+        login.assert_called_once_with("user@example.com", "good-code")
 
     def test_stream_api_get_yields_chunks_and_returns_response(self):
         """Test stream_api_get yields streamed chunks and returns the response."""

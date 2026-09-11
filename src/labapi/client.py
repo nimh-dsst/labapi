@@ -213,19 +213,19 @@ class _AuthResponseCollector:
 
                 error = query.get("error")
                 if error is not None:
-                    self._write_response(200, f"Error: {error}")
                     collector._error = error
+                    self._write_response(200, f"Error: {error}")
                     return
 
                 auth_code = query.get("auth_code")
                 email = query.get("email")
                 if auth_code is not None and email is not None:
+                    collector._auth_code = auth_code
+                    collector._email = email
                     self._write_response(
                         200,
                         "Thanks for Authenticating. Close this Window",
                     )
-                    collector._auth_code = auth_code
-                    collector._email = email
                     return
 
                 self._write_response(400, "Invalid authentication callback.")
