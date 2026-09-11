@@ -25,7 +25,6 @@ from cryptography.hazmat.primitives.hashes import SHA512
 from cryptography.hazmat.primitives.hmac import HMAC
 from lxml.etree import Element, fromstring
 from requests import Response, Session
-from requests import codes as status_codes
 from requests.adapters import HTTPAdapter
 from typing_extensions import Self, override
 
@@ -485,7 +484,7 @@ class Client:
         :raises ApiError: For all other non-200 responses.
         """
         # NOTE: See https://mynotebook.labarchives.com/share/LabArchives%2520API/NDEuNnwyNy8zMi9UcmVlTm9kZS83NDE1Mjk1NTJ8MTA1LjY= [ELN Error Codes]
-        if response.status_code != status_codes.ok:
+        if not (200 <= response.status_code < 300):
             error_code: int | None = None
             error_desc: str | None = None
             try:
