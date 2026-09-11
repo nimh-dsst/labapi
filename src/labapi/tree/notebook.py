@@ -140,21 +140,30 @@ class Notebook(AbstractTreeContainer):
             tmp_path = Path(tmp)
 
             if source != "walk":
+                # Isolate the backup attempt in its own subdirectory so a
+                # partially-populated temp tree from a failed backup cannot
+                # collide with the walk fallback's own staging below.
+                backup_tmp = tmp_path / "backup"
+                backup_tmp.mkdir()
                 try:
-                    tree = _backup_tree(self, tmp_path)
+                    tree = _backup_tree(self, backup_tmp)
+                    result = _write_tree(tree, destination, overwrite)
                 # A backup can be unavailable or unreadable for many reasons:
                 # py7zr missing (ImportError), the download rejected (ApiError),
-                # or a corrupt archive / invalid database / malformed row. In
-                # "auto" mode any such failure degrades to the live walk below;
-                # "backup" surfaces it via the RuntimeError raised at the end.
+                # a corrupt archive / invalid database / malformed row, or a
+                # referenced attachment missing from the archive. In "auto" mode
+                # any such failure degrades to the live walk below; "backup"
+                # surfaces it via the RuntimeError raised at the end.
                 except Exception as error:  # noqa: BLE001
                     backup_error = error
                 else:
-                    return NotebookExport(_write_tree(tree, destination, overwrite))
+                    return NotebookExport(result)
 
             if source != "backup":
+                walk_tmp = tmp_path / "walk"
+                walk_tmp.mkdir()
                 return NotebookExport(
-                    _write_tree(_walk_tree(self, tmp_path), destination, overwrite)
+                    _write_tree(_walk_tree(self, walk_tmp), destination, overwrite)
                 )
 
         raise RuntimeError(
