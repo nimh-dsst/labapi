@@ -247,7 +247,7 @@ class AbstractBaseTreeNode(ABC, HasNameMixin):
                 raise TraversalError(
                     (
                         f'Unable to traverse "{canonical}" at segment "{segment}": '
-                        f'"{"/".join(parsed_segments)}" is not a directory'
+                        f'"{resolved_parent}" is not a directory'
                     ),
                     path=str(canonical),
                     segment=segment,

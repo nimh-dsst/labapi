@@ -226,3 +226,14 @@ def test_browser_detection_explicit_terminal_override(browser_module, monkeypatc
     """Test terminal override from LA_AUTH_BROWSER."""
     monkeypatch.setenv("LA_AUTH_BROWSER", "terminal")
     assert browser_module.detect_default_browser() == "terminal"
+
+
+def test_browser_msedge_resolves_via_fallback(
+    browser_module, mock_installed_browsers, monkeypatch
+):
+    """LA_AUTH_BROWSER=msedge resolves when Edge is installed under a different key."""
+    monkeypatch.setenv("LA_AUTH_BROWSER", "msedge")
+    mock_installed_browsers.do_i_have_installed.return_value = False
+    mock_installed_browsers.browsers.return_value = [{"name": "Microsoft Edge"}]
+
+    assert browser_module.detect_default_browser() == "msedge"
