@@ -350,8 +350,13 @@ class AbstractTreeNode(AbstractBaseTreeNode):
             self.parent.children.index(self)
         ]  # This removes current node from old parent in-place
         self._parent = destination
-        self.parent._children.append(self)  # pyright: ignore[reportPrivateUsage]
-        # This adds current node to new parent in-place
+        if destination._populated:  # pyright: ignore[reportPrivateUsage]
+            self.parent._children.append(self)  # pyright: ignore[reportPrivateUsage]
+            # This adds current node to new parent in-place
+        # If the destination hasn't been populated yet, don't append: the
+        # next _ensure_populated() call replaces `_children` wholesale, which
+        # would silently discard a local-only append anyway. Leaving it alone
+        # lets that fetch populate the authoritative child list instead.
 
         self._invalidate_path()
         return self
