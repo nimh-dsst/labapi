@@ -176,6 +176,17 @@ class TestClientUnit:
         assert "/api_user_login" in url
         assert "akid=test_akid" in url
 
+    def test_client_construct_url_retains_blank_query_param(self):
+        """Test construct_url keeps explicitly-blank query parameter values."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        url = client.construct_url("entries/update", {"caption": ""}, expires_in=None)
+
+        query = dict(parse_qsl(urlsplit(url).query, keep_blank_values=True))
+        assert "caption" in query
+        assert query["caption"] == ""
+        assert "caption=" in url
+
     @pytest.mark.parametrize(
         ("api_method_uri", "kwargs"),
         [
