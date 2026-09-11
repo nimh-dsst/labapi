@@ -324,6 +324,15 @@ class TestClientUnit:
 
         Client._handle_request_status(response)
 
+    def test_client_handle_request_status_accepts_non_200_2xx(self):
+        """Test _handle_request_status treats the whole 2xx range as success."""
+        response = make_response(204, "")
+
+        Client._handle_request_status(response)
+
+        with pytest.raises(ApiError, match="API request failed with status code 400"):
+            Client._handle_request_status(make_response(400, "Bad Request"))
+
     def test_client_close_closes_session(self):
         """Test Client.close closes the underlying requests session."""
         client = Client("https://api.test.com", "test_akid", "test_password")
