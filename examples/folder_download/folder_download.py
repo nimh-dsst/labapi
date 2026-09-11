@@ -305,7 +305,9 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--overwrite", action="store_true", help="Overwrite existing files"
+        "--overwrite",
+        action="store_true",
+        help="Allow writing into a non-empty output directory (does not remove existing files)",
     )
     return parser
 
@@ -317,7 +319,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if output_dir.exists() and not args.overwrite and any(output_dir.iterdir()):
         print(f"Error: Output directory '{output_dir}' exists and is not empty")
-        print("Use --overwrite to overwrite existing files")
+        print("Use --overwrite to write into it anyway (existing files are kept).")
         return 1
 
     try:
