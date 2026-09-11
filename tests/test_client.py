@@ -257,6 +257,24 @@ class TestClientUnit:
         expires = dict(parse_qsl(urlsplit(signed_url).query))["expires"]
         assert int(expires) == round(absolute_expiry.timestamp() * 1000)
 
+    def test_client_construct_url_treats_naive_datetime_expiry_as_utc(self, client):
+        """Test naive datetime expiries are interpreted as UTC, not local time (#375)."""
+        naive_expiry = datetime(2099, 1, 1, 12, 0, 0)  # noqa: DTZ001 -- naive is the point
+        aware_expiry = naive_expiry.replace(tzinfo=timezone.utc)
+
+        naive_url = client.construct_url(
+            "users/get_info", {"uid": "123"}, expires_in=naive_expiry
+        )
+        aware_url = client.construct_url(
+            "users/get_info", {"uid": "123"}, expires_in=aware_expiry
+        )
+
+        naive_expires = dict(parse_qsl(urlsplit(naive_url).query))["expires"]
+        aware_expires = dict(parse_qsl(urlsplit(aware_url).query))["expires"]
+
+        assert naive_expires == aware_expires
+        assert int(naive_expires) == round(aware_expiry.timestamp() * 1000)
+
     @pytest.mark.parametrize("expires_in", [timedelta(0), timedelta(seconds=-1)])
     def test_client_construct_url_rejects_non_positive_duration_expiry(
         self, expires_in: timedelta

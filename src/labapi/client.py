@@ -916,7 +916,12 @@ class Client:
                 raise ValueError("expires_in must be a positive duration")
             expiry = round((datetime.now(timezone.utc) + expires_in).timestamp() * 1000)
         else:
-            expiry = round(expires_in.timestamp() * 1000)
+            expires_dt = (
+                expires_in
+                if expires_in.tzinfo is not None
+                else expires_in.replace(tzinfo=timezone.utc)
+            )
+            expiry = round(expires_dt.timestamp() * 1000)
             if expiry <= round(datetime.now(timezone.utc).timestamp() * 1000):
                 raise ValueError("expires_in must be a future datetime")
         sig = self._signature(api_method, expiry)
