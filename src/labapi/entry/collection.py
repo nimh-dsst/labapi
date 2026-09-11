@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from html import escape
 from io import BytesIO
 from json import dumps
+from secrets import token_hex
 from typing import TYPE_CHECKING, Any, SupportsIndex, TypeVar, overload
 
 from typing_extensions import override
@@ -106,7 +107,7 @@ class Entries(Sequence["Entry[Any]"]):
 
         name = (
             filename
-            or f"uploaded_data_{datetime.now(timezone.utc).timestamp():.0f}.json"
+            or f"uploaded_data_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S_%f')}_{token_hex(3)}.json"
         )
         display_caption = caption or name
         preview_json = escape(dumps(data, indent=4))
