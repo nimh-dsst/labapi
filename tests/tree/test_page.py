@@ -187,6 +187,59 @@ class TestNotebookPageUnit:
             succeeding_entry.__class__, succeeding_entry.content
         )
 
+    def test_copy_to_rolls_back_page_when_copy_aborts(self):
+        """Test NotebookPage.copy_to deletes the created page when the copy aborts."""
+        source_page = Mock(spec=NotebookPage)
+        source_page.name = "Source Page"
+        source_page.id = "source-page-id"
+
+        class ExplodingEntries:
+            """Entries whose iteration fails, aborting the copy mid-way."""
+
+            def __iter__(self):
+                raise RuntimeError("failed to load entries")
+
+        source_page.entries = ExplodingEntries()
+
+        new_page = Mock(spec=NotebookPage)
+        new_page.id = "new-page-id"
+
+        destination = Mock()
+        destination.create.return_value = new_page
+
+        with pytest.raises(RuntimeError, match="failed to load entries"):
+            NotebookPage.copy_to(source_page, destination)
+
+        # The partially created destination page is rolled back, leaving nothing behind.
+        new_page.delete.assert_called_once_with()
+
+    def test_copy_to_warns_when_rollback_fails(self):
+        """Test NotebookPage.copy_to warns (but still re-raises) if rollback fails."""
+        source_page = Mock(spec=NotebookPage)
+        source_page.name = "Source Page"
+        source_page.id = "source-page-id"
+
+        class ExplodingEntries:
+            def __iter__(self):
+                raise RuntimeError("failed to load entries")
+
+        source_page.entries = ExplodingEntries()
+
+        new_page = Mock(spec=NotebookPage)
+        new_page.id = "new-page-id"
+        new_page.delete.side_effect = RuntimeError("delete failed")
+
+        destination = Mock()
+        destination.create.return_value = new_page
+
+        with (
+            pytest.warns(RuntimeWarning, match="Failed to roll back"),
+            pytest.raises(RuntimeError, match="failed to load entries"),
+        ):
+            NotebookPage.copy_to(source_page, destination)
+
+        new_page.delete.assert_called_once_with()
+
 
 class TestNotebookPageIntegration:
     """Integration tests with real objects and mocked API."""
