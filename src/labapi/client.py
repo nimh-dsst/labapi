@@ -909,7 +909,7 @@ class Client:
         :raises ValueError: If ``expires_in`` is not a future expiry.
         """
         scheme, netloc, path, querystring, _f = urlsplit(url)
-        query = dict(parse_qsl(querystring))
+        query = dict(parse_qsl(querystring, keep_blank_values=True))
 
         if isinstance(expires_in, timedelta):
             if expires_in <= timedelta(0):
