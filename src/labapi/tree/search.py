@@ -86,6 +86,7 @@ class EntrySearch:
                     "entry-data": str,
                     "caption": str,
                     "attach-file-name": str,
+                    "attach-content-type": str,
                     "created-at": to_datetime,
                     "updated-at": to_datetime,
                     "version": int,
@@ -109,6 +110,7 @@ class EntrySearch:
             )
             if isinstance(entry, AttachmentEntry):
                 entry._filename = entry_optional.get("attach-file-name") or None  # pyright: ignore[reportPrivateUsage]
+                entry._mime_type = entry_optional.get("attach-content-type") or None  # pyright: ignore[reportPrivateUsage]
 
             entries.append(entry)
 
