@@ -236,3 +236,82 @@ class TestNotebooksIntegration:
         with pytest.raises(ApiError, match="API returned an existing notebook ID"):
             notebooks.create_notebook("Duplicate")
         client.clear_api_calls()
+
+
+class TestNotebooksLookupHelpers:
+    """Tests for get_by_id/get_by_name/default on Notebooks."""
+
+    @staticmethod
+    def _notebooks(*inits: NotebookInit) -> Notebooks:
+        return Notebooks(list(inits), Mock(spec=User))
+
+    def test_get_by_id_found(self):
+        """get_by_id returns the notebook with the matching ID."""
+        notebooks = self._notebooks(
+            NotebookInit(id="nb1", name="One", is_default=True),
+            NotebookInit(id="nb2", name="Two", is_default=False),
+        )
+
+        notebook = notebooks.get_by_id("nb2")
+
+        assert isinstance(notebook, Notebook)
+        assert notebook.id == "nb2"
+
+    def test_get_by_id_not_found_raises(self):
+        """get_by_id raises KeyError when no notebook has the ID."""
+        notebooks = self._notebooks(NotebookInit(id="nb1", name="One", is_default=True))
+
+        with pytest.raises(KeyError):
+            notebooks.get_by_id("missing")
+
+    def test_get_by_name_found(self):
+        """get_by_name returns all notebooks with the matching name."""
+        notebooks = self._notebooks(
+            NotebookInit(id="nb1", name="Shared", is_default=True),
+            NotebookInit(id="nb2", name="Shared", is_default=False),
+            NotebookInit(id="nb3", name="Unique", is_default=False),
+        )
+
+        result = notebooks.get_by_name("Shared")
+
+        assert isinstance(result, list)
+        assert [nb.id for nb in result] == ["nb1", "nb2"]
+
+    def test_get_by_name_not_found_returns_empty(self):
+        """get_by_name returns an empty list when no notebook matches."""
+        notebooks = self._notebooks(NotebookInit(id="nb1", name="One", is_default=True))
+
+        assert notebooks.get_by_name("Nonexistent") == []
+
+    def test_default_returns_marked_notebook(self):
+        """Default returns the notebook whose is_default flag is set."""
+        notebooks = self._notebooks(
+            NotebookInit(id="nb1", name="One", is_default=False),
+            NotebookInit(id="nb2", name="Two", is_default=True),
+        )
+
+        default = notebooks.default
+
+        assert isinstance(default, Notebook)
+        assert default.id == "nb2"
+
+    def test_default_none_when_unmarked(self):
+        """Default returns None when no notebook is marked default."""
+        notebooks = self._notebooks(
+            NotebookInit(id="nb1", name="One", is_default=False),
+            NotebookInit(id="nb2", name="Two", is_default=False),
+        )
+
+        assert notebooks.default is None
+
+    def test_default_returns_first_when_multiple_marked(self):
+        """Default returns the first marked notebook if several are default."""
+        notebooks = self._notebooks(
+            NotebookInit(id="nb1", name="One", is_default=True),
+            NotebookInit(id="nb2", name="Two", is_default=True),
+        )
+
+        default = notebooks.default
+
+        assert default is not None
+        assert default.id == "nb1"

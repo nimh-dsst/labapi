@@ -421,6 +421,31 @@ class TestNotebookPageIntegration:
         _ = client.pop_api_call()
         client.clear_api_calls()
 
+    def test_page_entries_preserve_attachment_mime_type(
+        self, client, notebook_tree: Notebook
+    ):
+        """Attachment entries expose filename and MIME type from the listing."""
+        page = notebook_tree[Index.Id : "page-1"].as_page()
+        client.clear_api_calls()
+        client.api_response = client.entries_response(
+            client.entry_xml(
+                "attachment-1",
+                part_type="Attachment",
+                attach_file_name="original.csv",
+                attach_content_type="text/csv",
+                entry_data="Caption",
+            ),
+            include_response=False,
+        )
+
+        entry = page.entries[0]
+
+        assert isinstance(entry, AttachmentEntry)
+        assert entry.filename == "original.csv"
+        assert entry.mime_type == "text/csv"
+        _ = client.pop_api_call()
+        client.clear_api_calls()
+
     def test_page_entries_preserve_widget_entry_without_warning(
         self, client, notebook_tree: Notebook
     ):

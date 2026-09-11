@@ -422,6 +422,27 @@ class AbstractTreeContainer(
         self._ensure_populated()
         return tuple(self._children)
 
+    @property
+    def children_by_id(self) -> dict[str, AbstractBaseTreeNode]:
+        """Return a point-in-time snapshot mapping child ID to child node.
+
+        The returned ``dict`` is a fresh, standalone snapshot: keys are child
+        IDs and values are the corresponding
+        :class:`~labapi.tree.mixins.AbstractBaseTreeNode` objects. Because child
+        IDs are unique within a container, no entries are lost to collisions
+        (unlike name-keyed views).
+
+        The snapshot is decoupled from the container: mutating the returned
+        ``dict`` does not affect the container, and later container changes
+        (for example, after :meth:`refresh`, or creating/moving children) are
+        not reflected in a snapshot taken earlier. Call this property again to
+        obtain an updated snapshot.
+
+        :returns: A new ``dict`` mapping each child's ID to its node.
+        """
+        self._ensure_populated()
+        return {node.id: node for node in self.children}
+
     def _ensure_populated(self) -> None:
         """Load this container's children from the API if needed.
 
@@ -589,6 +610,30 @@ class AbstractTreeContainer(
                 raise TypeError(
                     "Invalid key type. Use `str`, `Index.Id:<id>`, or `Index.Name:<name>`."
                 )
+
+    def get_by_id(self, node_id: str) -> AbstractBaseTreeNode:
+        """Return the child node with the given ID.
+
+        This is a readable equivalent of ``container[Index.Id:node_id]``.
+
+        :param node_id: The ID of the child node to retrieve.
+        :returns: The single :class:`AbstractBaseTreeNode` with the matching ID.
+        :raises KeyError: If no child has the given ID.
+        """
+        return self[Index.Id : node_id]
+
+    def get_by_name(self, name: str) -> Sequence[AbstractBaseTreeNode]:
+        """Return all child nodes with the given name.
+
+        This is a readable equivalent of ``container[Index.Name:name]``. Names
+        are not unique within a container, so this returns a (possibly empty)
+        sequence of every matching child rather than a single node.
+
+        :param name: The name of the child nodes to retrieve.
+        :returns: A sequence of :class:`AbstractBaseTreeNode` objects with the
+                  matching name; empty if none match.
+        """
+        return self[Index.Name : name]
 
     def is_parent_of(self, other: AbstractBaseTreeNode) -> bool:
         """Return whether this container is a strict ancestor of ``other``.

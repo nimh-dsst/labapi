@@ -84,6 +84,49 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
                     "Invalid key type. Use `str`, `Index.Id:<id>`, or `Index.Name:<name>`."
                 )
 
+    def get_by_id(self, notebook_id: str) -> Notebook:
+        """Return the notebook with the given ID.
+
+        This is a readable equivalent of ``notebooks[Index.Id:notebook_id]``.
+
+        :param notebook_id: The ID of the notebook to retrieve.
+        :returns: The single :class:`~labapi.tree.notebook.Notebook` with the
+                  matching ID.
+        :raises KeyError: If no notebook has the given ID.
+        """
+        return self[Index.Id : notebook_id]
+
+    def get_by_name(self, name: str) -> list[Notebook]:
+        """Return all notebooks with the given name.
+
+        This is a readable equivalent of ``notebooks[Index.Name:name]``. Names
+        are not unique, so this returns a (possibly empty) list of every
+        matching notebook rather than a single notebook.
+
+        :param name: The name of the notebooks to retrieve.
+        :returns: A list of :class:`~labapi.tree.notebook.Notebook` objects with
+                  the matching name; empty if none match.
+        """
+        return self[Index.Name : name]
+
+    @property
+    def default(self) -> Notebook | None:
+        """Return the user's default notebook, if one is marked.
+
+        LabArchives marks at most one notebook as the user's default via its
+        ``is-default`` flag. This accessor scans the collection and returns that
+        notebook.
+
+        :returns: The default :class:`~labapi.tree.notebook.Notebook`, or
+                  ``None`` if no notebook is marked as default. If more than one
+                  notebook is somehow marked default, the first in collection
+                  order is returned.
+        """
+        for notebook in self._notebooks:
+            if notebook.is_default:
+                return notebook
+        return None
+
     @override
     def __iter__(self) -> Iterator[str]:
         """Iterate over notebook names in collection order."""
