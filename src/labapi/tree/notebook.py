@@ -128,7 +128,8 @@ class Notebook(AbstractTreeContainer):
             live API tree; ``"backup"`` downloads and unpacks the native backup
             archive (requires the notebook owner's sign-in and the optional
             ``py7zr`` dependency: ``pip install 'labapi[export]'``); ``"auto"``
-            uses the backup archive when available and falls back to the walk.
+            uses the backup archive when it can be produced and read, and falls
+            back to the walk if the backup is unavailable or unreadable.
         :param overwrite: When ``destination`` exists and is not empty, raise
             unless ``overwrite`` is ``True``.
         :returns: A completed :class:`NotebookExport`. Its ``path`` is the
@@ -141,7 +142,12 @@ class Notebook(AbstractTreeContainer):
             if source != "walk":
                 try:
                     tree = _backup_tree(self, tmp_path)
-                except (ImportError, ApiError) as error:
+                # A backup can be unavailable or unreadable for many reasons:
+                # py7zr missing (ImportError), the download rejected (ApiError),
+                # or a corrupt archive / invalid database / malformed row. In
+                # "auto" mode any such failure degrades to the live walk below;
+                # "backup" surfaces it via the RuntimeError raised at the end.
+                except Exception as error:  # noqa: BLE001
                     backup_error = error
                 else:
                     return NotebookExport(_write_tree(tree, destination, overwrite))
