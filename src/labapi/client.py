@@ -789,7 +789,9 @@ class Client:
         exit.
 
         :param port: The local callback port to listen on. Defaults to ``8089``.
-        :param callback_path: The callback path to accept. Defaults to ``/``.
+        :param callback_path: The callback path to accept. When omitted or ``None``,
+                              a random, unguessable path of the form ``/auth/<token>/``
+                              is generated; pass a value to override it.
         :param timeout: Maximum number of seconds to wait for a valid callback.
                         Defaults to five minutes. Pass ``None`` to wait indefinitely.
         :returns: An enterable collector with a ``wait()`` method for the authentication callback.
