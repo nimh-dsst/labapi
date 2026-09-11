@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from html import escape
 from io import BytesIO
 from json import dumps
-from typing import TYPE_CHECKING, Any, SupportsIndex, TypeVar, overload
+from typing import TYPE_CHECKING, Any, SupportsIndex, TypeVar, cast, overload
 
 from typing_extensions import override
 
@@ -113,7 +113,7 @@ class Entries(Sequence["Entry[Any]"]):
         :returns: A list of entries of the requested type, in collection order;
                   empty if none match.
         """
-        return [entry for entry in self._entries if isinstance(entry, cls)]
+        return [cast(E, entry) for entry in self._entries if isinstance(entry, cls)]
 
     def attachments(self) -> list[AttachmentEntry]:
         """Return all attachment entries in this collection.
