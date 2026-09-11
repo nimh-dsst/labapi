@@ -19,6 +19,12 @@ if TYPE_CHECKING:
     from .client import Client
 
 
+# The API upload endpoint (entries/add_attachment) is capped at 250 MiB by an
+# nginx client_max_body_size on the API tier, independent of the account's
+# reported max-file-size (which reflects the larger web/S3 storage limit).
+_API_UPLOAD_SIZE_CAP: int = 262_144_000  # 250 MiB
+
+
 class User:
     """Represents an authenticated LabArchives user session.
 
@@ -108,9 +114,16 @@ class User:
         return self._client.api_post(api_method_uri, body, **kwargs, uid=self._id)
 
     def get_max_upload_size(self) -> int:
-        """Return the maximum upload size for this user in bytes.
+        """Return the effective attachment upload size limit in bytes.
 
-        :returns: The maximum upload size in bytes.
+        The account's reported ``max-file-size`` (``users/max_file_size``) can
+        exceed what the API upload endpoint accepts: ``entries/add_attachment``
+        is capped at 250 MiB (``262_144_000`` bytes) by an nginx
+        ``client_max_body_size`` on the API tier. This returns the smaller of
+        the two, so the value reflects what an ``add_attachment`` upload will
+        actually accept (larger files must use the web/S3 upload path).
+
+        :returns: The effective upload size limit in bytes.
         :raises RuntimeError: If the underlying client session has been closed.
         :raises AuthenticationError: If LabArchives rejects the request due to
                                      invalid or expired credentials.
@@ -120,9 +133,10 @@ class User:
 
         Invalid XML propagates ``lxml.etree.XMLSyntaxError``.
         """
-        return extract_etree(
+        reported = extract_etree(
             self.api_get("users/max_file_size"), {"max-file-size": int}
         )["max-file-size"]
+        return min(reported, _API_UPLOAD_SIZE_CAP)
 
     @property
     def notebooks(self) -> Notebooks:

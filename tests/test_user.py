@@ -128,6 +128,17 @@ class TestUserIntegration:
         assert api_call[0] == "users/max_file_size"
         assert api_call[1]["uid"] == "testid1"
 
+    def test_user_get_max_upload_size_clamps_to_api_cap(self, client, user: User):
+        """A reported limit above the API cap is clamped to what add_attachment accepts."""
+        client.api_response = client.xml(
+            "users",
+            client.xml("max-file-size", 4_294_967_296, type="integer"),  # 4 GiB
+        )
+
+        assert user.get_max_upload_size() == 262_144_000  # 250 MiB API cap
+
+        client.pop_api_call()
+
     def test_user_notebooks_property(self, user: User):
         """Test User.notebooks property returns Notebooks collection."""
         notebooks = user.notebooks
