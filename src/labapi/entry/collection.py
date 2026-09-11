@@ -14,7 +14,13 @@ from typing_extensions import override
 from labapi.util import extract_etree
 
 from .attachment import Attachment
-from .entries import AttachmentEntry, Entry, TextEntry, UnknownEntry
+from .entries import (
+    AttachmentEntry,
+    Entry,
+    PlainTextEntry,
+    TextEntry,
+    UnknownEntry,
+)
 
 E = TypeVar("E", bound="Entry[Any]")
 
@@ -82,6 +88,59 @@ class Entries(Sequence["Entry[Any]"]):
     def __len__(self):
         """Return the number of entries in this collection."""
         return len(self._entries)
+
+    def get_by_id(self, entry_id: str) -> Entry[Any]:
+        """Return the entry with the given ID.
+
+        This is a readable equivalent of ``entries[entry_id]``.
+
+        :param entry_id: The ID of the entry to retrieve.
+        :returns: The single :class:`~labapi.entry.entries.base.Entry` with the
+                  matching ID.
+        :raises KeyError: If no entry has the given ID.
+        """
+        return self[entry_id]
+
+    def of_type(self, cls: type[E]) -> list[E]:
+        """Return all entries that are instances of ``cls``.
+
+        Filtering uses :func:`isinstance`, so passing a base class also matches
+        its subclasses (for example, ``of_type(PlainTextEntry)`` matches
+        :class:`~labapi.entry.entries.text.TextEntry` and
+        :class:`~labapi.entry.entries.text.HeaderEntry` as well).
+
+        :param cls: The entry class to filter by.
+        :returns: A list of entries of the requested type, in collection order;
+                  empty if none match.
+        """
+        return [entry for entry in self._entries if isinstance(entry, cls)]
+
+    def attachments(self) -> list[AttachmentEntry]:
+        """Return all attachment entries in this collection.
+
+        Convenience wrapper for ``of_type(AttachmentEntry)``.
+
+        :returns: A list of
+                  :class:`~labapi.entry.entries.attachment.AttachmentEntry`
+                  objects, in collection order; empty if none match.
+        """
+        return self.of_type(AttachmentEntry)
+
+    def texts(self) -> list[PlainTextEntry]:
+        """Return all text-content entries in this collection.
+
+        Convenience wrapper for ``of_type(PlainTextEntry)``. Because
+        :class:`~labapi.entry.entries.text.PlainTextEntry` is the base class for
+        string-content entries, this includes plain text, rich text
+        (:class:`~labapi.entry.entries.text.TextEntry`), and heading
+        (:class:`~labapi.entry.entries.text.HeaderEntry`) entries. Use
+        :meth:`of_type` with a specific class for a narrower filter.
+
+        :returns: A list of
+                  :class:`~labapi.entry.entries.text.PlainTextEntry` objects (and
+                  subclasses), in collection order; empty if none match.
+        """
+        return self.of_type(PlainTextEntry)
 
     # TODO delete entries
 
@@ -215,6 +274,7 @@ class Entries(Sequence["Entry[Any]"]):
             eid = extract_etree(entry_tree, {"entry": {"eid": str}})["eid"]
             entry = cls(eid, data.caption, self._user)
             entry._filename = data.filename or None  # pyright: ignore[reportPrivateUsage]
+            entry._mime_type = data.mime_type or None  # pyright: ignore[reportPrivateUsage]
 
         else:
             if not isinstance(data, str):

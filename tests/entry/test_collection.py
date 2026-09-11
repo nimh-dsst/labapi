@@ -472,3 +472,86 @@ class TestEntriesIntegration:
             "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; metrics"
             in text_call[1]["entry_data"]
         )
+
+
+class TestEntriesLookupAndFilterHelpers:
+    """Tests for get_by_id/of_type/attachments/texts on Entries."""
+
+    @staticmethod
+    def _sample_entries() -> Entries:
+        mock_user = Mock(spec=User)
+        mock_page = Mock()
+        return Entries(
+            [
+                TextEntry("eid_text", "<p>Rich</p>", mock_user),
+                HeaderEntry("eid_head", "<h1>Head</h1>", mock_user),
+                PlainTextEntry("eid_plain", "Plain", mock_user),
+                AttachmentEntry("eid_attach", "Caption", mock_user),
+            ],
+            mock_user,
+            mock_page,
+        )
+
+    def test_get_by_id_found(self):
+        """get_by_id returns the entry with the matching ID."""
+        entries = self._sample_entries()
+
+        entry = entries.get_by_id("eid_head")
+
+        assert isinstance(entry, HeaderEntry)
+        assert entry.id == "eid_head"
+        assert entry is entries["eid_head"]
+
+    def test_get_by_id_not_found_raises(self):
+        """get_by_id raises KeyError when no entry has the ID."""
+        entries = self._sample_entries()
+
+        with pytest.raises(KeyError, match="Entry with id 'missing' not found"):
+            entries.get_by_id("missing")
+
+    def test_of_type_matches_subclasses(self):
+        """of_type matches instances of the class and its subclasses."""
+        entries = self._sample_entries()
+
+        # PlainTextEntry is the base for TextEntry and HeaderEntry.
+        plain_like = entries.of_type(PlainTextEntry)
+        assert [entry.id for entry in plain_like] == [
+            "eid_text",
+            "eid_head",
+            "eid_plain",
+        ]
+
+        rich_only = entries.of_type(TextEntry)
+        assert [entry.id for entry in rich_only] == ["eid_text"]
+
+    def test_of_type_no_matches_returns_empty(self):
+        """of_type returns an empty list when nothing matches."""
+        mock_user = Mock(spec=User)
+        mock_page = Mock()
+        entries = Entries(
+            [TextEntry("eid_text", "<p>x</p>", mock_user)], mock_user, mock_page
+        )
+
+        assert entries.of_type(AttachmentEntry) == []
+
+    def test_attachments_helper(self):
+        """Attachments returns only attachment entries."""
+        entries = self._sample_entries()
+
+        attachments = entries.attachments()
+
+        assert [entry.id for entry in attachments] == ["eid_attach"]
+        assert all(isinstance(entry, AttachmentEntry) for entry in attachments)
+
+    def test_texts_helper_includes_all_text_entries(self):
+        """Texts returns plain text, rich text, and heading entries."""
+        entries = self._sample_entries()
+
+        texts = entries.texts()
+
+        assert [entry.id for entry in texts] == [
+            "eid_text",
+            "eid_head",
+            "eid_plain",
+        ]
+        assert all(isinstance(entry, PlainTextEntry) for entry in texts)
