@@ -319,10 +319,11 @@ class TestClientUnit:
 
     def test_client_handle_request_status_success(self):
         """Test Client._handle_request_status with successful response."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
         response = Mock(spec=Response)
         response.status_code = 200
 
-        Client._handle_request_status(response)
+        client._handle_request_status(response)
 
     def test_client_close_closes_session(self):
         """Test Client.close closes the underlying requests session."""
@@ -372,23 +373,25 @@ class TestClientUnit:
 
     def test_client_handle_request_status_failure(self):
         """Test Client._handle_request_status with failed response."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
         response = Mock(spec=Response)
         response.status_code = 404
         response.url = "https://api.test.com/endpoint"
         response.text = "Not Found"
 
         with pytest.raises(ApiError, match="API request failed with status code 404"):
-            Client._handle_request_status(response)
+            client._handle_request_status(response)
 
     def test_client_handle_request_status_sanitizes_url(self):
         """Test Client._handle_request_status sanitizes sensitive query params."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
         response = Mock(spec=Response)
         response.status_code = 500
         response.url = "https://api.test.com/endpoint?akid=secret&password=pass&sig=123&normal=true"
         response.text = "Internal Error"
 
         with pytest.raises(ApiError) as exc_info:
-            Client._handle_request_status(response)
+            client._handle_request_status(response)
 
         error_msg = str(exc_info.value)
         assert "akid=%2A%2A%2A" in error_msg
@@ -397,6 +400,32 @@ class TestClientUnit:
         assert "normal=true" in error_msg
         assert "=secret" not in error_msg
         assert "=pass" not in error_msg
+
+    def test_client_handle_request_status_sanitizes_body_echoing_signed_url(self):
+        """Test _handle_request_status masks credentials echoed in the response body."""
+        akid = "AKID_live_1234567890abcdef"
+        sig = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce"
+        client = Client("https://api.test.com", akid, "test_password")
+        signed_url = (
+            "https://api.test.com/api/users/get_info"
+            f"?akid={akid}&sig={sig}&expires=1700000000000"
+            "&login_or_email=user%40example.com"
+        )
+        response = Mock(spec=Response)
+        response.status_code = 500
+        response.url = signed_url
+        # The error body echoes the full signed URL, leaking credentials.
+        response.text = f"Upstream error while processing {signed_url} - try again"
+
+        with pytest.raises(ApiError) as exc_info:
+            client._handle_request_status(response)
+
+        error_msg = str(exc_info.value)
+        assert akid not in error_msg
+        assert sig not in error_msg
+        # The body portion was sanitized: the raw signed URL no longer appears.
+        assert signed_url not in error_msg
+        assert "Upstream error while processing" in error_msg
 
     def test_raw_api_get_returns_response(self):
         """Test raw_api_get returns the raw response and calls session.get directly."""

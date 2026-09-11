@@ -472,8 +472,7 @@ class Client:
 
         return User(uid, user_email, notebooks, self)
 
-    @staticmethod
-    def _handle_request_status(response: Response) -> None:
+    def _handle_request_status(self, response: Response) -> None:
         """Raise an error for an unsuccessful HTTP response.
 
         Attempts to parse the LabArchives ``<error>`` XML element from the response
@@ -511,10 +510,34 @@ class Client:
                     query[key] = "***"
             clean_url = urlunsplit(parts._replace(query=urlencode(query)))
 
+            safe_body = self._sanitize_error_body(
+                response.text, response.url, clean_url
+            )
+
             raise ApiError(
                 f"API request failed with status code {response.status_code} "
-                f"for URL {clean_url}: {response.text}"
+                f"for URL {clean_url}: {safe_body}"
             )
+
+    def _sanitize_error_body(
+        self, body: str, raw_url: str | None, clean_url: str
+    ) -> str:
+        """Mask credentials an error body may echo before it reaches logs.
+
+        Error bodies sometimes echo the full signed request URL, which would leak
+        the akid, signature, and other credentials into the raised exception.
+
+        :param body: The raw response body text.
+        :param raw_url: The unmasked request URL (``response.url``).
+        :param clean_url: The credential-masked request URL.
+        :returns: The body with the raw URL and akid replaced by masked values.
+        """
+        safe_body = body
+        if raw_url:
+            safe_body = safe_body.replace(raw_url, clean_url)
+        if self._akid:
+            safe_body = safe_body.replace(self._akid, "***")
+        return safe_body
 
     def stream_api_get(
         self, api_method_uri: str | Sequence[str], **kwargs: Any
@@ -541,7 +564,7 @@ class Client:
             timeout=self.timeout,
         )
         try:
-            Client._handle_request_status(request)
+            self._handle_request_status(request)
         except Exception:
             request.close()
             raise
@@ -578,7 +601,7 @@ class Client:
             timeout=self.timeout,
         )
         try:
-            Client._handle_request_status(request)
+            self._handle_request_status(request)
         except Exception:
             request.close()
             raise
@@ -607,7 +630,7 @@ class Client:
         request = self.session.get(
             self.construct_url(api_method_uri, query=kwargs), timeout=self.timeout
         )
-        Client._handle_request_status(request)
+        self._handle_request_status(request)
 
         return request
 
@@ -639,7 +662,7 @@ class Client:
             data=body,
             timeout=self.timeout,
         )
-        Client._handle_request_status(request)
+        self._handle_request_status(request)
 
         return request
 
