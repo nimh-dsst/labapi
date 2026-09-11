@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import socket
+import ssl
+import sys
 from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
 from os import getenv
@@ -17,6 +19,7 @@ from lxml.etree import XMLSyntaxError
 from requests import Response
 
 from labapi import Client, User
+from labapi.client import _313HTTPAdapter  # pyright: ignore[reportPrivateUsage]
 from labapi.exceptions import ApiError, AuthenticationError
 
 
@@ -806,6 +809,26 @@ class TestClientUnit:
 
         assert bind_info["closed"] is True
 
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="SO_EXCLUSIVEADDRUSE rebind protection is Windows-specific",
+    )
+    def test_collect_auth_response_blocks_concurrent_bind_on_windows(self):
+        """Test the loopback listener rejects a same-port bind from another socket."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        port = reserve_local_port()
+
+        with client.collect_auth_response(port=port, timeout=1.0):
+            other = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                other.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                with pytest.raises(
+                    OSError, match="forbidden by its access permissions"
+                ):
+                    other.bind(("127.0.0.1", port))
+            finally:
+                other.close()
+
     def test_collect_auth_response_requires_context_manager(self):
         """Test auth callback collector must be entered before waiting."""
         client = Client("https://api.test.com", "test_akid", "test_password")
@@ -1056,6 +1079,23 @@ class TestClientUnit:
         client = Client("https://test.api/", "test_akid", "test_akpass")
         assert client._akid == "test_akid"  # pyright: ignore[reportPrivateUsage]
         assert client._base_url == "https://test.api/"  # pyright: ignore[reportPrivateUsage]
+
+    def test_strict_cert_false_relaxes_ssl_for_direct_and_proxied_requests(self):
+        """Test strict_cert=False relaxes verification for direct and proxied requests."""
+        client = Client(
+            "https://test.api/", "test_akid", "test_akpass", strict_cert=False
+        )
+
+        adapter = client.session.get_adapter("https://test.api/")
+        assert isinstance(adapter, _313HTTPAdapter)
+
+        pool_kwargs = adapter.poolmanager.connection_pool_kw
+        assert pool_kwargs["ssl_context"] is adapter.ssl_context
+        assert not (adapter.ssl_context.verify_flags & ssl.VERIFY_X509_STRICT)
+
+        proxy_manager = adapter.proxy_manager_for("https://proxy.example.com:3128")
+        proxy_pool_kwargs = proxy_manager.connection_pool_kw
+        assert proxy_pool_kwargs["ssl_context"] is adapter.ssl_context
 
     def test_client_web_url_override(self):
         """Test Client accepts an explicit Web UI URL for custom API hosts."""
