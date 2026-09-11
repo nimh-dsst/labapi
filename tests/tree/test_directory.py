@@ -33,6 +33,57 @@ class TestNotebookDirectoryUnit:
         assert directory.root is mock_root
         assert directory.is_dir() is True
 
+    def test_copy_to_rolls_back_subtree_when_descendant_copy_fails(self):
+        """Test NotebookDirectory.copy_to deletes the created subtree on failure."""
+        source_dir = Mock(spec=NotebookDirectory)
+        source_dir.name = "Source Dir"
+        source_dir.is_parent_of.return_value = False
+
+        good_child = Mock()
+        failing_child = Mock()
+        failing_child.copy_to.side_effect = RuntimeError("descendant copy failed")
+        source_dir.children = [good_child, failing_child]
+
+        new_dir = Mock(spec=NotebookDirectory)
+        new_dir.id = "new-dir-id"
+
+        destination = Mock()
+        destination.create.return_value = new_dir
+
+        with pytest.raises(RuntimeError, match="descendant copy failed"):
+            NotebookDirectory.copy_to(source_dir, destination)
+
+        # Both children were copied into the newly created directory before the abort...
+        good_child.copy_to.assert_called_once_with(new_dir)
+        failing_child.copy_to.assert_called_once_with(new_dir)
+        # ...and deleting that directory cascades, rolling back the whole partial subtree.
+        new_dir.delete.assert_called_once_with()
+
+    def test_copy_to_warns_when_subtree_rollback_fails(self):
+        """Test NotebookDirectory.copy_to warns (but still re-raises) if rollback fails."""
+        source_dir = Mock(spec=NotebookDirectory)
+        source_dir.name = "Source Dir"
+        source_dir.is_parent_of.return_value = False
+
+        failing_child = Mock()
+        failing_child.copy_to.side_effect = RuntimeError("descendant copy failed")
+        source_dir.children = [failing_child]
+
+        new_dir = Mock(spec=NotebookDirectory)
+        new_dir.id = "new-dir-id"
+        new_dir.delete.side_effect = RuntimeError("delete failed")
+
+        destination = Mock()
+        destination.create.return_value = new_dir
+
+        with (
+            pytest.warns(RuntimeWarning, match="Failed to roll back"),
+            pytest.raises(RuntimeError, match="descendant copy failed"),
+        ):
+            NotebookDirectory.copy_to(source_dir, destination)
+
+        new_dir.delete.assert_called_once_with()
+
 
 class TestNotebookDirectoryIntegration:
     """Integration tests with real objects and mocked API."""
