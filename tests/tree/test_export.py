@@ -241,10 +241,20 @@ def test_write_tree_supports_a_long_windows_path(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "error", [ImportError(), ApiError("denied", 4547), ApiError("failed", 5000)]
+    "error",
+    [
+        ImportError(),
+        ApiError("denied", 4547),
+        ApiError("failed", 5000),
+        # Corrupt/unreadable backup: these previously escaped instead of
+        # falling back to the live walk.
+        RuntimeError("corrupt 7z archive"),
+        ValueError("invalid backup database"),
+        OSError("backup read failed"),
+    ],
 )
 def test_auto_falls_back_to_walk(monkeypatch, notebook: LA.Notebook, tmp_path, error):
-    """Automatic exports fall back to the API tree when backup is unavailable."""
+    """Automatic exports fall back to the API tree when the backup is unusable."""
     monkeypatch.setattr(notebook_module, "_backup_tree", Mock(side_effect=error))
     monkeypatch.setattr(notebook_module, "_walk_tree", Mock(return_value={}))
 
