@@ -84,6 +84,25 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
                     "Invalid key type. Use `str`, `Index.Id:<id>`, or `Index.Name:<name>`."
                 )
 
+    def __contains__(self, key: object) -> bool:
+        """Return whether a notebook matches the key.
+
+        Name and ID lookups are present when they resolve without raising; an
+        ``Index.Name`` lookup returns a list and is present only when that list
+        is non-empty. The default ``Mapping`` ``in`` treats every ``Index.Name``
+        slice as present because the Name branch never raises ``KeyError``.
+
+        :param key: A name string, or an ``Index.Id``/``Index.Name`` slice.
+        :returns: True if a matching notebook exists, False otherwise.
+        """
+        try:
+            result = self[key]  # type: ignore  # pyright: ignore[reportArgumentType]
+        except (KeyError, TypeError):
+            return False
+        if isinstance(result, Notebook):
+            return True
+        return len(result) > 0
+
     @override
     def __iter__(self) -> Iterator[str]:
         """Iterate over notebook names in collection order."""
