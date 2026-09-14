@@ -472,3 +472,36 @@ class TestEntriesIntegration:
             "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; metrics"
             in text_call[1]["entry_data"]
         )
+
+    def test_entries_create_json_entry_default_filenames_are_unique(
+        self, client, user: User, mock_page
+    ):
+        """Two default-filename JSON entries must not collide within one second."""
+        entries = Entries([], user, mock_page)
+
+        # Queue responses for two full create_json_entry calls
+        # (each does an attachment upload followed by a companion text entry).
+        for eid in (
+            "json_attachment_eid_1",
+            "json_text_eid_1",
+            "json_attachment_eid_2",
+            "json_text_eid_2",
+        ):
+            client.api_response = client.entries_response(client.entry_xml(eid))
+
+        entries.create_json_entry({"key": "value"})
+        entries.create_json_entry({"key": "value"})
+
+        first_attachment = client.pop_api_call()
+        _ = client.pop_api_call()  # companion text entry
+        second_attachment = client.pop_api_call()
+        _ = client.pop_api_call()  # companion text entry
+
+        assert first_attachment[0] == "entries/add_attachment"
+        assert second_attachment[0] == "entries/add_attachment"
+
+        first_name = first_attachment[1]["filename"]
+        second_name = second_attachment[1]["filename"]
+        assert first_name.startswith("uploaded_data_")
+        assert first_name.endswith(".json")
+        assert first_name != second_name
