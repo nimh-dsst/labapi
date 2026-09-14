@@ -1,6 +1,6 @@
 """Enumeration classes and data types shared across the LabArchives API client."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, TypeAlias
@@ -60,9 +60,7 @@ class NotebookInit:
     """Whether this notebook is the user's default."""
 
 
-JsonData: TypeAlias = (
-    "Sequence[JsonData] | Mapping[str, JsonData] | str | bool | int | float | None"
-)
+JsonData: TypeAlias = "list[JsonData] | tuple[JsonData, ...] | Mapping[str, JsonData] | str | bool | int | float | None"
 """
 A recursive type alias representing any data structure that can be
 serialized to or deserialized from JSON.
