@@ -7,11 +7,13 @@ from collections.abc import Iterator
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 import labapi as LA
 from labapi import Index
+from labapi.util import JsonData
 
 pytestmark = pytest.mark.integration
 
@@ -478,7 +480,9 @@ def test_paper_qc_workflow(test_env: LA.NotebookDirectory, tmp_path: Path) -> No
 
     dashboard = test_env.page("Dashboards/Cohort QC")
     dashboard.entries.create_json_entry(
-        summary,
+        # summary is list[dict[...]]; list is invariant, so cast at the API
+        # boundary (the JsonData contract is satisfied at runtime).
+        cast(JsonData, summary),
         filename="cohort_qc.json",
         caption="Cohort QC",
     )
