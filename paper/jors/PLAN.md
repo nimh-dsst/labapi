@@ -18,6 +18,9 @@ its source so it can be re-checked before submission.
   concept DOI `10.5281/zenodo.19599400`, see #301) and published on PyPI.
 - `main` carries 39 commits of fixes since the `v1.2.0` tag, which sits on the
   release line rather than on `main`.
+- A bioRxiv preprint of the JOSS-format paper is posted:
+  [10.64898/2026.09.02.748406](https://doi.org/10.64898/2026.09.02.748406)
+  (v1, 2026-09-07, CC0).
 
 ## 2. Why JORS fits
 
@@ -99,9 +102,23 @@ and [Submissions](https://openresearchsoftware.metajnl.com/about/submissions):
 - Review is single-anonymous (reviewers know the authors), so the manuscript
   is not anonymised. Decisions are accept / minor / major / reject; JORS
   expects metapapers to be publishable "after one or two rounds".
-- APC: £824 for metapapers plus tax, charged on acceptance. A discount or full
-  waiver can be requested, but only in the cover letter at submission.
-  Institutional agreements give a 10% discount.
+- APC: £824 for metapapers plus tax, charged on acceptance (checked
+  2026-09-28). Funding routes, in the order worth trying:
+  1. NIH Library APC Funding Pilot
+     (<https://www.nihlibrary.nih.gov/apc-funding>, login required). It
+     covers selected publishers free of charge for an NIH corresponding
+     author. Ubiquity Press is not named in any public snippet, so check the
+     gated publisher list while logged in.
+  2. Waiver or discount from JORS. Wording: "If you do not have funds
+     available to pay the APC (e.g., because your institution/funder will
+     not cover the fee) then we may be able to offer a discount or full
+     waiver." Requests go in the cover letter at submission and are judged
+     on financial need. No US-government-works or country exemption exists
+     for JORS; Ubiquity asks authors to try department, library and funder
+     first.
+  3. Institutional agreement with Ubiquity Press: 10% discount. No public
+     member list; no NIH or US federal institution identified.
+  4. Pay from NIMH DSST or contract funds.
 - ORCID is strongly recommended, not mandatory. Authorship follows ICMJE.
 - AI use: JORS follows the Ubiquity Press AI policy (Nov 2025). Any use beyond
   copyediting must be declared in the manuscript; AI cannot be an author. The
@@ -142,8 +159,9 @@ Ordered so decisions come first and nothing is written twice.
       patch release that includes the fixes on `main` since the tag. The
       Archive block must name one version and date; the paper text and the
       Zenodo version DOI must agree with it.
-- [ ] Decide whether to post the bioRxiv preprint before or after JORS
-      submission, and check the JORS preprint policy first (not yet verified).
+- [x] bioRxiv preprint: posted as 10.64898/2026.09.02.748406. Mention it in
+      the cover letter; JORS's preprint policy was not found on the site, so
+      state the preprint rather than assume it is fine.
 - [ ] Agree the competing-interests sentence and the funding statement with
       all four authors.
 - [ ] Pick five suggested reviewers for the cover letter (ELN integration,
