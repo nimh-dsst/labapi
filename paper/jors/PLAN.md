@@ -35,12 +35,15 @@ software, and where to find it"
 That is exactly the category JOSS said we fall outside of: useful-in-research
 infrastructure rather than research software in JOSS's narrower sense.
 
-JORS has no stated exclusion for API clients or vendor wrappers, and has
-published them: GTdownloader, "both an API wrapper and a geographic
-information pre-processing helper" for the Twitter API
-([jors.443](https://openresearchsoftware.metajnl.com/articles/10.5334/jors.443)),
-and pybeepop+, a Python interface wrapping a C++ model
-([jors.550](https://openresearchsoftware.metajnl.com/articles/10.5334/jors.550)).
+JORS has no stated exclusion for API clients or vendor wrappers. It has
+published at least one: GTdownloader, "both an API wrapper and a geographic
+information pre-processing helper" for the Twitter API, whose quality
+control tests "API transactions and data exports"
+([jors.443](https://openresearchsoftware.metajnl.com/articles/10.5334/jors.443)).
+It is not a bare client, since it also preprocesses geographic data, so it
+is a partial precedent. pybeepop+
+([jors.550](https://openresearchsoftware.metajnl.com/articles/10.5334/jors.550))
+wraps a C++ research model, not a web API, and is not a precedent here.
 
 Recent Python-library exemplars in the current format: GravDyn
 ([jors.743](https://openresearchsoftware.metajnl.com/articles/10.5334/jors.743),
