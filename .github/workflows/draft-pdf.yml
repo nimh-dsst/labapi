@@ -81,8 +81,9 @@ jobs:
           path: paper/paper.preprint.pdf
 
   # Builds the JORS software metapaper from paper/jors/jors.tex with the
-  # official JORS class. Reuses the Inara image for its TeX Live and
-  # rsvg-convert; the SVG figure is converted to PDF for pdflatex.
+  # official JORS class. The Inara image lacks sectsty, which jors.cls
+  # requires, so this job uses Ubuntu's TeX Live packages instead. The SVG
+  # figure is converted to PDF for pdflatex.
   jors:
     runs-on: ubuntu-latest
     name: JORS manuscript PDF
@@ -90,18 +91,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Compile JORS manuscript
+      - name: Install TeX Live
         run: |
-          docker run --rm -v "$PWD":/data -u "$(id -u):$(id -g)" \
-            --entrypoint /bin/sh openjournals/inara -c '
-            set -e
-            cd /data/paper/jors
-            rsvg-convert -f pdf -o ../figures/object-model.pdf ../figures/object-model.svg
-            pdflatex -interaction=nonstopmode -halt-on-error jors.tex
-            bibtex jors
-            pdflatex -interaction=nonstopmode -halt-on-error jors.tex
-            pdflatex -interaction=nonstopmode -halt-on-error jors.tex
-            ! grep -E "Citation .* undefined|Reference .* undefined" jors.log'
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-bibtex-extra librsvg2-bin
+
+      - name: Compile JORS manuscript
+        working-directory: paper/jors
+        run: |
+          rsvg-convert -f pdf -o ../figures/object-model.pdf ../figures/object-model.svg
+          pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+          bibtex jors
+          pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+          pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+          ! grep -E "Citation .* undefined|Reference .* undefined" jors.log
 
       - name: Upload JORS PDF
         uses: actions/upload-artifact@v4
