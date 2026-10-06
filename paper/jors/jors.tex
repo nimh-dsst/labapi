@@ -19,6 +19,8 @@
 
 % jors.cls sets \parindent to 0pt; separate paragraphs with space instead.
 \setlength{\parskip}{0.6em}
+% Allow extra interword stretch so unbreakable code names do not overflow.
+\setlength{\emergencystretch}{2em}
 
 \pagestyle{fancy}
 \definecolor{mygray}{gray}{0.6}
@@ -90,8 +92,7 @@ notebook one folder level per call \citep{labarchives_api}. Code that wants
 to write to QC/sub-01 has to list the top level of the notebook, find the
 QC folder by name, list that folder, find the page, and only then sign and
 send the request that adds the entry. None of the public clients in
-Table~\ref{tab:comparison} does this lookup, so each laboratory that
-automates its record-keeping has to write it.
+Table~\ref{tab:comparison} does this lookup.
 
 labapi does the lookup and the signing, and creates missing folders and
 pages on request. At NIMH, two applications are built on it: muronto records
@@ -133,17 +134,18 @@ a general Python interface to notebooks
 
 \section*{Implementation and architecture}
 
-At the bottom of labapi, the client signs each request with HMAC-SHA512
-and handles login. Above it, a user session holds the notebooks a
-researcher can open, and the tree layer models their folders and pages. Page
-content, whether rich text, headers, plain text, widgets or attachments
-(files stored as entries), is handled by the entry layer. Responses arrive as XML and are parsed with
-lxml.
+The client signs each request with HMAC-SHA512 and handles login. A user
+session lists the notebooks a researcher can open. The tree layer models
+their folders and pages, and the entry layer models what is on a page:
+rich text, headers, plain text, widgets and attachments, which are files
+stored as entries. Responses arrive as XML and are parsed with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
 interface (Figure~\ref{fig:model}); labapi's class names call folders
-directories. A folder's contents are fetched with a
-single \texttt{get\_tree\_level} call the first time code looks inside it.
+directories. A folder's contents are fetched with a single
+\texttt{get\_tree\_level} call the first time code looks inside it and are
+then cached, so changes made in the web interface during a session are not
+seen until \texttt{refresh()} reloads them.
 \texttt{dir()} and \texttt{page()} return the folder or page at a path,
 creating it and any missing parent folders if needed. \texttt{traverse()}
 follows only paths that already exist.
@@ -164,11 +166,14 @@ raises \texttt{PathError} when it is built, before any request is sent.
 Joining, resolving, containment checks and traversal all work on these
 objects.
 
-To log in, \texttt{default\_authenticate()} opens the LabArchives sign-in
-page in a browser, or prints its address, and listens on a local port for
-the redirect that carries the user's one-time authentication code. The
-access key ID and password are passed to the \texttt{Client} or read from
-environment variables or a \texttt{.env} file.
+To log in, \texttt{default\_authenticate()} opens the LabArchives login page
+in a browser, or prints its address, and listens on a local port for the
+redirect that carries the user's one-time authentication code. The access
+key ID and password are passed to the \texttt{Client} or read from
+environment variables or a \texttt{.env} file. They stay in the
+\texttt{Client}, separate from the \texttt{User} sessions it creates, so a
+shared service can keep one copy of its institution's access key and still
+open a session for each researcher who logs in.
 
 \texttt{Notebook.backup()} saves the 7-Zip archive that LabArchives itself
 produces for a whole notebook, with or without attachments.
@@ -178,20 +183,12 @@ backup.
 
 \texttt{create\_json\_entry()} stores JSON as an attachment entry that code can
 read back, and adds a formatted preview for people reviewing the page in the
-web interface. The two remain ordinary LabArchives entries, so other tools
-that read the notebook see nothing labapi-specific. Richer metadata
-schemes are left to the applications built on labapi.
-
-API credentials are held in a \texttt{Client} object, separate from the
-\texttt{User} sessions it creates. A shared service can keep one copy of
-its institution's API key on the server and still open a separate session
-for each researcher who signs in.
+web interface. The attachment and the preview are ordinary LabArchives
+entries, so other tools that read the notebook see nothing labapi-specific.
 
 API failures are raised as typed exceptions such as \texttt{ApiError} and
 \texttt{AuthenticationError}. labapi does not retry failed requests or
-handle rate limiting. A folder's contents are cached once loaded, so changes
-made in the web interface during a session are not seen until
-\texttt{refresh()} reloads them.
+handle rate limiting.
 
 \section*{Quality control}
 
@@ -199,12 +196,14 @@ The unit tests cover request signing and authentication, path parsing, tree
 navigation, entry handling, notebook backup and the bundled examples. They
 mock the network layer and need no credentials. An integration suite runs
 the same operations against a live LabArchives account and is started by
-hand. On every push and pull request, GitHub Actions runs the unit tests on
+hand. Both run with \texttt{pytest}; the integration suite is enabled with
+\texttt{--integration} and reads a LabArchives login from environment
+variables, as described in the contributing guide. On every push and pull request, GitHub Actions runs the unit tests on
 Python 3.10 to 3.14, along with Ruff lint and format checks, static type
 checking and a documentation build.
 
-The repository's examples directory contains runnable workflows with sample
-input data. The JSON
+The repository's examples directory contains five runnable workflows, three
+of them with sample input data. The JSON
 synchronisation example is the quickest check that an installation works. It
 uploads the two JSON files in its \texttt{sample\_data} folder to a notebook
 page as JSON entries, and its download command writes them back to local
@@ -212,8 +211,9 @@ files that should match the originals.
 
 A fuller example is a two-stage quality-control workflow for five subjects
 from the public OpenNeuro dataset ds000228 \citep{ds000228}, in which
-participants watched the short film Partly Cloudy. In the
-listings, \texttt{subjects} stands for the five subject identifiers, and
+participants watched the short film Partly Cloudy. The same workflow, with
+fixed values in place of the imaging calculations, runs as part of the
+integration suite. In the listings, \texttt{subjects} stands for the five subject identifiers, and
 \texttt{compute\_qc()} and \texttt{summarize()} stand for the scientific
 calculations. The first stage writes, for each subject, a group label and
 the mean DVARS, a quality-control measure of how much a functional MRI scan
@@ -231,15 +231,20 @@ for subject in subjects:
 \end{verbatim}
 }
 
-Each subject page then holds the JSON attachment followed by its preview.
-The second stage reads the first entry of every page back, produces a
-cohort summary and a figure, and writes both to a dashboard page:
+The second stage loads the JSON attachment from every subject page,
+produces a cohort summary and a figure, and writes both to a dashboard
+page:
 
 {\footnotesize
 \begin{verbatim}
 notebook = user.notebooks["Lab QC"]
-qc = notebook.traverse("Partly Cloudy QC")
-records = [json.load(page.entries[0].content) for page in qc.children]
+qc = notebook.traverse("Partly Cloudy QC").as_dir()
+records = [
+    json.load(entry.content)
+    for page in qc.children
+    for entry in page.as_page().entries
+    if isinstance(entry, labapi.AttachmentEntry)
+]
 
 summary, figure_path = summarize(records)
 dashboard = notebook.page("Dashboards/Cohort QC")
@@ -282,12 +287,12 @@ Edge.
 
 \section*{Dependencies}
 
-cryptography ($\geq$ 50), lxml ($\geq$ 6.1.1), requests ($\geq$ 2.33) and
-typing-extensions ($\geq$ 4.12.2). Optional extras: \texttt{builtin-auth}
-adds selenium ($\geq$ 4.39) and installed-browsers ($\geq$ 0.1.5) for
-browser-based login, \texttt{dotenv} adds python-dotenv ($\geq$ 1.2.1) for
+cryptography ($\geq$~50), lxml ($\geq$~6.1.1), requests ($\geq$~2.33) and
+typing-extensions ($\geq$~4.12.2). Optional extras: \texttt{builtin-auth}
+adds selenium ($\geq$~4.39) and installed-browsers ($\geq$~0.1.5) for
+browser-based login, \texttt{dotenv} adds python-dotenv ($\geq$~1.2.1) for
 loading credentials from a \texttt{.env} file, and \texttt{export} adds
-py7zr ($\geq$ 1.1.3) for unpacking notebook backups.
+py7zr ($\geq$~1.1.3) for unpacking notebook backups.
 
 \section*{List of contributors}
 
@@ -329,9 +334,9 @@ English
 
 \section*{(3) Reuse potential}
 
-Nothing in labapi is specific to neuroscience or to NIMH. A laboratory in
-another field could use the same calls to file instrument output,
-simulation results or analysis reports on the page for each experiment. A
+A laboratory in any field could use the calls shown above to file
+instrument output, simulation results or analysis reports on the page for
+each experiment. A
 core facility could schedule backups of the notebooks it manages, as the
 Systems Neuroscience Imaging Resource, an NIMH imaging core, already does.
 The backup feature was written together with that facility
@@ -348,8 +353,8 @@ Questions and bug reports go to the GitHub issue tracker, which has forms
 for bug reports and feature requests. The contributing guide covers setting
 up a development environment, running both test suites and opening a pull
 request, and contributors can also write to the corresponding author.
-Releases follow semantic versioning, as stated in the changelog. Each one is published on PyPI and
-archived on Zenodo with its own documentation.
+Releases follow semantic versioning. Each is published on PyPI and archived
+on Zenodo, with versioned documentation on GitHub Pages.
 
 \section*{Acknowledgements}
 
