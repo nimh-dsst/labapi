@@ -56,15 +56,15 @@ Bethesda, MD, USA. ORCID 0000-0002-2850-1419
 
 \section*{Abstract}
 
-Electronic lab notebooks keep experimental notes, data and results together
-as the laboratory record, but the outputs of analysis pipelines are often
-copied into them by hand. labapi is a Python library that lets pipelines read
-from and write to the LabArchives electronic lab notebook directly. It
-presents a notebook as the same tree of folders and pages that researchers
-see in the web interface, so code can address content by its notebook path
-rather than by internal identifiers. labapi is archived on Zenodo, released
-under the MIT licence and distributed on PyPI. It can be reused by any
-laboratory whose institution provides LabArchives API access.
+Researchers often copy the outputs of analysis pipelines into their
+electronic lab notebook by hand.
+labapi is a Python library that lets pipelines read from and write to the
+LabArchives notebook directly. Code names a page by the folder path a
+researcher sees in the web interface, such as Partly Cloudy QC/sub-01, and
+labapi finds or creates the matching page through the API. The library is
+released under the MIT licence, archived on Zenodo and installable from
+PyPI. To use it, a laboratory needs API credentials, which LabArchives
+issues through the institution.
 
 \section*{Keywords}
 
@@ -73,41 +73,39 @@ laboratory record-keeping; reproducibility; Python
 
 \section*{Introduction}
 
-An electronic lab notebook (ELN) is most useful when it holds the whole
-experimental record, including the outputs of analysis code. Once an output
-is added to LabArchives, it sits beside the notes and revision history that
-document the experiment \citep{labarchives}. In practice, those outputs are
-often added through the web interface by hand, one page at a time, after
-every pipeline run. LabArchives is a widely used commercial ELN and one of
-the notebooks approved for new research in the NIH Intramural Research
-Program \citep{nih_eln_policy}. It offers a web API for automating this
-transfer. The API, however, addresses pages by internal identifiers rather
-than by the notebook paths researchers use. Each laboratory that automates
-its record-keeping must therefore write its own code to resolve paths and to
-build and sign requests \citep{labarchives_api}.
+Once an output is added to a LabArchives page, it sits beside the notes and
+revision history that document the experiment \citep{labarchives}. Getting
+it there usually means opening the web interface after each pipeline run and
+uploading by hand. LabArchives is a widely used commercial electronic lab
+notebook (ELN) and one of the notebooks approved for new research in the NIH
+Intramural Research Program \citep{nih_eln_policy}. Its web API can automate
+the upload, but it identifies pages by internal tree IDs and returns a
+notebook one folder level per call \citep{labarchives_api}. Code that wants
+to write to Partly Cloudy QC/sub-01 has to list the top level of the
+notebook, find the folder by name, list that folder, find the page, and only
+then sign and send the request that adds the entry. Each laboratory that
+automates its record-keeping ends up writing this code for itself.
 
-labapi performs this work, so that workflows can be configured with notebook
-paths. Two applications built on it are used by NIMH intramural
-laboratories: muronto records neuro-behavioural experiment outputs, and
-save-my-jupyter deposits Jupyter notebook snapshots
-\citep{muronto,save_my_jupyter}. The intended users are computational
-researchers and research software engineers who work in or with laboratories
+labapi does the lookup and the signing, and creates missing folders and
+pages on request. At NIMH, two applications are built on it: muronto records
+neuro-behavioural experiment outputs, and save-my-jupyter deposits Jupyter
+notebook snapshots \citep{muronto,save_my_jupyter}. It is aimed at
+computational researchers and research software engineers in laboratories
 that use LabArchives.
 
-Benchling, RSpace and eLabFTW pair their APIs with official client libraries
-\citep{benchling_sdk,rspace_client,elabapi_python}. LabArchives publishes
-its API without an official client library. The public standalone
-LabArchives clients listed in Table~\ref{tab:comparison} do not combine path
-navigation, entry handling and attachment transfer in a single client.
-Among them, labarchives-py comes closest. Its single-module implementation
-signs arbitrary GET requests and returns raw responses, leaving researchers
-to choose endpoints, parse responses, and implement notebook navigation,
-entry handling and file transfer. Extending it would still have required
-building the notebook model and higher-level record operations, so labapi
-was developed as a separate client. Specialised integrations also exist for
-the ReDBox research data portal and for the Model Context Protocol, but
-neither provides a general-purpose, path-oriented Python interface to
-notebooks \citep{redbox_labarchives,labarchives_mcp}.
+Benchling, RSpace and eLabFTW each ship an official Python client for their
+API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives has
+none.
+None of the public standalone LabArchives clients in
+Table~\ref{tab:comparison} offers path-based access to notebooks. The
+closest, labarchives-py, is a single module that signs arbitrary GET
+requests and returns the raw responses. Choosing endpoints, parsing the XML
+and walking the tree are left to the caller. Building those on top of it
+would have meant writing the notebook model anyway, so labapi was started as
+a separate client. There are also LabArchives integrations for the ReDBox
+research data portal and for the Model Context Protocol, but neither offers
+a general Python interface to notebooks
+\citep{redbox_labarchives,labarchives_mcp}.
 
 % TODO: re-check each row against the current state of each project and
 % update the date in the caption before submission.
@@ -130,19 +128,19 @@ notebooks \citep{redbox_labarchives,labarchives_mcp}.
 
 \section*{Implementation and architecture}
 
-labapi is organised in four layers. A client signs each request with
-HMAC-SHA512 and handles authentication. A user session gives access to the
-notebooks a researcher can open. A tree layer represents notebooks, folders
-and pages, and an entry layer represents the content of a page: rich text,
-headers, plain text, attachments and widgets. LabArchives returns XML, which
-labapi parses with lxml.
+The code has four layers. At the bottom, the client signs each request with
+HMAC-SHA512 and handles login. Above it, a user session holds the notebooks a
+researcher can open, and the tree layer models their folders and pages. Page
+content, whether rich text, headers, plain text, attachments or widgets, is
+handled by the entry layer. Responses arrive as XML and are parsed with
+lxml.
 
-The tree layer mirrors the hierarchy shown in the web interface
-(Figure~\ref{fig:model}). Moving through this hierarchy is essential to
-working with a notebook but is difficult through the raw API. The helpers
-\texttt{dir()} and \texttt{page()} ensure that a folder or page exists at a
-path, returning the existing node or creating it together with any missing
-parent folders. \texttt{traverse()} resolves only paths that already exist.
+Each folder and page in the tree layer corresponds to one in the web
+interface (Figure~\ref{fig:model}). A folder's contents are fetched with a
+single \texttt{get\_tree\_level} call the first time code looks inside it.
+\texttt{dir()} and \texttt{page()} return the folder or page at a path,
+creating it and any missing parent folders if needed. \texttt{traverse()}
+follows only paths that already exist.
 
 \begin{figure}[htbp]
     \centering
@@ -152,12 +150,10 @@ parent folders. \texttt{traverse()} resolves only paths that already exist.
     \label{fig:model}
 \end{figure}
 
-The design follows the principle ``parse, don't validate''
-\citep{king2019parse}. labapi parses notebook-path strings into canonical
-\texttt{NotebookPath} objects, which keep track of path segments and of
-whether a path is absolute or relative. All composition, resolution,
-containment checks and tree traversal operate on these objects rather than
-on raw strings.
+Path strings are parsed once, following Alexis King's ``parse, don't
+validate'' \citep{king2019parse}, into \texttt{NotebookPath} objects that
+record their segments and whether they are absolute or relative. Joining,
+resolving, containment checks and traversal all work on these objects.
 
 \texttt{create\_json\_entry()} stores JSON as an attachment that code can
 read back, and adds a formatted preview for people reviewing the page in the
@@ -165,24 +161,21 @@ web interface. A library-level meta-entry that grouped the two was
 considered. It would have broken the direct correspondence between labapi
 objects and native LabArchives entries, and other tools would then have
 needed extra bookkeeping entries to preserve the grouping. Richer metadata
-schemes were therefore left to higher-level applications.
+schemes are left to the applications built on labapi.
 
-Applications built on labapi may serve more than one researcher. API
-credentials are therefore held in a \texttt{Client} object that is separate
-from each \texttt{User} session, so a central application can hold several
-sessions without distributing the credentials.
+API credentials are held in a \texttt{Client} object, separate from the
+\texttt{User} sessions it creates. One service can hold sessions for
+several researchers without handing out the credentials.
 
 \section*{Quality control}
 
-labapi is tested at two levels. A unit-test suite covers request signing and
-authentication, path parsing, tree navigation, entry handling, notebook
-backup and the bundled example applications. It replaces the network layer
-with mocks, so it needs no credentials. A separate integration suite runs
-the same operations against a live LabArchives account. It is run on demand,
-because it requires institutional API credentials. GitHub Actions runs the
-unit tests on every push and pull request on Python 3.10 to 3.14, together
-with Ruff lint and format checks, static type checking and a documentation
-build.
+The unit tests cover request signing and authentication, path parsing, tree
+navigation, entry handling, notebook backup and the bundled examples. They
+mock the network layer and need no credentials. An integration suite runs
+the same operations against a live LabArchives account and is started by
+hand. On every push and pull request, GitHub Actions runs the unit tests on
+Python 3.10 to 3.14, along with Ruff lint and format checks, static type
+checking and a documentation build.
 
 The repository's examples directory contains runnable workflows with sample
 input data, and each example is covered by the unit tests. The JSON
@@ -191,9 +184,8 @@ uploads the two JSON files in its \texttt{sample\_data} folder to a notebook
 page as JSON entries, and its download command writes them back to local
 files that should match the originals.
 
-The following workflow shows the read-and-write pattern the examples share.
-A researcher adds labapi to a two-stage quality-control workflow for five
-subjects from the public OpenNeuro dataset ds000228 \citep{ds000228}. In the
+A fuller example is a two-stage quality-control workflow for five subjects
+from the public OpenNeuro dataset ds000228 \citep{ds000228}. In the
 listings, \texttt{subjects} stands for the five subject identifiers, and
 \texttt{compute\_qc()} and \texttt{summarize()} stand for the scientific
 calculations. The first stage writes, for each subject, a group label and
@@ -307,37 +299,25 @@ English
 
 \section*{(3) Reuse potential}
 
-labapi can be reused by any laboratory, core facility or research software
-engineer whose institution uses LabArchives and provides API credentials.
-Typical uses are depositing pipeline outputs into the laboratory record,
-reading earlier results back for later stages of analysis, and backing up
-or exporting notebooks. The use is not tied to a scientific field: any
-workflow that produces files or structured results can record them in the
-notebook page that documents the experiment.
+In the work described here, labapi writes pipeline outputs to the page that
+documents an experiment, reads them back for a later analysis stage, and
+backs up whole notebooks. Nothing in labapi is specific to neuroscience.
 
-Applications can be built on labapi's object model rather than on the raw
-API. Two such applications are in use at the National Institute of Mental
-Health: muronto records neuro-behavioural experiment outputs, and
-save-my-jupyter deposits Jupyter notebook snapshots
-\citep{muronto,save_my_jupyter}. The Systems Neuroscience Imaging Resource,
-an NIMH core facility that provides imaging and image-analysis support to
-intramural investigators, uses labapi to back up its notebooks
-automatically. Its notebook-backup support was developed with that facility
-\citep{labapi_issue_264}. The repository's examples show further patterns
-that can be adapted, including uploading CSV files as formatted tables and
-downloading them back, synchronising a folder of JSON files with a page,
-downloading a folder, and logging model runs.
+The Systems Neuroscience Imaging Resource, an NIMH core facility for imaging
+and image analysis, backs up its notebooks with labapi, and the backup
+feature was written together with that facility \citep{labapi_issue_264}.
+Developers can build on the object model in the same way muronto and
+save-my-jupyter do. The repository's examples are starting points for
+common tasks: uploading CSV files as formatted tables and downloading them
+again, keeping a folder of JSON files in sync with a page, downloading a
+folder, and logging model runs.
 
-Support is provided through the GitHub issue tracker, which offers forms for
-bug reports and feature requests. The contributing guide describes how to
-set up a development environment, run the unit and integration tests, and
-submit changes through pull requests; contributors can also contact the
-corresponding author. Documentation is published for each release, and each
-release is distributed through PyPI and archived on Zenodo.
-
-labapi is limited to the operations that the LabArchives API exposes, and it
-cannot be used without API credentials issued by LabArchives through the
-user's institution.
+Questions and bug reports go to the GitHub issue tracker, which has forms
+for bug reports and feature requests. The contributing guide covers setting
+up a development environment, running both test suites and opening a pull
+request, and contributors can also write to the corresponding author. Each
+release has its own documentation and is published on PyPI and archived on
+Zenodo.
 
 \section*{Acknowledgements}
 
