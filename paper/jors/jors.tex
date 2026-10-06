@@ -104,7 +104,7 @@ that use LabArchives.
 Benchling, RSpace and eLabFTW each ship an official Python client for their
 API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives
 publishes none. Of the standalone clients, the closest to labapi is
-labarchives-py, a single module that signs arbitrary GET
+labarchives-py \citep{mcmero}, a single module that signs arbitrary GET
 requests and returns the raw responses. Choosing endpoints, parsing the XML
 and walking the tree are left to the caller. Building those on top of it
 would have meant writing the notebook model anyway, so labapi was started as
@@ -127,7 +127,7 @@ a general Python interface to notebooks
 		labapi & General Python client & Yes \\
 		labarchives-py \citep{mcmero} & Signed generic GET-call wrapper & No \\
 		labarchives-js \citep{marcellofuschi} & Login, image-entry search, attachment URLs & No \\
-		labarchives-client \citep{alaninmcr} & Unmaintained; no released functionality & No \\
+		labarchives-client \citep{alaninmcr} & Repository only; nothing released & No \\
 		\hline
 	\end{tabular}
 \end{table}
@@ -137,12 +137,12 @@ a general Python interface to notebooks
 The client signs each request with HMAC-SHA512 and handles login. A user
 session lists the notebooks a researcher can open. The tree layer models
 their folders and pages, and the entry layer models what is on a page:
-rich text, headers, plain text, widgets and attachments, which are files
-stored as entries. Responses arrive as XML and are parsed with lxml.
+rich text, headers, plain text, widgets and file attachments. Responses
+arrive as XML and are parsed with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
-interface (Figure~\ref{fig:model}); labapi's class names call folders
-directories. A folder's contents are fetched with a single
+interface (Figure~\ref{fig:model}). labapi calls folders directories, as in
+\texttt{NotebookDirectory} and \texttt{dir()}. A folder's contents are fetched with a single
 \texttt{get\_tree\_level} call the first time code looks inside it and are
 then cached, so changes made in the web interface during a session are not
 seen until \texttt{refresh()} reloads them.
@@ -175,20 +175,21 @@ environment variables or a \texttt{.env} file. They stay in the
 shared service can keep one copy of its institution's access key and still
 open a session for each researcher who logs in.
 
-\texttt{Notebook.backup()} saves the 7-Zip archive that LabArchives itself
-produces for a whole notebook, with or without attachments.
-\texttt{Notebook.export()} writes a notebook to disk as a folder tree with
-one file per entry, built either by walking the API or by unpacking a
-backup.
+A whole notebook can be saved with \texttt{Notebook.backup()}, which
+downloads the 7-Zip archive that LabArchives itself produces, with or
+without attachments. \texttt{Notebook.export()} instead writes the notebook
+to disk as a folder tree with one file per entry, built either by walking
+the API or by unpacking a backup.
 
-\texttt{create\_json\_entry()} stores JSON as an attachment entry that code can
-read back, and adds a formatted preview for people reviewing the page in the
-web interface. The attachment and the preview are ordinary LabArchives
-entries, so other tools that read the notebook see nothing labapi-specific.
+Structured results go through \texttt{create\_json\_entry()}, which stores
+the JSON as an attachment that code can read back and adds a formatted
+preview for people reviewing the page in the web interface. Both are
+ordinary LabArchives entries, so other tools that read the notebook see
+nothing labapi-specific.
 
-API failures are raised as typed exceptions such as \texttt{ApiError} and
-\texttt{AuthenticationError}. labapi does not retry failed requests or
-handle rate limiting.
+Errors returned by the API raise typed exceptions, such as
+\texttt{ApiError} and \texttt{AuthenticationError}. labapi does not retry
+failed requests or handle rate limiting.
 
 \section*{Quality control}
 
@@ -211,15 +212,15 @@ files that should match the originals.
 
 A fuller example is a two-stage quality-control workflow for five subjects
 from the public OpenNeuro dataset ds000228 \citep{ds000228}, in which
-participants watched the short film Partly Cloudy. The same workflow, with
-fixed values in place of the imaging calculations, runs as part of the
-integration suite. In the listings, \texttt{subjects} stands for the five subject identifiers, and
+participants watched the short film Partly Cloudy. The first stage writes,
+for each subject, the subject's group (child or adult) and mean DVARS, a
+quality-control measure of how much a functional MRI scan changes between
+successive time points \citep{power2012dvars}. It creates or reuses one
+page per subject in a Partly Cloudy QC folder. In the listings,
+\texttt{subjects} stands for the five subject identifiers, and
 \texttt{compute\_qc()} and \texttt{summarize()} stand for the scientific
-calculations. The first stage writes, for each subject, a group label and
-the mean DVARS, a quality-control measure of how much a functional MRI scan
-changes between successive time points \citep{power2012dvars}. It creates or
-reuses one page per subject in a Partly Cloudy QC folder, which holds
-nothing else:
+calculations. The same workflow, with fixed values in place of those
+calculations, runs as part of the integration suite.
 
 {\footnotesize
 \begin{verbatim}
@@ -231,9 +232,11 @@ for subject in subjects:
 \end{verbatim}
 }
 
-The second stage loads the JSON attachment from every subject page,
-produces a cohort summary and a figure, and writes both to a dashboard
-page:
+The second stage opens the folder with \texttt{traverse()}, which finds it
+without creating anything. Because the folder holds only the subject pages,
+every child can be read as a page. The stage loads the JSON attachment from
+each one, produces a cohort summary and a figure, and writes both to a
+dashboard page:
 
 {\footnotesize
 \begin{verbatim}
@@ -270,8 +273,9 @@ The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 
 \section*{Operating system}
 
-Platform-independent (pure Python). Continuous integration runs on Ubuntu
-24.04. labapi is also used on Windows 11. Windows and macOS are not covered
+Platform-independent (pure Python). Continuous integration runs on GitHub's
+current Ubuntu runner, Ubuntu 24.04 at the time of writing. labapi is also
+used on Windows 11. Windows and macOS are not covered
 by automated tests.
 
 \section*{Programming language}
@@ -342,10 +346,10 @@ Systems Neuroscience Imaging Resource, an NIMH imaging core, already does.
 The backup feature was written together with that facility
 \citep{labapi_issue_264}.
 
-The repository's examples are starting points for common tasks, among them
-uploading CSV files as formatted tables and downloading them again, keeping
-a folder of JSON files in sync with a page, and logging model runs. To
-support a LabArchives entry type that labapi does not yet
+Besides JSON synchronisation, the repository's examples cover uploading CSV
+files as formatted tables, downloading folders, logging model runs and
+logging from Jupyter notebooks, and each can be adapted as a starting
+point. To support a LabArchives entry type that labapi does not yet
 cover, a developer subclasses \texttt{Entry} with the type's name as a class
 keyword, and the new class registers itself for dispatch.
 
