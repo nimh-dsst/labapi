@@ -201,6 +201,7 @@ the mean DVARS, a quality-control measure of how much a functional MRI scan
 changes between successive time points \citep{power2012dvars}. It creates or
 reuses one page per subject in an existing notebook:
 
+{\footnotesize
 \begin{verbatim}
 user = labapi.Client().default_authenticate()
 qc = user.notebooks["Lab QC"].dir("Partly Cloudy QC")
@@ -208,10 +209,12 @@ qc = user.notebooks["Lab QC"].dir("Partly Cloudy QC")
 for subject in subjects:
     qc.page(f"sub-{subject}").entries.create_json_entry(compute_qc(subject))
 \end{verbatim}
+}
 
 The second stage reads the stored values back, produces a cohort summary and
 a figure, and writes both to a dashboard page:
 
+{\footnotesize
 \begin{verbatim}
 notebook = user.notebooks["Lab QC"]
 qc = notebook.traverse("Partly Cloudy QC")
@@ -224,6 +227,7 @@ dashboard.entries.create_json_entry(summary)
 attachment = labapi.Attachment.from_file(figure_path)
 dashboard.entries.create(labapi.AttachmentEntry, attachment)
 \end{verbatim}
+}
 
 The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 
