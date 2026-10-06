@@ -95,16 +95,15 @@ automates its record-keeping has to write it.
 
 labapi does the lookup and the signing, and creates missing folders and
 pages on request. At NIMH, two applications are built on it: muronto records
-the outputs of neuro-behavioural experiments, and save-my-jupyter deposits
+the outputs of behavioural neuroscience experiments, and save-my-jupyter deposits
 Jupyter notebook snapshots \citep{muronto,save_my_jupyter}. It is aimed at
 computational researchers and research software engineers in laboratories
 that use LabArchives.
 
 Benchling, RSpace and eLabFTW each ship an official Python client for their
 API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives
-publishes none. Of the public standalone LabArchives clients in
-Table~\ref{tab:comparison}, the closest to labapi is labarchives-py, a single
-module that signs arbitrary GET
+publishes none. Of the standalone clients, the closest to labapi is
+labarchives-py, a single module that signs arbitrary GET
 requests and returns the raw responses. Choosing endpoints, parsing the XML
 and walking the tree are left to the caller. Building those on top of it
 would have meant writing the notebook model anyway, so labapi was started as
@@ -134,11 +133,11 @@ a general Python interface to notebooks
 
 \section*{Implementation and architecture}
 
-The code has four layers. At the bottom, the client signs each request with
-HMAC-SHA512 and handles login. Above it, a user session holds the notebooks a
+At the bottom of labapi, the client signs each request with HMAC-SHA512
+and handles login. Above it, a user session holds the notebooks a
 researcher can open, and the tree layer models their folders and pages. Page
-content, whether rich text, headers, plain text, attachments or widgets, is
-handled by the entry layer. Responses arrive as XML and are parsed with
+content, whether rich text, headers, plain text, widgets or attachments
+(files stored as entries), is handled by the entry layer. Responses arrive as XML and are parsed with
 lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
@@ -177,17 +176,22 @@ produces for a whole notebook, with or without attachments.
 one file per entry, built either by walking the API or by unpacking a
 backup.
 
-\texttt{create\_json\_entry()} stores JSON as an attachment that code can
+\texttt{create\_json\_entry()} stores JSON as an attachment entry that code can
 read back, and adds a formatted preview for people reviewing the page in the
 web interface. The two remain ordinary LabArchives entries, so other tools
-that read the notebook see nothing labapi-specific. A combined meta-entry
-was considered and rejected for that reason, and richer metadata schemes
-are left to the applications built on labapi.
+that read the notebook see nothing labapi-specific. Richer metadata
+schemes are left to the applications built on labapi.
 
 API credentials are held in a \texttt{Client} object, separate from the
 \texttt{User} sessions it creates. A shared service can keep one copy of
 its institution's API key on the server and still open a separate session
 for each researcher who signs in.
+
+API failures are raised as typed exceptions such as \texttt{ApiError} and
+\texttt{AuthenticationError}. labapi does not retry failed requests or
+handle rate limiting. A folder's contents are cached once loaded, so changes
+made in the web interface during a session are not seen until
+\texttt{refresh()} reloads them.
 
 \section*{Quality control}
 
@@ -207,13 +211,15 @@ page as JSON entries, and its download command writes them back to local
 files that should match the originals.
 
 A fuller example is a two-stage quality-control workflow for five subjects
-from the public OpenNeuro dataset ds000228 \citep{ds000228}. In the
+from the public OpenNeuro dataset ds000228 \citep{ds000228}, in which
+participants watched the short film Partly Cloudy. In the
 listings, \texttt{subjects} stands for the five subject identifiers, and
 \texttt{compute\_qc()} and \texttt{summarize()} stand for the scientific
 calculations. The first stage writes, for each subject, a group label and
 the mean DVARS, a quality-control measure of how much a functional MRI scan
 changes between successive time points \citep{power2012dvars}. It creates or
-reuses one page per subject in an existing notebook:
+reuses one page per subject in a Partly Cloudy QC folder, which holds
+nothing else:
 
 {\footnotesize
 \begin{verbatim}
@@ -323,31 +329,26 @@ English
 
 \section*{(3) Reuse potential}
 
-In the work described here, labapi writes pipeline outputs to the page that
-documents an experiment, reads them back for a later analysis stage, and
-backs up whole notebooks. Nothing in labapi is specific to neuroscience.
+Nothing in labapi is specific to neuroscience or to NIMH. A laboratory in
+another field could use the same calls to file instrument output,
+simulation results or analysis reports on the page for each experiment. A
+core facility could schedule backups of the notebooks it manages, as the
+Systems Neuroscience Imaging Resource, an NIMH imaging core, already does.
+The backup feature was written together with that facility
+\citep{labapi_issue_264}.
 
-The Systems Neuroscience Imaging Resource, an NIMH core facility for imaging
-and image analysis, backs up its notebooks with labapi, and the backup
-feature was written together with that facility \citep{labapi_issue_264}.
 The repository's examples are starting points for common tasks, among them
 uploading CSV files as formatted tables and downloading them again, keeping
-a folder of JSON files in sync with a page, and logging model runs.
-Applications such as muronto and save-my-jupyter use the object model
-directly. To support a LabArchives entry type that labapi does not yet
+a folder of JSON files in sync with a page, and logging model runs. To
+support a LabArchives entry type that labapi does not yet
 cover, a developer subclasses \texttt{Entry} with the type's name as a class
 keyword, and the new class registers itself for dispatch.
-
-labapi does not retry failed requests or handle rate limiting. A folder's
-contents are cached once loaded, so changes made in the web interface
-during a session are not seen until \texttt{refresh()} reloads them. API failures are raised as typed exceptions such
-as \texttt{ApiError} and \texttt{AuthenticationError}.
 
 Questions and bug reports go to the GitHub issue tracker, which has forms
 for bug reports and feature requests. The contributing guide covers setting
 up a development environment, running both test suites and opening a pull
 request, and contributors can also write to the corresponding author.
-Releases follow semantic versioning. Each one is published on PyPI and
+Releases follow semantic versioning, as stated in the changelog. Each one is published on PyPI and
 archived on Zenodo with its own documentation.
 
 \section*{Acknowledgements}
