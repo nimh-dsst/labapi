@@ -222,7 +222,7 @@ page per subject in a Partly Cloudy QC folder. In the listings,
 calculations. The same workflow, with fixed values in place of those
 calculations, runs as part of the integration suite.
 
-{\footnotesize
+{\footnotesize\noindent\begin{minipage}{\linewidth}
 \begin{verbatim}
 user = labapi.Client().default_authenticate()
 qc = user.notebooks["Lab QC"].dir("Partly Cloudy QC")
@@ -230,7 +230,7 @@ qc = user.notebooks["Lab QC"].dir("Partly Cloudy QC")
 for subject in subjects:
     qc.page(f"sub-{subject}").entries.create_json_entry(compute_qc(subject))
 \end{verbatim}
-}
+\end{minipage}}
 
 The second stage opens the folder with \texttt{traverse()}, which finds it
 without creating anything. Because the folder holds only the subject pages,
@@ -238,7 +238,7 @@ every child can be read as a page. The stage loads the JSON attachment from
 each one, produces a cohort summary and a figure, and writes both to a
 dashboard page:
 
-{\footnotesize
+{\footnotesize\noindent\begin{minipage}{\linewidth}
 \begin{verbatim}
 notebook = user.notebooks["Lab QC"]
 qc = notebook.traverse("Partly Cloudy QC").as_dir()
@@ -256,7 +256,7 @@ dashboard.entries.create_json_entry(summary)
 attachment = labapi.Attachment.from_file(figure_path)
 dashboard.entries.create(labapi.AttachmentEntry, attachment)
 \end{verbatim}
-}
+\end{minipage}}
 
 The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 
