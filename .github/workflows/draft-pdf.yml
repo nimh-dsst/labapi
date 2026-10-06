@@ -96,7 +96,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             texlive-latex-recommended texlive-latex-extra \
-            texlive-fonts-recommended texlive-bibtex-extra librsvg2-bin
+            texlive-fonts-recommended texlive-bibtex-extra librsvg2-bin \
+            poppler-utils
 
       - name: Compile JORS manuscript
         working-directory: paper/jors
@@ -107,9 +108,14 @@ jobs:
           pdflatex -interaction=nonstopmode -halt-on-error jors.tex
           pdflatex -interaction=nonstopmode -halt-on-error jors.tex
           ! grep -E "Citation .* undefined|Reference .* undefined" jors.log
+          # Page previews for reviewing layout without a local TeX install.
+          mkdir -p pages
+          pdftoppm -r 70 -png jors.pdf pages/page
 
       - name: Upload JORS PDF
         uses: actions/upload-artifact@v4
         with:
           name: jors
-          path: paper/jors/jors.pdf
+          path: |
+            paper/jors/jors.pdf
+            paper/jors/pages/
