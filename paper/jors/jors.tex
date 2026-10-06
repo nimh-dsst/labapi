@@ -13,10 +13,17 @@
 % order of first citation.
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage{graphicx}
+% Let long URLs break anywhere, and show links without coloured boxes.
+\usepackage{xurl}
+\hypersetup{hidelinks}
+
+% jors.cls sets \parindent to 0pt; separate paragraphs with space instead.
+\setlength{\parskip}{0.6em}
 
 \pagestyle{fancy}
 \definecolor{mygray}{gray}{0.6}
 \renewcommand\headrule{}
+\lhead{}
 \rhead{\textcolor{gray}{labapi: JORS software metapaper}}
 
 \begin{document}
@@ -56,15 +63,14 @@ Bethesda, MD, USA. ORCID 0000-0002-2850-1419
 
 \section*{Abstract}
 
-Researchers often copy the outputs of analysis pipelines into their
-electronic lab notebook by hand.
-labapi is a Python library that lets pipelines read from and write to the
+Without an API client, the outputs of analysis pipelines reach an
+electronic lab notebook only when a researcher uploads them by hand. labapi
+is a Python library that lets pipelines read from and write to the
 LabArchives notebook directly. Code names a page by the folder path a
-researcher sees in the web interface, such as Partly Cloudy QC/sub-01, and
-labapi finds or creates the matching page through the API. The library is
-released under the MIT licence, archived on Zenodo and installable from
-PyPI. To use it, a laboratory needs API credentials, which LabArchives
-issues through the institution.
+researcher sees in the web interface, such as QC/sub-01, and labapi finds or
+creates the matching page through the API. The library is released under
+the MIT licence, archived on Zenodo and installable from PyPI. It needs API
+credentials, which LabArchives issues to the user's institution on request.
 
 \section*{Keywords}
 
@@ -73,32 +79,32 @@ laboratory record-keeping; reproducibility; Python
 
 \section*{Introduction}
 
-Once an output is added to a LabArchives page, it sits beside the notes and
-revision history that document the experiment \citep{labarchives}. Getting
-it there usually means opening the web interface after each pipeline run and
-uploading by hand. LabArchives is a widely used commercial electronic lab
-notebook (ELN) and one of the notebooks approved for new research in the NIH
-Intramural Research Program \citep{nih_eln_policy}. Its web API can automate
-the upload, but it identifies pages by internal tree IDs and returns a
+LabArchives is a commercial electronic lab notebook (ELN) and one of the
+notebooks approved for new research in the NIH Intramural Research Program
+\citep{labarchives,nih_eln_policy}. An output added to a LabArchives page
+sits beside the notes and revision history that document the experiment,
+but getting it there from a pipeline means opening the web interface after
+each run and uploading by hand. The LabArchives web API can automate the
+upload. It identifies pages by internal tree IDs, however, and returns a
 notebook one folder level per call \citep{labarchives_api}. Code that wants
-to write to Partly Cloudy QC/sub-01 has to list the top level of the
-notebook, find the folder by name, list that folder, find the page, and only
-then sign and send the request that adds the entry. Each laboratory that
-automates its record-keeping ends up writing this code for itself.
+to write to QC/sub-01 has to list the top level of the notebook, find the
+QC folder by name, list that folder, find the page, and only then sign and
+send the request that adds the entry. None of the public clients in
+Table~\ref{tab:comparison} does this lookup, so each laboratory that
+automates its record-keeping has to write it.
 
 labapi does the lookup and the signing, and creates missing folders and
 pages on request. At NIMH, two applications are built on it: muronto records
-neuro-behavioural experiment outputs, and save-my-jupyter deposits Jupyter
-notebook snapshots \citep{muronto,save_my_jupyter}. It is aimed at
+the outputs of neuro-behavioural experiments, and save-my-jupyter deposits
+Jupyter notebook snapshots \citep{muronto,save_my_jupyter}. It is aimed at
 computational researchers and research software engineers in laboratories
 that use LabArchives.
 
 Benchling, RSpace and eLabFTW each ship an official Python client for their
-API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives has
-none.
-None of the public standalone LabArchives clients in
-Table~\ref{tab:comparison} offers path-based access to notebooks. The
-closest, labarchives-py, is a single module that signs arbitrary GET
+API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives
+publishes none. Of the public standalone LabArchives clients in
+Table~\ref{tab:comparison}, the closest to labapi is labarchives-py, a single
+module that signs arbitrary GET
 requests and returns the raw responses. Choosing endpoints, parsing the XML
 and walking the tree are left to the caller. Building those on top of it
 would have meant writing the notebook model anyway, so labapi was started as
@@ -114,9 +120,9 @@ a general Python interface to notebooks
 	\caption{Public standalone LabArchives clients, checked 20 August 2026.}
 	\label{tab:comparison}
 	\small
-	\begin{tabular}{lp{5.5cm}p{2.6cm}}
+	\begin{tabular}{lp{6.2cm}l}
 		\hline
-		\textbf{Project} & \textbf{What it provides} & \textbf{Navigable notebook objects} \\
+		\textbf{Project} & \textbf{What it provides} & \textbf{Path navigation} \\
 		\hline
 		labapi & General Python client & Yes \\
 		labarchives-py \citep{mcmero} & Signed generic GET-call wrapper & No \\
@@ -136,7 +142,8 @@ handled by the entry layer. Responses arrive as XML and are parsed with
 lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
-interface (Figure~\ref{fig:model}). A folder's contents are fetched with a
+interface (Figure~\ref{fig:model}); labapi's class names call folders
+directories. A folder's contents are fetched with a
 single \texttt{get\_tree\_level} call the first time code looks inside it.
 \texttt{dir()} and \texttt{page()} return the folder or page at a path,
 creating it and any missing parent folders if needed. \texttt{traverse()}
@@ -144,7 +151,7 @@ follows only paths that already exist.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.64\textwidth]{../figures/object-model}
+    \includegraphics[width=0.9\textwidth]{../figures/object-model}
     \caption{The LabArchives notebook hierarchy and the corresponding labapi
     objects.}
     \label{fig:model}
@@ -152,20 +159,35 @@ follows only paths that already exist.
 
 Path strings are parsed once, following Alexis King's ``parse, don't
 validate'' \citep{king2019parse}, into \texttt{NotebookPath} objects that
-record their segments and whether they are absolute or relative. Joining,
-resolving, containment checks and traversal all work on these objects.
+record their segments and whether they are absolute or relative. A slash
+inside a name is written as \texttt{\textbackslash/}, and a malformed path
+raises \texttt{PathError} when it is built, before any request is sent.
+Joining, resolving, containment checks and traversal all work on these
+objects.
+
+To log in, \texttt{default\_authenticate()} opens the LabArchives sign-in
+page in a browser, or prints its address, and listens on a local port for
+the redirect that carries the user's one-time authentication code. The
+access key ID and password are passed to the \texttt{Client} or read from
+environment variables or a \texttt{.env} file.
+
+\texttt{Notebook.backup()} saves the 7-Zip archive that LabArchives itself
+produces for a whole notebook, with or without attachments.
+\texttt{Notebook.export()} writes a notebook to disk as a folder tree with
+one file per entry, built either by walking the API or by unpacking a
+backup.
 
 \texttt{create\_json\_entry()} stores JSON as an attachment that code can
 read back, and adds a formatted preview for people reviewing the page in the
-web interface. A library-level meta-entry that grouped the two was
-considered. It would have broken the direct correspondence between labapi
-objects and native LabArchives entries, and other tools would then have
-needed extra bookkeeping entries to preserve the grouping. Richer metadata
-schemes are left to the applications built on labapi.
+web interface. The two remain ordinary LabArchives entries, so other tools
+that read the notebook see nothing labapi-specific. A combined meta-entry
+was considered and rejected for that reason, and richer metadata schemes
+are left to the applications built on labapi.
 
 API credentials are held in a \texttt{Client} object, separate from the
-\texttt{User} sessions it creates. One service can hold sessions for
-several researchers without handing out the credentials.
+\texttt{User} sessions it creates. A shared service can keep one copy of
+its institution's API key on the server and still open a separate session
+for each researcher who signs in.
 
 \section*{Quality control}
 
@@ -178,7 +200,7 @@ Python 3.10 to 3.14, along with Ruff lint and format checks, static type
 checking and a documentation build.
 
 The repository's examples directory contains runnable workflows with sample
-input data, and each example is covered by the unit tests. The JSON
+input data. The JSON
 synchronisation example is the quickest check that an installation works. It
 uploads the two JSON files in its \texttt{sample\_data} folder to a notebook
 page as JSON entries, and its download command writes them back to local
@@ -203,8 +225,9 @@ for subject in subjects:
 \end{verbatim}
 }
 
-The second stage reads the stored values back, produces a cohort summary and
-a figure, and writes both to a dashboard page:
+Each subject page then holds the JSON attachment followed by its preview.
+The second stage reads the first entry of every page back, produces a
+cohort summary and a figure, and writes both to a dashboard page:
 
 {\footnotesize
 \begin{verbatim}
@@ -237,8 +260,8 @@ The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 \section*{Operating system}
 
 Platform-independent (pure Python). Continuous integration runs on Ubuntu
-24.04. labapi is also used on Windows 11 and is expected to run on macOS,
-but these platforms are not covered by automated tests.
+24.04. labapi is also used on Windows 11. Windows and macOS are not covered
+by automated tests.
 
 \section*{Programming language}
 
@@ -254,15 +277,16 @@ Edge.
 \section*{Dependencies}
 
 cryptography ($\geq$ 50), lxml ($\geq$ 6.1.1), requests ($\geq$ 2.33) and
-typing-extensions. Optional extras: \texttt{builtin-auth} adds selenium and
-installed-browsers for browser-based login, and \texttt{dotenv} adds
-python-dotenv for loading credentials from a \texttt{.env} file.
+typing-extensions ($\geq$ 4.12.2). Optional extras: \texttt{builtin-auth}
+adds selenium ($\geq$ 4.39) and installed-browsers ($\geq$ 0.1.5) for
+browser-based login, \texttt{dotenv} adds python-dotenv ($\geq$ 1.2.1) for
+loading credentials from a \texttt{.env} file, and \texttt{export} adds
+py7zr ($\geq$ 1.1.3) for unpacking notebook backups.
 
 \section*{List of contributors}
 
-Christoph Li (lead developer and maintainer); Josh Lawrimore (concept, code
-and code review); Adam G. Thomas (code); Dustin Moraczewski (project
-direction). Affiliations are given above.
+All contributors to the software are authors of this paper; their roles and
+affiliations are given above.
 
 \section*{Software location:}
 
@@ -306,18 +330,25 @@ backs up whole notebooks. Nothing in labapi is specific to neuroscience.
 The Systems Neuroscience Imaging Resource, an NIMH core facility for imaging
 and image analysis, backs up its notebooks with labapi, and the backup
 feature was written together with that facility \citep{labapi_issue_264}.
-Developers can build on the object model in the same way muronto and
-save-my-jupyter do. The repository's examples are starting points for
-common tasks: uploading CSV files as formatted tables and downloading them
-again, keeping a folder of JSON files in sync with a page, downloading a
-folder, and logging model runs.
+The repository's examples are starting points for common tasks, among them
+uploading CSV files as formatted tables and downloading them again, keeping
+a folder of JSON files in sync with a page, and logging model runs.
+Applications such as muronto and save-my-jupyter use the object model
+directly. To support a LabArchives entry type that labapi does not yet
+cover, a developer subclasses \texttt{Entry} with the type's name as a class
+keyword, and the new class registers itself for dispatch.
+
+labapi does not retry failed requests or handle rate limiting. A folder's
+contents are cached once loaded, so changes made in the web interface
+during a session are not seen until \texttt{refresh()} reloads them. API failures are raised as typed exceptions such
+as \texttt{ApiError} and \texttt{AuthenticationError}.
 
 Questions and bug reports go to the GitHub issue tracker, which has forms
 for bug reports and feature requests. The contributing guide covers setting
 up a development environment, running both test suites and opening a pull
-request, and contributors can also write to the corresponding author. Each
-release has its own documentation and is published on PyPI and archived on
-Zenodo.
+request, and contributors can also write to the corresponding author.
+Releases follow semantic versioning. Each one is published on PyPI and
+archived on Zenodo with its own documentation.
 
 \section*{Acknowledgements}
 
@@ -333,7 +364,7 @@ products or organisations does not imply endorsement by the U.S. Government.
 % Acknowledgements, following GravDyn (JORS 2026). TODO: re-read the policy
 % before submission.
 Generative AI was used in developing the software and preparing this paper.
-The authors designed labapi's foundational architecture and implemented its
+The authors designed labapi's architecture and implemented its
 core. AI tools subsequently assisted with development, testing, maintenance,
 release work, documentation and manuscript preparation: they generated code,
 contributed to tests, opened pull requests and issues, and drafted and
@@ -359,7 +390,9 @@ under Contract No.\ 75N91019D00024.
 The authors declare that they have no competing interests.
 
 \bibliographystyle{unsrtnat}
+{\raggedright
 \bibliography{../paper}
+}
 
 \vspace{2cm}
 
