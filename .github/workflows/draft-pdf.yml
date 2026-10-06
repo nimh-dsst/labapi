@@ -79,3 +79,32 @@ jobs:
         with:
           name: preprint
           path: paper/paper.preprint.pdf
+
+  # Builds the JORS software metapaper from paper/jors/jors.tex with the
+  # official JORS class. Reuses the Inara image for its TeX Live and
+  # rsvg-convert; the SVG figure is converted to PDF for pdflatex.
+  jors:
+    runs-on: ubuntu-latest
+    name: JORS manuscript PDF
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile JORS manuscript
+        run: |
+          docker run --rm -v "$PWD":/data -u "$(id -u):$(id -g)" \
+            --entrypoint /bin/sh openjournals/inara -c '
+            set -e
+            cd /data/paper/jors
+            rsvg-convert -f pdf -o ../figures/object-model.pdf ../figures/object-model.svg
+            pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+            bibtex jors
+            pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+            pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+            ! grep -E "Citation .* undefined|Reference .* undefined" jors.log'
+
+      - name: Upload JORS PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: jors
+          path: paper/jors/jors.pdf

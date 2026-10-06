@@ -143,10 +143,13 @@ and [Submissions](https://openresearchsoftware.metajnl.com/about/submissions):
 | AI usage disclosure | Dedicated statement before Acknowledgements | Keep; matches the Ubiquity policy. |
 | Acknowledgements | Acknowledgements + Funding statement | Split the NIH disclaimer from the two funding lines (NIMH ZICMH002960, NCI contract 75N91019D00024). |
 | (none) | Competing interests | New, required. Confirm wording with all authors. |
-| References | References, Vancouver numbered | Reuse `paper/paper.bib`; render with a Vancouver CSL. |
+| References | References, Vancouver numbered | Reuse `paper/paper.bib`; numbered via natbib and `unsrtnat`. |
 
-The skeleton at `paper/jors/paper.md` applies this mapping and marks every
-open item with `TODO`.
+`paper/jors/jors.tex` is the manuscript source. It uses the official JORS
+LaTeX class (`jors.cls`, template v0.2), numbered citations from
+`paper/paper.bib`, and marks every open item with a `TODO` comment. The
+Markdown skeleton `paper/jors/paper.md` records the first mapping and is no
+longer edited.
 
 ## 5. Task list
 
@@ -184,27 +187,22 @@ Ordered so decisions come first and nothing is written twice.
       `paper/jors/sample/`.
 - [ ] Confirm the operating-system claim. CI runs on `ubuntu-latest` only
       (`.github/workflows/python_check.yml`), so either state Linux as tested
-      and macOS/Windows as supported-but-untested, or add a small OS matrix.
-- [ ] Re-check the "State of the field" table entries against the current
-      state of each project and update the checked date.
+     ### C. Manuscript
 
-### C. Manuscript
-
-- [ ] Fill every `TODO` in `paper/jors/paper.md`.
-- [ ] Write the about-100-word abstract and choose keywords.
-- [ ] Expand Quality control: unit tests with `MockClient`, opt-in live
-      integration tests, CI on Python 3.10 to 3.14, Ruff, pyright, docs
-      build; then the sample run with input and output.
-- [ ] Rewrite Reuse potential with explicit support mechanisms.
-- [ ] Export `figures/object-model.svg` to a 300 dpi PNG (or PDF for LaTeX)
-      and confirm `figures/cohort-dashboard-example.png` meets 150 dpi at
-      print size.
-- [ ] Build the manuscript. Suggested command from `paper/jors/`, with a
-      Vancouver CSL downloaded from the CSL styles repository:
-
-      ```bash
-      pandoc paper.md --citeproc --bibliography ../paper.bib \
-        --csl vancouver.csl -o paper.docx
+- [x] Write the manuscript in the JORS LaTeX template (`paper/jors/jors.tex`),
+      with wording checked against ten local JORS metapapers and four recent
+      web exemplars.
+- [x] Abstract (about 110 words), keywords, Quality control with sample
+      input and output, Reuse potential with support mechanisms and limits.
+- [x] Build in CI: the `jors` job in `.github/workflows/draft-pdf.yml`
+      converts the SVG figure to PDF, compiles with pdflatex and BibTeX, fails
+      on undefined citations or references, and uploads `jors.pdf`.
+- [ ] Resolve the `TODO` comments in `jors.tex`: comparison table date,
+      archive version if a patch release is cut, repository public date,
+      competing-interests confirmation, AI policy re-read.
+- [ ] Confirm `figures/cohort-dashboard-example.png` meets 150 dpi at print
+      size.
+l -o paper.docx
       ```
 
       Optionally add this as a third job in `draft-pdf.yml` once it builds
@@ -219,7 +217,7 @@ Ordered so decisions come first and nothing is written twice.
 
 - [ ] Create the OJS account and submit `.docx` (or LaTeX plus PDF) with
       figures at 150 dpi or better.
-- [ ] Respond to review rounds; keep `paper/jors/paper.md` as the source of
+- [ ] Respond to review rounds; keep `paper/jors/jors.tex` as the source of
       truth and rebuild the `.docx` from it.
 - [ ] On acceptance: add `preferred-citation` to `CITATION.cff`, add
       `referencePublication` to `codemeta.json`, add a paper badge to
