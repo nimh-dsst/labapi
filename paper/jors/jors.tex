@@ -98,20 +98,21 @@ QC folder by name, list that folder, find the page, and only then sign and
 send the request that adds the entry. None of the public clients in
 Table~\ref{tab:comparison} does this lookup.
 
-labapi does the lookup and the signing, and creates missing folders and
-pages on request. At NIMH, two applications are built on it: muronto records
-the outputs of behavioural neuroscience experiments, and save-my-jupyter deposits
-Jupyter notebook snapshots \citep{muronto,save_my_jupyter}. It is aimed at
-computational researchers and research software engineers in laboratories
-that use LabArchives.
+We wrote labapi to do that lookup and the signing for us, and to create
+missing folders and pages when asked. Two applications we maintain at NIMH
+are built on it: muronto, which records the outputs of behavioural
+neuroscience experiments, and save-my-jupyter, which deposits Jupyter
+notebook snapshots \citep{muronto,save_my_jupyter}. We expect it to be most
+useful to computational researchers, and to the research software engineers
+who support laboratories on LabArchives.
 
 Benchling, RSpace and eLabFTW each ship an official Python client for their
 API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives
 publishes none. Of the standalone clients, the closest to labapi is
 labarchives-py \citep{mcmero}, a single module that signs arbitrary GET
-requests and returns the raw responses. Choosing endpoints, parsing the XML
-and walking the tree are left to the caller. Building those on top of it
-would have meant writing the notebook model anyway, so labapi was started as
+requests and returns the raw responses, leaving the caller to pick
+endpoints, parse the XML and walk the tree. We considered building on it,
+but that would have meant writing the notebook model anyway, so we started
 a separate client. There are also LabArchives integrations for the ReDBox
 research data portal and for the Model Context Protocol, but neither offers
 a general Python interface to notebooks
@@ -136,18 +137,20 @@ a general Python interface to notebooks
 
 \section*{Implementation and architecture}
 
-The client signs each request with HMAC-SHA512 and handles login. A user
-session lists the notebooks a researcher can open. The tree layer models
-their folders and pages, and the entry layer models what is on a page:
-rich text, headers, plain text, widgets and file attachments. Responses
-arrive as XML and are parsed with lxml.
+Underneath everything, a client signs each request with HMAC-SHA512 and
+handles login, and a user session on top of it knows which notebooks the
+researcher can open. Folders and pages live in the tree layer, while
+whatever sits on a page, from rich text and headers to widgets and file
+attachments, belongs to the entry layer. LabArchives answers in XML, which
+we parse with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
 interface (Figure~\ref{fig:model}). labapi calls folders directories, as in
-\texttt{NotebookDirectory} and \texttt{dir()}. A folder's contents are fetched with a single
-\texttt{get\_tree\_level} call the first time code looks inside it and are
-then cached, so changes made in the web interface during a session are not
-seen until \texttt{refresh()} reloads them.
+\texttt{NotebookDirectory} and \texttt{dir()}. Nothing is fetched until code
+looks inside a folder; at that point one \texttt{get\_tree\_level} call
+loads it, and the result is cached. Someone editing the same notebook in the
+browser during a session will not be seen until \texttt{refresh()} reloads
+the folder.
 \texttt{dir()} and \texttt{page()} return the folder or page at a path,
 creating it and any missing parent folders if needed. \texttt{traverse()}
 follows only paths that already exist.
@@ -195,22 +198,22 @@ failed requests or handle rate limiting.
 
 \section*{Quality control}
 
-The unit tests cover request signing and authentication, path parsing, tree
-navigation, entry handling, notebook backup and the bundled examples. They
-mock the network layer and need no credentials. An integration suite runs
-the same operations against a live LabArchives account and is started by
-hand. Both run with \texttt{pytest}; the integration suite is enabled with
-\texttt{--integration} and reads a LabArchives login from environment
-variables, as described in the contributing guide. On every push and pull request, GitHub Actions runs the unit tests on
-Python 3.10 to 3.14, along with Ruff lint and format checks, static type
-checking and a documentation build.
+Most of the testing happens offline. The unit tests mock the network layer,
+so they need no credentials, and they reach from request signing and path
+parsing up to notebook backup; each bundled example is tested too. A second
+suite repeats the same operations against a real LabArchives account.
+Because it needs a login we start it by hand: both suites run under
+\texttt{pytest}, and \texttt{--integration} switches on the live one, which
+reads its credentials from environment variables as the contributing guide
+explains. For every push and pull request, GitHub Actions runs the unit
+tests on Python 3.10 to 3.14 alongside Ruff, type checking and a
+documentation build.
 
-The repository's examples directory contains five runnable workflows, three
-of them with sample input data. The JSON
-synchronisation example is the quickest check that an installation works. It
-uploads the two JSON files in its \texttt{sample\_data} folder to a notebook
-page as JSON entries, and its download command writes them back to local
-files that should match the originals.
+For a new user, the quickest way to see whether an installation works is
+the JSON synchronisation example, one of five runnable workflows in the
+repository (three ship with sample input). It uploads the two files in its
+\texttt{sample\_data} folder to a notebook page; running its download
+command should then give back files identical to the originals.
 
 A fuller example is a two-stage quality-control workflow for five subjects
 from the public OpenNeuro dataset ds000228 \citep{ds000228}, in which
@@ -342,28 +345,25 @@ English
 
 \section*{(3) Reuse potential}
 
-A laboratory in any field could use the calls shown above to file
-instrument output, simulation results or analysis reports on the page for
-each experiment. A
-core facility could schedule backups of the notebooks it manages, as the
-Systems Neuroscience Imaging Resource, an NIMH imaging core, already does.
-The backup feature was written together with that facility
-\citep{labapi_issue_264}. \fillin{optional adoption figure, e.g. number of
+Nothing in the calls above is tied to imaging. A biochemistry lab could
+use them to file plate-reader exports on the page for each assay, and a
+core facility could schedule backups of the notebooks it looks after. The
+Systems Neuroscience Imaging Resource, an NIMH imaging core, already does
+the latter; we wrote the backup feature with them \citep{labapi_issue_264}. \fillin{optional adoption figure, e.g. number of
 laboratories or users}
 
-Besides JSON synchronisation, the repository's examples cover uploading CSV
-files as formatted tables, downloading folders, logging model runs and
-logging from Jupyter notebooks, and each can be adapted as a starting
-point. To support a LabArchives entry type that labapi does not yet
-cover, a developer subclasses \texttt{Entry} with the type's name as a class
-keyword, and the new class registers itself for dispatch.
+The other examples in the repository are meant to be copied and changed.
+One uploads CSV files as formatted tables and fetches them back; others
+download a folder, log machine-learning runs, or capture a Jupyter session.
+If LabArchives adds an entry type that labapi does not know, supporting it
+takes a subclass of \texttt{Entry} with the type's name as a class keyword,
+and the class registers itself for dispatch.
 
-Questions and bug reports go to the GitHub issue tracker, which has forms
-for bug reports and feature requests. The contributing guide covers setting
-up a development environment, running both test suites and opening a pull
-request, and contributors can also write to the corresponding author.
-Releases follow semantic versioning. Each is published on PyPI and archived
-on Zenodo, with versioned documentation on GitHub Pages.
+Questions and bug reports go to the GitHub issue tracker. The contributing
+guide explains how to set up a development environment, run both test
+suites and open a pull request, and anyone is welcome to write to the
+corresponding author directly. Releases follow semantic versioning; each
+one goes to PyPI and Zenodo, with its own documentation on GitHub Pages.
 
 % Ubiquity Press AI policy (https://ubiquitypress.com/ai-policy): use beyond
 % basic copyediting must be declared, ideally in a Methods section. JORS
