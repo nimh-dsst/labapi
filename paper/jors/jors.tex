@@ -72,7 +72,7 @@ Bethesda, MD, USA. ORCID 0000-0002-2850-1419
 Without an API client, the outputs of analysis pipelines reach an
 electronic lab notebook only when a researcher uploads them by hand. labapi
 is a Python library that lets pipelines read from and write to the
-LabArchives notebook directly. Code names a page by the folder path a
+LabArchives notebook directly. Code refers to a page by the folder path a
 researcher sees in the web interface, such as QC/sub-01, and labapi finds or
 creates the matching page through the API. The library is released under
 the MIT licence, archived on Zenodo and installable from PyPI. It needs API
@@ -91,20 +91,20 @@ notebooks approved for new research in the NIH Intramural Research Program
 sits beside the notes and revision history that document the experiment,
 but getting it there from a pipeline means opening the web interface after
 each run and uploading by hand. The LabArchives web API can automate the
-upload. It identifies pages by internal tree IDs, however, and returns a
-notebook one folder level per call \citep{labarchives_api}. Code that wants
+upload. It identifies pages by internal tree IDs, however, and returns the
+notebook's contents one folder level at a time \citep{labarchives_api}. Code that wants
 to write to QC/sub-01 has to list the top level of the notebook, find the
 QC folder by name, list that folder, find the page, and only then sign and
 send the request that adds the entry. None of the public clients in
 Table~\ref{tab:comparison} does this lookup.
 
-We wrote labapi to do that lookup and the signing for us, and to create
-missing folders and pages when asked. Two applications we maintain at NIMH
+labapi does that lookup, signs the request, and creates any missing folders
+or pages along the way. Two applications we maintain at NIMH
 are built on it: muronto, which records the outputs of behavioural
 neuroscience experiments, and save-my-jupyter, which deposits Jupyter
-notebook snapshots \citep{muronto,save_my_jupyter}. We expect it to be most
-useful to computational researchers, and to the research software engineers
-who support laboratories on LabArchives.
+notebook snapshots \citep{muronto,save_my_jupyter}. labapi is meant for
+computational researchers and for the research software engineers who
+support laboratories on LabArchives.
 
 Benchling, RSpace and eLabFTW each ship an official Python client for their
 API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives
@@ -112,8 +112,8 @@ publishes none. Of the standalone clients, the closest to labapi is
 labarchives-py \citep{mcmero}, a single module that signs arbitrary GET
 requests and returns the raw responses, leaving the caller to pick
 endpoints, parse the XML and walk the tree. We considered building on it,
-but that would have meant writing the notebook model anyway, so we started
-a separate client. There are also LabArchives integrations for the ReDBox
+but we would still have had to write the notebook model, so we wrote a
+separate client. There are also LabArchives integrations for the ReDBox
 research data portal and for the Model Context Protocol, but neither offers
 a general Python interface to notebooks
 \citep{redbox_labarchives,labarchives_mcp}.
@@ -141,15 +141,16 @@ The lowest layer is a client that signs each request with HMAC-SHA512 and
 handles login. On top of it, a user session knows which notebooks the
 researcher can open. Folders and pages live in the tree layer, and the
 contents of a page (rich text, headers, plain text, widgets and file
-attachments) in the entry layer. LabArchives answers in XML, which
-we parse with lxml.
+attachments) in the entry layer. LabArchives returns XML, which
+labapi parses with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
 interface (Figure~\ref{fig:model}). labapi calls folders directories, as in
 \texttt{NotebookDirectory} and \texttt{dir()}. Nothing is fetched until code
 looks inside a folder; at that point one \texttt{get\_tree\_level} call
 loads it, and the result is cached. Edits that someone makes in the browser
-during a session are not seen until \texttt{refresh()} reloads the folder.
+during a session are not visible to labapi until \texttt{refresh()} reloads
+the folder.
 \texttt{dir()} and \texttt{page()} return the folder or page at a path,
 creating it and any missing parent folders if needed. \texttt{traverse()}
 follows only paths that already exist.
@@ -163,7 +164,7 @@ follows only paths that already exist.
 \end{figure}
 
 Path strings are parsed once, following Alexis King's ``parse, don't
-validate'' \citep{king2019parse}, into \texttt{NotebookPath} objects that
+validate'' principle \citep{king2019parse}, into \texttt{NotebookPath} objects that
 record their segments and whether they are absolute or relative. A slash
 inside a name is written as \texttt{\textbackslash/}, and a malformed path
 raises \texttt{PathError} when it is built, before any request is sent.
@@ -183,28 +184,28 @@ A whole notebook can be saved with \texttt{Notebook.backup()}, which
 downloads the 7-Zip archive that LabArchives itself produces, with or
 without attachments. \texttt{Notebook.export()} instead writes the notebook
 to disk as a folder tree with one file per entry, built either by walking
-the API or by unpacking a backup.
+the notebook through the API or by unpacking a backup.
 
-Structured results go through \texttt{create\_json\_entry()}, which stores
-the JSON as an attachment that code can read back and adds a formatted
-preview for people reviewing the page in the web interface. Both are
-ordinary LabArchives entries, so they display and export like any other
-entry and can be read without labapi.
+\texttt{create\_json\_entry()} stores structured results as a JSON
+attachment that code can read back, plus a formatted preview for people
+reviewing the page in the web interface. The attachment and the preview
+are ordinary LabArchives entries, so they display and export like any
+other entry and can be read without labapi.
 
-Errors returned by the API raise typed exceptions, such as
-\texttt{ApiError} and \texttt{AuthenticationError}. labapi does not retry
+labapi raises typed exceptions, such as \texttt{ApiError} and
+\texttt{AuthenticationError}, when the API returns an error. labapi does not retry
 failed requests or handle rate limiting.
 
 \section*{Quality control}
 
 The unit tests run against a mocked network layer, so they need no
-credentials, and they reach from request signing and path
-parsing up to notebook backup; each bundled example is tested too. A second
-suite repeats the same operations against a real LabArchives account.
-Because it needs a login, we start it by hand. Both suites run under
+credentials, and they cover everything from request signing and path
+parsing to notebook backup; each bundled example is tested too. A second
+suite repeats the same operations against a real LabArchives account. It
+needs a LabArchives login, so we run it by hand. Both suites run under
 \texttt{pytest}, and the \texttt{--integration} flag switches on the live
-one, which reads its credentials from environment variables as the
-contributing guide explains. For every push and pull request, GitHub Actions runs the unit
+one, which reads its credentials from environment variables (see the
+contributing guide). For every push and pull request, GitHub Actions runs the unit
 tests on Python 3.10 to 3.14 alongside Ruff, type checking and a
 documentation build.
 
@@ -215,12 +216,12 @@ repository (three ship with sample input). It uploads the two files in its
 command should then give back files identical to the originals.
 
 A fuller example is a two-stage quality-control workflow for five subjects
-from the public OpenNeuro dataset ds000228 \citep{ds000228}, in which
-participants watched the short film Partly Cloudy. The first stage writes,
-for each subject, the subject's group (child or adult) and mean DVARS, a
+from the public OpenNeuro dataset ds000228 \citep{ds000228}, whose
+participants watched the short film Partly Cloudy. For each subject, the
+first stage creates or reuses a page in a Partly Cloudy QC folder and
+writes the subject's group (child or adult) and mean DVARS, a
 quality-control measure of how much a functional MRI scan changes between
-successive time points \citep{power2012dvars}. It creates or reuses one
-page per subject in a Partly Cloudy QC folder. In the listings,
+successive time points \citep{power2012dvars}. In the listings,
 \texttt{subjects} stands for the five subject identifiers, and
 \texttt{compute\_qc()} and \texttt{summarize()} stand for the scientific
 calculations. The same workflow, with fixed values in place of those
@@ -346,9 +347,9 @@ English
 
 A biochemistry lab could use the same calls to file plate-reader exports
 on the page for each assay, and a core facility could schedule backups of
-the notebooks it looks after. The
-Systems Neuroscience Imaging Resource, an NIMH imaging core, already does
-the latter; we wrote the backup feature with them \citep{labapi_issue_264}. \fillin{optional adoption figure, e.g. number of
+the notebooks it looks after. The Systems Neuroscience Imaging Resource, an
+NIMH imaging core, already schedules backups this way, and the backup
+feature was developed with it \citep{labapi_issue_264}. \fillin{optional adoption figure, e.g. number of
 laboratories or users}
 
 The other examples in the repository are meant to be copied and changed.
@@ -360,8 +361,8 @@ and the class registers itself for dispatch.
 
 Questions and bug reports go to the GitHub issue tracker. The contributing
 guide explains how to set up a development environment, run both test
-suites and open a pull request, and anyone is welcome to write to the
-corresponding author directly. Releases follow semantic versioning; each
+suites and open a pull request, and the corresponding author can also be
+contacted directly. Releases follow semantic versioning; each
 one goes to PyPI and Zenodo, with its own documentation on GitHub Pages.
 
 % Ubiquity Press AI policy (https://ubiquitypress.com/ai-policy): use beyond
@@ -374,18 +375,18 @@ The authors designed labapi's architecture and implemented its
 core. AI tools subsequently assisted with development, testing, maintenance,
 release work, documentation and manuscript preparation: they generated code,
 contributed to tests, opened pull requests and issues, and drafted and
-edited documentation and manuscript text. The authors reviewed and accepted
-all AI-assisted software changes through public pull requests, reviewed and
-revised all AI-assisted text, and take full responsibility for the software
-and this paper. AI also wrote the analysis and plotting code for the
-example workflow. The DVARS values and the cohort figure were produced by
-running that code on the ds000228 data, and no AI tool generated or edited
-the data, measurements or figure content. The panels of
-Figure~\ref{fig:dashboard} were cropped, arranged and labelled from
-unaltered screenshots by an AI agent using ImageMagick. The tools used were
+edited documentation and manuscript text. For the example workflow, AI
+wrote the analysis and plotting code. The DVARS values and the cohort
+figure were produced by running that code on the ds000228 data, and no AI
+tool generated or edited the data, measurements or figure content. The
+panels of Figure~\ref{fig:dashboard} were cropped, arranged and labelled
+from unaltered screenshots by an AI agent using ImageMagick. The authors
+reviewed and accepted all AI-assisted software changes through public pull
+requests, reviewed and revised all AI-assisted text, and take full
+responsibility for the software and this paper. The tools used were
 Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Opus 5.5, Sonnet 4.6,
 Sonnet 5, Fable 5 and Fable 5.1) and OpenAI's Codex (GPT-5.4, GPT-5.5, and
-GPT-5.6 Luna, Sol and Terra), the latter accessed through the HHS Enterprise
+GPT-5.6 Luna, Sol and Terra). Codex was accessed through the HHS Enterprise
 agreement.
 
 \section*{Acknowledgements}
