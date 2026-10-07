@@ -139,9 +139,9 @@ a general Python interface to notebooks
 
 The lowest layer is a client that signs each request with HMAC-SHA512 and
 handles login. On top of it, a user session knows which notebooks the
-researcher can open. Folders and pages live in the tree layer, while
-whatever sits on a page, from rich text and headers to widgets and file
-attachments, belongs to the entry layer. LabArchives answers in XML, which
+researcher can open. Folders and pages live in the tree layer, and the
+contents of a page (rich text, headers, plain text, widgets and file
+attachments) in the entry layer. LabArchives answers in XML, which
 we parse with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
@@ -197,8 +197,8 @@ failed requests or handle rate limiting.
 
 \section*{Quality control}
 
-Most of the testing happens offline. The unit tests mock the network layer,
-so they need no credentials, and they reach from request signing and path
+The unit tests run against a mocked network layer, so they need no
+credentials, and they reach from request signing and path
 parsing up to notebook backup; each bundled example is tested too. A second
 suite repeats the same operations against a real LabArchives account.
 Because it needs a login, we start it by hand. Both suites run under
