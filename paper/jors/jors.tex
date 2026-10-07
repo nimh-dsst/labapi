@@ -137,8 +137,8 @@ a general Python interface to notebooks
 
 \section*{Implementation and architecture}
 
-Underneath everything, a client signs each request with HMAC-SHA512 and
-handles login, and a user session on top of it knows which notebooks the
+The lowest layer is a client that signs each request with HMAC-SHA512 and
+handles login. On top of it, a user session knows which notebooks the
 researcher can open. Folders and pages live in the tree layer, while
 whatever sits on a page, from rich text and headers to widgets and file
 attachments, belongs to the entry layer. LabArchives answers in XML, which
@@ -148,9 +148,8 @@ Each folder and page in the tree layer corresponds to one in the web
 interface (Figure~\ref{fig:model}). labapi calls folders directories, as in
 \texttt{NotebookDirectory} and \texttt{dir()}. Nothing is fetched until code
 looks inside a folder; at that point one \texttt{get\_tree\_level} call
-loads it, and the result is cached. Someone editing the same notebook in the
-browser during a session will not be seen until \texttt{refresh()} reloads
-the folder.
+loads it, and the result is cached. Edits that someone makes in the browser
+during a session are not seen until \texttt{refresh()} reloads the folder.
 \texttt{dir()} and \texttt{page()} return the folder or page at a path,
 creating it and any missing parent folders if needed. \texttt{traverse()}
 follows only paths that already exist.
@@ -189,8 +188,8 @@ the API or by unpacking a backup.
 Structured results go through \texttt{create\_json\_entry()}, which stores
 the JSON as an attachment that code can read back and adds a formatted
 preview for people reviewing the page in the web interface. Both are
-ordinary LabArchives entries, so other tools that read the notebook see
-nothing labapi-specific.
+ordinary LabArchives entries, so they display and export like any other
+entry and can be read without labapi.
 
 Errors returned by the API raise typed exceptions, such as
 \texttt{ApiError} and \texttt{AuthenticationError}. labapi does not retry
@@ -202,10 +201,10 @@ Most of the testing happens offline. The unit tests mock the network layer,
 so they need no credentials, and they reach from request signing and path
 parsing up to notebook backup; each bundled example is tested too. A second
 suite repeats the same operations against a real LabArchives account.
-Because it needs a login we start it by hand: both suites run under
-\texttt{pytest}, and \texttt{--integration} switches on the live one, which
-reads its credentials from environment variables as the contributing guide
-explains. For every push and pull request, GitHub Actions runs the unit
+Because it needs a login, we start it by hand. Both suites run under
+\texttt{pytest}, and the \texttt{--integration} flag switches on the live
+one, which reads its credentials from environment variables as the
+contributing guide explains. For every push and pull request, GitHub Actions runs the unit
 tests on Python 3.10 to 3.14 alongside Ruff, type checking and a
 documentation build.
 
@@ -345,9 +344,9 @@ English
 
 \section*{(3) Reuse potential}
 
-Nothing in the calls above is tied to imaging. A biochemistry lab could
-use them to file plate-reader exports on the page for each assay, and a
-core facility could schedule backups of the notebooks it looks after. The
+A biochemistry lab could use the same calls to file plate-reader exports
+on the page for each assay, and a core facility could schedule backups of
+the notebooks it looks after. The
 Systems Neuroscience Imaging Resource, an NIMH imaging core, already does
 the latter; we wrote the backup feature with them \citep{labapi_issue_264}. \fillin{optional adoption figure, e.g. number of
 laboratories or users}
