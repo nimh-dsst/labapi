@@ -5,7 +5,7 @@
 %%   rsvg-convert -f pdf -o ../figures/object-model.pdf ../figures/object-model.svg
 %%   pdflatex jors && bibtex jors && pdflatex jors && pdflatex jors
 %%
-%% Open items are marked "TODO" in comments.
+%% Open items are marked with \fillin{...}, which prints in red brackets.
 
 \documentclass{jors}
 
@@ -21,6 +21,10 @@
 \setlength{\parskip}{0.6em}
 % Allow extra interword stretch so unbreakable code names do not overflow.
 \setlength{\emergencystretch}{2em}
+
+% Visible placeholder for items awaiting author input. Remove every use
+% before submission.
+\newcommand{\fillin}[1]{\textcolor{red}{\textbf{[#1]}}}
 
 \pagestyle{fancy}
 \definecolor{mygray}{gray}{0.6}
@@ -113,11 +117,9 @@ research data portal and for the Model Context Protocol, but neither offers
 a general Python interface to notebooks
 \citep{redbox_labarchives,labarchives_mcp}.
 
-% TODO: re-check each row against the current state of each project and
-% update the date in the caption before submission.
 \begin{table}[htbp]
 	\centering
-	\caption{Public standalone LabArchives clients, checked 20 August 2026.}
+	\caption{Public standalone LabArchives clients, checked \fillin{re-check rows; date}.}
 	\label{tab:comparison}
 	\small
 	\begin{tabular}{lp{6.2cm}l}
@@ -311,26 +313,24 @@ affiliations are given above.
 
 {\bf Archive}
 
-% TODO: replace the version, DOI and date if a 1.2.x patch release is cut
-% for the submission.
+% Values below are for 1.2.0; replace all three if a 1.2.x patch release is
+% cut for the submission.
 \begin{description}[noitemsep,topsep=0pt]
 	\item[Name:] Zenodo
-	\item[Persistent identifier:] \url{https://doi.org/10.5281/zenodo.22021367}
+	\item[Persistent identifier:] \fillin{DOI; 1.2.0 is \url{https://doi.org/10.5281/zenodo.22021367}}
 	\item[Licence:] MIT
 	\item[Publisher:] Christoph Li
-	\item[Version published:] 1.2.0
-	\item[Date published:] 20/08/2026
+	\item[Version published:] \fillin{1.2.0 or 1.2.x}
+	\item[Date published:] \fillin{date; 1.2.0 is 20/08/2026}
 \end{description}
 
 {\bf Code repository}
 
-% TODO: confirm the date the repository was made public. GitHub reports the
-% repository was created on 27/05/2025; codemeta.json gives 15/12/2025.
 \begin{description}[noitemsep,topsep=0pt]
 	\item[Name:] GitHub
 	\item[Identifier:] \url{https://github.com/nimh-dsst/labapi}
 	\item[Licence:] MIT
-	\item[Date published:] 27/05/2025
+	\item[Date published:] \fillin{date made public; GitHub says created 27/05/2025, codemeta.json says 15/12/2025}
 \end{description}
 
 Documentation: \url{https://nimh-dsst.github.io/labapi/}. Package:
@@ -348,7 +348,8 @@ each experiment. A
 core facility could schedule backups of the notebooks it manages, as the
 Systems Neuroscience Imaging Resource, an NIMH imaging core, already does.
 The backup feature was written together with that facility
-\citep{labapi_issue_264}.
+\citep{labapi_issue_264}. \fillin{optional adoption figure, e.g. number of
+laboratories or users}
 
 Besides JSON synchronisation, the repository's examples cover uploading CSV
 files as formatted tables, downloading folders, logging model runs and
@@ -408,8 +409,8 @@ under Contract No.\ 75N91019D00024.
 
 \section*{Competing interests}
 
-% TODO: confirm with all authors.
 The authors declare that they have no competing interests.
+\fillin{confirm with all four authors}
 
 \bibliographystyle{unsrtnat}
 {\raggedright
