@@ -123,6 +123,38 @@ class TestAttachmentEntryIntegration:
         assert attachment.read() == b"attachment data"
 
     @pytest.mark.parametrize(
+        ("raw_filename", "expected_filename"),
+        [
+            ('"../../x"', "x"),
+            (r'"..\\..\\x"', "x"),
+            ('"report.pdf"', "report.pdf"),
+        ],
+    )
+    def test_attachment_entry_sanitizes_content_disposition_filename(
+        self,
+        client,
+        user: User,
+        raw_filename: str,
+        expected_filename: str,
+    ):
+        """Content-Disposition filenames are reduced to a safe basename."""
+        entry = AttachmentEntry("eid_att", "Caption", user)
+
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition": f"attachment; filename={raw_filename}",
+        }
+        mock_response.history = []
+        mock_response.iter_content.return_value = [b"attachment data"]
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        attachment = entry.get_attachment()
+
+        assert attachment.filename == expected_filename
+        assert attachment.read() == b"attachment data"
+
+    @pytest.mark.parametrize(
         ("content_type", "expected_filename"),
         [
             ("application/pdf", "eid_att.pdf"),
