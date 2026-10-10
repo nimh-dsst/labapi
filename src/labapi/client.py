@@ -6,7 +6,9 @@ handling authentication, request signing, and API calls.
 
 from __future__ import annotations
 
+import socket
 import ssl
+import sys
 import warnings
 from base64 import b64encode
 from collections.abc import Iterator, Mapping, Sequence
@@ -142,6 +144,8 @@ class _313HTTPAdapter(HTTPAdapter):
        necessary and with trusted servers.
     """
 
+    ssl_context: ssl.SSLContext
+
     def init_poolmanager(self, *args: Any, **kwargs: Any):
         """Initialize the connection pool manager with a custom SSL context.
 
@@ -150,8 +154,22 @@ class _313HTTPAdapter(HTTPAdapter):
         """
         context = ssl.create_default_context()
         context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        self.ssl_context = context
 
         super().init_poolmanager(*args, **kwargs, ssl_context=context)  # pyright: ignore[reportUnknownMemberType]
+
+    def proxy_manager_for(self, proxy: str, **proxy_kwargs: Any) -> Any:
+        """Return a urllib3 ProxyManager using the same relaxed SSL context.
+
+        Without this override, requests routed through an HTTPS proxy would
+        fall back to strict certificate verification, silently ignoring
+        ``strict_cert=False``.
+
+        :param proxy: The proxy to return a urllib3 ProxyManager for.
+        :param proxy_kwargs: Extra keyword arguments used to configure the Proxy Manager.
+        """
+        proxy_kwargs.setdefault("ssl_context", self.ssl_context)
+        return super().proxy_manager_for(proxy, **proxy_kwargs)  # pyright: ignore[reportUnknownMemberType]
 
 
 def _close_auth_driver(driver: Any) -> None:
@@ -235,7 +253,25 @@ class _AuthResponseCollector:
                 pass
 
         class LoopbackTCPServer(TCPServer):
-            allow_reuse_address = True
+            # On POSIX, SO_REUSEADDR only lets a socket rebind a port stuck in
+            # TIME_WAIT and is safe to keep. On Windows, SO_REUSEADDR instead
+            # allows an unrelated process to bind the *same* address while
+            # it's in use, which would let another local process race for the
+            # auth callback. So on Windows we leave reuse disabled and instead
+            # request SO_EXCLUSIVEADDRUSE, which blocks that kind of rebind.
+            if sys.platform == "win32":
+                allow_reuse_address = False
+
+                def server_bind(self) -> None:
+                    with suppress(OSError, AttributeError):
+                        self.socket.setsockopt(
+                            socket.SOL_SOCKET,
+                            socket.SO_EXCLUSIVEADDRUSE,  # pyright: ignore[reportAttributeAccessIssue]
+                            1,
+                        )
+                    super().server_bind()
+            else:
+                allow_reuse_address = True
 
         self._httpd = LoopbackTCPServer(
             (_DEFAULT_AUTH_CALLBACK_HOST, self._port),
