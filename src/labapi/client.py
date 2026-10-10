@@ -48,6 +48,16 @@ _DEFAULT_AUTH_CALLBACK_PORT = 8089
 
 _DEFAULT_AUTH_CALLBACK_TIMEOUT = 300.0
 
+# Per-connection read timeout for the loopback auth callback handler. This
+# bounds how long a single accepted connection may block waiting for the
+# client to finish sending its HTTP request; without it, a connection that is
+# opened but never completes (e.g. a stray local process, or a slow/broken
+# client) can stall the handler indefinitely, which in turn defeats the
+# overall auth callback timeout enforced by ``_AuthResponseCollector.wait``.
+# A legitimate browser redirect sends its request essentially immediately, so
+# this can be small without risking the normal flow.
+_AUTH_CALLBACK_CONNECTION_TIMEOUT = 5.0
+
 _WEB_UI_HOSTS = {
     "api.labarchives.com": "mynotebook.labarchives.com",
     "api.labarchives-gov.com": "mynotebook.labarchives-gov.com",
@@ -196,6 +206,15 @@ class _AuthResponseCollector:
         callback_path = self._callback_path
 
         class AuthRequestHandler(BaseHTTPRequestHandler):
+            # Bound how long we wait on an accepted-but-idle connection for
+            # the client to send its request. ``http.server`` honors this by
+            # calling ``socket.settimeout()`` on the accepted connection in
+            # ``StreamRequestHandler.setup`` and treating a resulting
+            # ``socket.timeout`` as a normal (silent) connection close in
+            # ``handle_one_request``, so the accept loop in ``wait()`` simply
+            # continues and the overall auth deadline is still honored.
+            timeout = _AUTH_CALLBACK_CONNECTION_TIMEOUT
+
             def _write_response(self, status_code: int, message: str) -> None:
                 self.send_response(status_code)
                 self.send_header("Content-type", "text/plain")
