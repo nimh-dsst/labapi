@@ -826,3 +826,81 @@ class TestTreeMixinsIntegration:
         )
 
         assert new_page is existing_page
+
+
+class TestTreeContainerLookupHelpers:
+    """Tests for get_by_id/get_by_name/children_by_id on tree containers."""
+
+    def test_get_by_id_found(self, notebook_tree: Notebook):
+        """get_by_id returns the child with the matching ID."""
+        node = notebook_tree.get_by_id("dir-1")
+
+        assert isinstance(node, NotebookDirectory)
+        assert node.id == "dir-1"
+        assert node is notebook_tree[Index.Id : "dir-1"]
+
+    def test_get_by_id_not_found_raises(self, notebook_tree: Notebook):
+        """get_by_id raises KeyError when no child has the ID."""
+        with pytest.raises(KeyError, match='Node with id "missing" not found'):
+            notebook_tree.get_by_id("missing")
+
+    def test_get_by_name_found(self, notebook_tree: Notebook):
+        """get_by_name returns all children with the matching name."""
+        result = notebook_tree.get_by_name("Test Folder A")
+
+        assert [node.id for node in result] == ["dir-1"]
+
+    def test_get_by_name_duplicate_names(self, notebook_tree: Notebook):
+        """get_by_name returns every child sharing a name."""
+        folder_a = expect_dir(notebook_tree[Index.Id : "dir-1"])
+        duplicate = NotebookDirectory(
+            "dir-1-dup",
+            "Test Folder A",
+            notebook_tree,
+            notebook_tree,
+            notebook_tree.user,
+        )
+        notebook_tree._children.append(duplicate)  # pyright: ignore[reportPrivateUsage]
+
+        result = notebook_tree.get_by_name("Test Folder A")
+
+        assert {node.id for node in result} == {folder_a.id, "dir-1-dup"}
+
+    def test_get_by_name_not_found_returns_empty(self, notebook_tree: Notebook):
+        """get_by_name returns an empty sequence when no child matches."""
+        assert list(notebook_tree.get_by_name("Nonexistent")) == []
+
+    def test_children_by_id_maps_id_to_node(self, notebook_tree: Notebook):
+        """children_by_id maps each child ID to its node."""
+        snapshot = notebook_tree.children_by_id
+
+        assert snapshot == {node.id: node for node in notebook_tree.children}
+        assert snapshot["dir-1"].id == "dir-1"
+
+    def test_children_by_id_is_stable_snapshot(self, notebook_tree: Notebook):
+        """children_by_id is decoupled from later container mutations."""
+        snapshot = notebook_tree.children_by_id
+        original_ids = set(snapshot)
+
+        new_dir = NotebookDirectory(
+            "dir-new",
+            "Added Later",
+            notebook_tree,
+            notebook_tree,
+            notebook_tree.user,
+        )
+        notebook_tree._children.append(new_dir)  # pyright: ignore[reportPrivateUsage]
+
+        # Earlier snapshot is unaffected; a fresh one reflects the change.
+        assert set(snapshot) == original_ids
+        assert "dir-new" not in snapshot
+        assert "dir-new" in notebook_tree.children_by_id
+
+    def test_children_by_id_mutation_does_not_affect_container(
+        self, notebook_tree: Notebook
+    ):
+        """Mutating the returned dict does not change the container."""
+        snapshot = notebook_tree.children_by_id
+        snapshot.clear()
+
+        assert len(notebook_tree.children_by_id) > 0

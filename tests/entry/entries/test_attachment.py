@@ -31,6 +31,29 @@ class TestAttachmentEntryUnit:
 
         assert entry.caption == "My attachment caption"
 
+    def test_attachment_entry_filename_and_mime_default_none(self):
+        """Filename and mime_type are None before any listing metadata is set."""
+        mock_user = Mock(spec=User)
+        entry = AttachmentEntry("eid_att", "Caption", mock_user)
+
+        assert entry.filename is None
+        assert entry.mime_type is None
+
+    def test_attachment_entry_filename_and_mime_from_listing(self):
+        """Filename and mime_type expose the metadata parsed from the listing."""
+        mock_user = Mock(spec=User)
+        entry = AttachmentEntry("eid_att", "Caption", mock_user)
+
+        # These attributes are populated by the page/search listing parsers,
+        # without any attachment download.
+        entry._filename = "data.csv"  # pyright: ignore[reportPrivateUsage]
+        entry._mime_type = "text/csv"  # pyright: ignore[reportPrivateUsage]
+
+        assert entry.filename == "data.csv"
+        assert entry.mime_type == "text/csv"
+        # Reading the metadata must not trigger a download.
+        mock_user.client.stream_api_get.assert_not_called()
+
 
 class TestAttachmentEntryIntegration:
     """Integration tests with real objects and mocked API."""
