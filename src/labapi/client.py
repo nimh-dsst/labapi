@@ -48,6 +48,13 @@ _DEFAULT_AUTH_CALLBACK_PORT = 8089
 
 _DEFAULT_AUTH_CALLBACK_TIMEOUT = 300.0
 
+# Caps how much of a *streamed* error response body is read into memory when
+# building an ApiError message, so a large error payload can't defeat the
+# streaming API's resource guarantee. Non-streamed responses are unaffected:
+# `requests` has already fully buffered those by the time we see them.
+_STREAMED_ERROR_BODY_CAP = 64 * 1024  # 64 KiB
+_STREAMED_ERROR_BODY_CHUNK_SIZE = 8192
+
 _WEB_UI_HOSTS = {
     "api.labarchives.com": "mynotebook.labarchives.com",
     "api.labarchives-gov.com": "mynotebook.labarchives-gov.com",
@@ -79,6 +86,32 @@ def _normalize_web_url(web_url: str) -> str:
             "",
         )
     )
+
+
+def _read_capped_body(response: Response, cap: int, chunk_size: int) -> bytes:
+    """Read up to ``cap`` bytes from a response body via ``iter_content``.
+
+    Unlike ``response.content``/``response.text``, this does not force the
+    entire body into memory: for a not-yet-consumed streamed response,
+    ``iter_content`` pulls bytes incrementally from the underlying
+    connection, and iteration stops as soon as ``cap`` is reached. (For a
+    response whose body was already fully buffered, ``iter_content`` simply
+    replays the buffered bytes in slices, so this is equally safe to call in
+    that case.)
+
+    :param response: The HTTP response to read from.
+    :param cap: The maximum number of bytes to return.
+    :param chunk_size: The size of each ``iter_content`` read.
+    :returns: Up to ``cap`` bytes read from the response.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in response.iter_content(chunk_size=chunk_size):
+        chunks.append(chunk)
+        total += len(chunk)
+        if total >= cap:
+            break
+    return b"".join(chunks)[:cap]
 
 
 class StreamingResponse:
@@ -473,7 +506,7 @@ class Client:
         return User(uid, user_email, notebooks, self)
 
     @staticmethod
-    def _handle_request_status(response: Response) -> None:
+    def _handle_request_status(response: Response, *, streamed: bool = False) -> None:
         """Raise an error for an unsuccessful HTTP response.
 
         Attempts to parse the LabArchives ``<error>`` XML element from the response
@@ -481,6 +514,15 @@ class Client:
         generic message if the body is not parseable XML.
 
         :param response: The HTTP response object from the requests library.
+        :param streamed: Whether ``response`` came from a streamed
+                         (``stream=True``) request. When ``True``, the body
+                         used to build the error is capped at
+                         :data:`_STREAMED_ERROR_BODY_CAP` bytes and read
+                         incrementally, so a large streamed error response is
+                         never fully buffered into memory. Non-streamed
+                         responses use ``response.content``/``response.text``
+                         directly, since ``requests`` has already fully read
+                         those into memory by this point.
         :raises AuthenticationError: For API error codes 4506, 4514, 4520, 4533.
         :raises ApiError: For all other non-200 responses.
         """
@@ -488,8 +530,17 @@ class Client:
         if response.status_code != status_codes.ok:
             error_code: int | None = None
             error_desc: str | None = None
+            body = (
+                _read_capped_body(
+                    response,
+                    _STREAMED_ERROR_BODY_CAP,
+                    _STREAMED_ERROR_BODY_CHUNK_SIZE,
+                )
+                if streamed
+                else response.content
+            )
             try:
-                tree = fromstring(response.content)
+                tree = fromstring(body)
                 code_text = tree.findtext(".//error-code")
                 if code_text is not None:
                     error_code = int(code_text)
@@ -511,9 +562,12 @@ class Client:
                     query[key] = "***"
             clean_url = urlunsplit(parts._replace(query=urlencode(query)))
 
+            body_text = (
+                body.decode("utf-8", errors="replace") if streamed else response.text
+            )
             raise ApiError(
                 f"API request failed with status code {response.status_code} "
-                f"for URL {clean_url}: {response.text}"
+                f"for URL {clean_url}: {body_text}"
             )
 
     def stream_api_get(
@@ -541,7 +595,7 @@ class Client:
             timeout=self.timeout,
         )
         try:
-            Client._handle_request_status(request)
+            Client._handle_request_status(request, streamed=True)
         except Exception:
             request.close()
             raise
@@ -578,7 +632,7 @@ class Client:
             timeout=self.timeout,
         )
         try:
-            Client._handle_request_status(request)
+            Client._handle_request_status(request, streamed=True)
         except Exception:
             request.close()
             raise
