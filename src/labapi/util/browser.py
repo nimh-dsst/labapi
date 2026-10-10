@@ -48,7 +48,7 @@ def _get_env_browser() -> _ChoosableBrowser | None:
 
     warnings.warn(
         f"Unrecognized LA_AUTH_BROWSER value {browser!r}; "
-        "supported values are chrome, firefox, edge, or terminal. "
+        "supported values are chrome, firefox, edge, msedge, or terminal. "
         "Falling back to automatic browser detection.",
         stacklevel=2,
     )
@@ -76,7 +76,9 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
     try:
         if installed_browsers.do_i_have_installed(browser):
             return browser
-    except OSError as exc:
+    # TODO(BLE001): intentional broad catch — the probe may raise for an
+    # unrecognized name; fall back to detection; narrow if a specific type becomes known.
+    except Exception as exc:  # noqa: BLE001
         warnings.warn(
             f"Configured browser probe failed: {exc}. "
             "Falling back to automatic browser detection.",
@@ -86,15 +88,17 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
         return None
 
     # Fall back to a linear search: installed-browsers may register a browser
-    # under a key that differs from our canonical name (e.g. Edge as "msedge"),
-    # so match on the same substring basis autodetection uses.
+    # under a key that differs from our value (e.g. Edge as "Microsoft Edge",
+    # with both "edge" and "msedge" normalising to "edge"), so match on the same
+    # detectable basis autodetection uses.
     try:
         installed = installed_browsers.browsers()
     # TODO(BLE001): intentional broad catch — installed-browsers probe may raise; fall back to an empty list; narrow if a specific type becomes known.
     except Exception:  # noqa: BLE001
         installed = []
+    target = _parse_detectable(browser)
     for entry in installed:
-        if _parse_detectable(entry.get("name")) == browser:
+        if target and _parse_detectable(entry.get("name")) == target:
             return browser
 
     warnings.warn(

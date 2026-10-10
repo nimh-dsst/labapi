@@ -395,3 +395,33 @@ class TestAttachmentEntryIntegration:
         attachment = entry.get_attachment(use_tempfile=True)
         assert attachment.read() == b"Chunked content"
         attachment.close()
+
+
+def test_get_attachment_closes_output_on_copy_error(monkeypatch):
+    """get_attachment closes its output backing file if the copy fails."""
+    from labapi.entry.entries import attachment as attachment_module
+
+    entry = AttachmentEntry("eid", "caption", Mock(spec=User))
+    entry._filedata = Attachment(BytesIO(b"data"), "text/plain", "f.txt", "caption")
+
+    closed: list[bool] = []
+
+    class TrackingBuffer(BytesIO):
+        def close(self) -> None:
+            closed.append(True)
+            super().close()
+
+    buffer = TrackingBuffer()
+    monkeypatch.setattr(
+        attachment_module, "_make_backing_io", lambda _use_tempfile: buffer
+    )
+    monkeypatch.setattr(
+        attachment_module.shutil,
+        "copyfileobj",
+        Mock(side_effect=OSError("copy failed")),
+    )
+
+    with pytest.raises(OSError, match="copy failed"):
+        entry.get_attachment()
+
+    assert closed == [True]

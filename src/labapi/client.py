@@ -95,6 +95,8 @@ class StreamingResponse:
 
     def __getattr__(self, name: str) -> Any:
         """Proxy response attributes (e.g., ``headers`` / ``status_code``)."""
+        if name == "_response" or "_response" not in self.__dict__:
+            raise AttributeError(name)
         return getattr(self._response, name)
 
     def __iter__(self) -> Iterator[bytes]:
@@ -455,17 +457,18 @@ class Client:
 
         for notebook in uid_tree.iterfind(".//notebook"):
             try:
-                notebook_id, notebook_name, is_default = itemgetter(
-                    "id", "name", "is-default"
-                )(
-                    extract_etree(
-                        notebook, {"id": str, "name": str, "is-default": to_bool}
-                    )
+                notebook_id, notebook_name = itemgetter("id", "name")(
+                    extract_etree(notebook, {"id": str, "name": str})
                 )
             except ValueError as e:
                 warnings.warn(f"Failed to parse notebook entry: {e}", stacklevel=2)
                 continue
 
+            # is-default is optional metadata; a missing/malformed value defaults
+            # to False rather than discarding the whole notebook.
+            is_default = extract_etree(
+                notebook, {"is-default": to_bool}, raise_missing=False
+            ).get("is-default", False)
             notebooks.append(NotebookInit(notebook_id, notebook_name, is_default))
 
         notebooks.sort(key=lambda k: k.is_default)

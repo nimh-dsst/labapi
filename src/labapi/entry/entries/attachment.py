@@ -137,12 +137,16 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
 
         assert self._filedata is not None
         output = _make_backing_io(use_tempfile)
-
-        # Return an independent copy so each caller gets isolated read/seek/close state
-        # while still sharing a single downloaded backing attachment in the cache.
-        self._filedata.seek(0)
-        shutil.copyfileobj(self._filedata, output)
-        output.seek(0)
+        try:
+            # Return an independent copy so each caller gets isolated
+            # read/seek/close state while still sharing a single downloaded
+            # backing attachment in the cache.
+            self._filedata.seek(0)
+            shutil.copyfileobj(self._filedata, output)
+            output.seek(0)
+        except BaseException:
+            output.close()
+            raise
 
         return Attachment(
             output,

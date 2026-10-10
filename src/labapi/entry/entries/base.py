@@ -99,12 +99,12 @@ class Entry(ABC, Generic[T]):
 
         This method takes a part type string and returns the corresponding
         entry class instance when one is registered. Recognized-but-unimplemented
-        part types resolve to :class:`~labapi.entry.entries.unimplemented.UnimplementedEntry`,
+        part types resolve to :class:`~labapi.entry.entries.unknown.UnimplementedEntry`,
         while truly unknown part types fall back to
         :class:`~labapi.entry.entries.unknown.UnknownEntry`.
 
         :param part_type: The type of entry to create (e.g., "heading", "text entry",
-                         "plain text entry", "attachment", "widget entry").
+                         "plain text entry", "Attachment", "widget entry").
         :param eid: The unique ID of the entry.
         :param data: The entry data. For text-based entries, this is the text content.
                     For attachment entries, this is the caption.
