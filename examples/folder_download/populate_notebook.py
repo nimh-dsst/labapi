@@ -69,7 +69,7 @@ def populate_notebook(user: User, notebook_name: str) -> None:
         PlainTextEntry, "These are some general notes for the experiments folder."
     )
 
-    print("\n✓ Notebook populated successfully!")
+    print("\n[OK] Notebook populated successfully!")
     print("\nYou can now test the download script:")
     print(
         f'  python folder_download.py --notebook "{notebook_name}" --path "Experiments" ./downloaded_data'
@@ -91,7 +91,7 @@ def main() -> None:
         with Client() as client:
             print("Authenticating...")
             user = client.default_authenticate()
-            print("✓ Authenticated successfully")
+            print("[OK] Authenticated successfully")
             populate_notebook(user, args.notebook)
     # TODO(BLE001): intentional broad catch — top-level example handler: report the per-item failure and continue; narrow if a specific type becomes known.
     except Exception as e:  # noqa: BLE001
