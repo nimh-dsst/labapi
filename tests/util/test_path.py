@@ -350,6 +350,23 @@ def test_notebook_path_anchored_equals_absolute_with_matching_hash():
     assert {anchored: "value"}.get(absolute) == "value"
 
 
+def test_notebook_path_equal_relative_paths_are_equal_and_hashable():
+    """Two equal unanchored relative paths must compare equal and hash equal."""
+    a = NotebookPath(EscapedSegment("foo/bar"))
+    b = NotebookPath(EscapedSegment("foo/bar"))
+
+    assert a == b
+    assert hash(a) == hash(b)
+    assert b in {a}
+    assert len({a, b}) == 1
+    assert {a: "value"}[b] == "value"
+
+    # Distinct relative paths stay unequal, and an unanchored relative path is
+    # not equal to the same-segment absolute path.
+    assert a != NotebookPath(EscapedSegment("foo/baz"))
+    assert a != NotebookPath(EscapedSegment("/foo/bar"))
+
+
 def test_notebook_path_relative_to_identical_relative_returns_empty():
     """relative_to an identical relative path returns an empty relative path."""
     result = NotebookPath(EscapedSegment("a")).relative_to(
