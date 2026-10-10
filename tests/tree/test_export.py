@@ -17,7 +17,7 @@ import labapi as LA
 from labapi.entry import Attachment, AttachmentEntry, PlainTextEntry, TextEntry
 from labapi.exceptions import ApiError
 from labapi.tree import notebook as notebook_module
-from labapi.tree._export import _backup_tree, _walk_tree, _write_tree
+from labapi.tree._export import _backup_tree, _walk_tree, _writable_name, _write_tree
 
 
 def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
@@ -216,6 +216,40 @@ def test_write_tree_shortens_an_overlong_filename(tmp_path):
 
     assert len(files) == 1
     assert len(files[0].name) <= 240
+    assert files[0].suffix == ".txt"
+    readable_path = files[0]
+    if os.name == "nt":
+        readable_path = Path("\\\\?\\" + str(readable_path.resolve()))
+    assert readable_path.read_text(encoding="utf-8") == "contents"
+
+
+def test_writable_name_shortens_by_encoded_byte_length():
+    """Many-multibyte-character names are bounded by UTF-8 bytes, not code points."""
+    emoji_name = "\U0001f600" * 100  # 100 emoji: 100 code points, 400 UTF-8 bytes
+
+    result = _writable_name(emoji_name)
+
+    assert len(emoji_name) <= 240  # stays under the old code-point cap
+    assert len(emoji_name.encode("utf-8")) > 240  # but not the byte cap
+    assert len(result.encode("utf-8")) <= 240
+    # The truncation never split a multibyte character.
+    assert result.encode("utf-8").decode("utf-8") == result
+
+
+def test_write_tree_shortens_an_overlong_multibyte_filename(tmp_path):
+    """Multibyte names are shortened by encoded bytes, not code points."""
+    source = tmp_path / "source.txt"
+    source.write_text("contents", encoding="utf-8")
+
+    emoji_name = "\U0001f600" * 100 + ".txt"  # 100 emoji, 1 code point each
+    exported = _write_tree({emoji_name: source}, tmp_path / "export")
+    files = list(exported.iterdir())
+
+    assert len(files) == 1
+    name = files[0].name
+    assert len(name.encode("utf-8")) <= 240
+    # The truncation never split a multibyte character.
+    assert name.encode("utf-8").decode("utf-8") == name
     assert files[0].suffix == ".txt"
     readable_path = files[0]
     if os.name == "nt":

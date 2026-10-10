@@ -16,22 +16,37 @@ from typing import TYPE_CHECKING
 from labapi.entry import AttachmentEntry, TextEntry
 
 _INVALID_PATH_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
-_MAX_COMPONENT_LENGTH = 240
+_MAX_COMPONENT_BYTES = 240
 
 if TYPE_CHECKING:
     from .notebook import Notebook
 
 
+def _truncate_utf8(text: str, max_bytes: int) -> str:
+    """Truncate ``text`` to at most ``max_bytes`` UTF-8 bytes.
+
+    Never splits a multibyte character: any dangling partial character left
+    at the cut point is dropped rather than emitted as invalid UTF-8.
+    """
+    if max_bytes <= 0:
+        return ""
+    encoded = text.encode("utf-8")
+    if len(encoded) <= max_bytes:
+        return text
+    return encoded[:max_bytes].decode("utf-8", errors="ignore")
+
+
 def _writable_name(name: str) -> str:
     """Make a LabArchives name writable as one filesystem path component."""
     name = _INVALID_PATH_CHARS.sub("_", name).rstrip(" .") or "untitled"
-    if len(name) <= _MAX_COMPONENT_LENGTH:
+    if len(name.encode("utf-8")) <= _MAX_COMPONENT_BYTES:
         return name
 
-    digest = hashlib.sha256(name.encode()).hexdigest()[:12]
-    suffix = Path(name).suffix[-(_MAX_COMPONENT_LENGTH - len(digest) - 1) :]
-    stem_length = _MAX_COMPONENT_LENGTH - len(suffix) - len(digest) - 1
-    return f"{name[:stem_length]}~{digest}{suffix}"
+    digest = hashlib.sha256(name.encode("utf-8")).hexdigest()[:12]
+    suffix = _truncate_utf8(Path(name).suffix, _MAX_COMPONENT_BYTES - len(digest) - 1)
+    stem_budget = _MAX_COMPONENT_BYTES - len(suffix.encode("utf-8")) - len(digest) - 1
+    stem = _truncate_utf8(name, stem_budget)
+    return f"{stem}~{digest}{suffix}"
 
 
 def _backup_tree(notebook: Notebook, tmpdir: Path) -> dict:
