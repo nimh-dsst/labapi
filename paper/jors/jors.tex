@@ -95,10 +95,10 @@ upload. It identifies pages by internal tree IDs, however, and returns the
 notebook's contents one folder level at a time \citep{labarchives_api}. Code that wants
 to write to QC/sub-01 has to list the top level of the notebook, find the
 QC folder by name, list that folder, find the page, and only then sign and
-send the request that adds the entry. None of the public clients in
-Table~\ref{tab:comparison} does this lookup.
+send the request that adds the entry. None of the other clients in
+Table~\ref{tab:comparison} does this.
 
-labapi does that lookup, signs the request, and creates any missing folders
+labapi performs that lookup, signs the request, and creates any missing folders
 or pages along the way. Two applications we maintain at NIMH
 are built on it: muronto, which records the outputs of behavioural
 neuroscience experiments, and save-my-jupyter, which deposits Jupyter
@@ -138,8 +138,8 @@ a general Python interface to notebooks
 \section*{Implementation and architecture}
 
 The lowest layer is a client that signs each request with HMAC-SHA512 and
-handles login. On top of it, a user session knows which notebooks the
-researcher can open. Folders and pages live in the tree layer, and the
+handles login. On top of it, a user session gives access to the notebooks
+the researcher can open. Folders and pages live in the tree layer, and the
 contents of a page (rich text, headers, plain text, widgets and file
 attachments) in the entry layer. LabArchives returns XML, which
 labapi parses with lxml.
@@ -163,9 +163,10 @@ follows only paths that already exist.
     \label{fig:model}
 \end{figure}
 
-Path strings are parsed once, following Alexis King's ``parse, don't
-validate'' principle \citep{king2019parse}, into \texttt{NotebookPath} objects that
-record their segments and whether they are absolute or relative. A slash
+Following Alexis King's ``parse, don't validate'' principle
+\citep{king2019parse}, labapi parses each path string once into a
+\texttt{NotebookPath} object that records its segments and whether it is
+absolute or relative. A slash
 inside a name is written as \texttt{\textbackslash/}, and a malformed path
 raises \texttt{PathError} when it is built, before any request is sent.
 Joining, resolving, containment checks and traversal all work on these
@@ -193,19 +194,19 @@ are ordinary LabArchives entries, so they display and export like any
 other entry and can be read without labapi.
 
 labapi raises typed exceptions, such as \texttt{ApiError} and
-\texttt{AuthenticationError}, when the API returns an error. labapi does not retry
+\texttt{AuthenticationError}, when the API returns an error. It does not retry
 failed requests or handle rate limiting.
 
 \section*{Quality control}
 
 The unit tests run against a mocked network layer, so they need no
-credentials, and they cover everything from request signing and path
-parsing to notebook backup; each bundled example is tested too. A second
+credentials, and they cover request signing, path parsing, tree operations
+and notebook backup; each bundled example is tested too. A second
 suite repeats the same operations against a real LabArchives account. It
 needs a LabArchives login, so we run it by hand. Both suites run under
-\texttt{pytest}, and the \texttt{--integration} flag switches on the live
-one, which reads its credentials from environment variables (see the
-contributing guide). For every push and pull request, GitHub Actions runs the unit
+\texttt{pytest}; passing \texttt{--integration} enables the live suite,
+which reads credentials from environment variables (see the contributing
+guide). For every push and pull request, GitHub Actions runs the unit
 tests on Python 3.10 to 3.14 alongside Ruff, type checking and a
 documentation build.
 
@@ -283,9 +284,9 @@ The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 \section*{Operating system}
 
 Platform-independent (pure Python). Continuous integration runs on GitHub's
-current Ubuntu runner, Ubuntu 24.04 at the time of writing. labapi is also
-used on Windows 11. Windows and macOS are not covered
-by automated tests.
+current Ubuntu runner, Ubuntu 24.04 at the time of writing. The authors
+also use it on Windows 11, but neither Windows nor macOS is covered by
+automated tests.
 
 \section*{Programming language}
 
@@ -345,19 +346,21 @@ English
 
 \section*{(3) Reuse potential}
 
-A biochemistry lab could use the same calls to file plate-reader exports
+A biochemistry lab could use the calls shown in the quality-control example to file
+plate-reader exports
 on the page for each assay, and a core facility could schedule backups of
 the notebooks it looks after. The Systems Neuroscience Imaging Resource, an
 NIMH imaging core, already schedules backups this way, and the backup
-feature was developed with it \citep{labapi_issue_264}. \fillin{optional adoption figure, e.g. number of
+feature was developed together with that core \citep{labapi_issue_264}. \fillin{optional adoption figure, e.g. number of
 laboratories or users}
 
 The other examples in the repository are meant to be copied and changed.
 One uploads CSV files as formatted tables and fetches them back; others
 download a folder, log machine-learning runs, or capture a Jupyter session.
 If LabArchives adds an entry type that labapi does not know, supporting it
-takes a subclass of \texttt{Entry} with the type's name as a class keyword,
-and the class registers itself for dispatch.
+takes a subclass of \texttt{Entry} that passes the type's name as the
+\texttt{part\_type} class argument; the subclass registers itself for
+dispatch.
 
 Questions and bug reports go to the GitHub issue tracker. The contributing
 guide explains how to set up a development environment, run both test
@@ -378,9 +381,9 @@ contributed to tests, opened pull requests and issues, and drafted and
 edited documentation and manuscript text. For the example workflow, AI
 wrote the analysis and plotting code. The DVARS values and the cohort
 figure were produced by running that code on the ds000228 data, and no AI
-tool generated or edited the data, measurements or figure content. The
-panels of Figure~\ref{fig:dashboard} were cropped, arranged and labelled
-from unaltered screenshots by an AI agent using ImageMagick. The authors
+tool generated or edited the data, measurements or figure content. An AI
+agent used ImageMagick to crop, arrange and label the panels of
+Figure~\ref{fig:dashboard} from unaltered screenshots. The authors
 reviewed and accepted all AI-assisted software changes through public pull
 requests, reviewed and revised all AI-assisted text, and take full
 responsibility for the software and this paper. The tools used were
