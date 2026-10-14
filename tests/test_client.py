@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import socket
+import ssl
+import sys
+import warnings
 from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
 from os import getenv
@@ -13,10 +16,13 @@ from unittest.mock import MagicMock, Mock, patch
 from urllib.parse import parse_qsl, urlsplit
 
 import pytest
+import truststore
 from lxml.etree import XMLSyntaxError
 from requests import Response
+from requests.adapters import HTTPAdapter
 
 from labapi import Client, User
+from labapi.client import _313HTTPAdapter
 from labapi.exceptions import ApiError, AuthenticationError
 
 
@@ -88,6 +94,13 @@ def local_get(port: int, path: str) -> tuple[int, str]:
         return response.status, response.read().decode("utf-8")
     finally:
         connection.close()
+
+
+def https_adapter(client: Client) -> HTTPAdapter:
+    """Return the requests adapter the client's session uses for HTTPS."""
+    adapter = client.session.get_adapter("https://api.test.com")
+    assert isinstance(adapter, HTTPAdapter)
+    return adapter
 
 
 class TestClientUnit:
@@ -436,6 +449,121 @@ class TestClientUnit:
 
         client.raw_api_get("test")
         assert client.session.get.call_args.kwargs["timeout"] == 5.0
+
+    def test_default_client_mounts_stock_https_adapter(self):
+        """Test the default client keeps requests' stock HTTPS adapter."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            client = Client("https://api.test.com", "test_akid", "test_password")
+
+        adapter = https_adapter(client)
+        assert type(adapter) is HTTPAdapter
+        assert "ssl_context" not in adapter.poolmanager.connection_pool_kw
+
+    def test_ssl_host_bundle_uses_truststore_context(self):
+        """Test ssl_host_bundle=True verifies with an unmodified truststore context."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            client = Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                ssl_host_bundle=True,
+            )
+
+        adapter = https_adapter(client)
+        context = adapter.poolmanager.connection_pool_kw["ssl_context"]
+        assert isinstance(context, truststore.SSLContext)
+        expected = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT).verify_flags
+        assert context.verify_flags == expected
+
+    @pytest.mark.parametrize("strict_cert", [True, False])
+    def test_strict_cert_is_deprecated(self, strict_cert: bool):
+        """Test passing strict_cert explicitly warns at the caller's line."""
+        with pytest.warns(
+            DeprecationWarning, match="strict_cert is deprecated"
+        ) as record:
+            Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                strict_cert=strict_cert,
+            )
+
+        assert "ssl_host_bundle=True" in str(record[0].message)
+        assert record[0].filename == __file__
+
+    def test_ssl_host_bundle_ignores_strict_cert(self):
+        """Test strict_cert only warns and leaves the truststore context unchanged."""
+        with pytest.warns(DeprecationWarning, match="strict_cert is deprecated"):
+            client = Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                strict_cert=False,
+                ssl_host_bundle=True,
+            )
+
+        adapter = https_adapter(client)
+        context = adapter.poolmanager.connection_pool_kw["ssl_context"]
+        assert isinstance(context, truststore.SSLContext)
+        expected = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT).verify_flags
+        assert context.verify_flags == expected
+
+    def test_ssl_host_bundle_context_is_used_through_proxies(self):
+        """Test proxied HTTPS connections also verify with the truststore context."""
+        client = Client(
+            "https://api.test.com",
+            "test_akid",
+            "test_password",
+            ssl_host_bundle=True,
+        )
+
+        adapter = https_adapter(client)
+        context = adapter.poolmanager.connection_pool_kw["ssl_context"]
+        proxy_manager = adapter.proxy_manager_for("http://proxy.test:8080")
+        assert proxy_manager.connection_pool_kw["ssl_context"] is context
+
+    def test_strict_cert_true_mounts_stock_https_adapter(self):
+        """Test explicit strict_cert=True keeps requests' stock HTTPS adapter."""
+        with pytest.warns(DeprecationWarning, match="strict_cert is deprecated"):
+            client = Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                strict_cert=True,
+            )
+
+        assert type(https_adapter(client)) is HTTPAdapter
+
+    def test_strict_cert_false_alone_mounts_313_adapter(self):
+        """Test strict_cert=False without ssl_host_bundle keeps _313HTTPAdapter."""
+        with pytest.warns(DeprecationWarning, match="strict_cert is deprecated"):
+            client = Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                strict_cert=False,
+            )
+
+        adapter = https_adapter(client)
+        assert type(adapter) is _313HTTPAdapter
+        context = adapter.poolmanager.connection_pool_kw["ssl_context"]
+        assert not isinstance(context, truststore.SSLContext)
+        assert not context.verify_flags & ssl.VERIFY_X509_STRICT
+
+    def test_ssl_host_bundle_without_truststore_raises_import_error(self):
+        """Test a missing truststore dependency points at the labapi extra."""
+        with (
+            patch.dict(sys.modules, {"truststore": None}),
+            pytest.raises(ImportError, match=r"labapi\[truststore\]"),
+        ):
+            Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                ssl_host_bundle=True,
+            )
 
     def test_raw_api_get_raises_api_error_from_xml_error_body(self):
         """Test raw_api_get surfaces LabArchives XML error payloads."""
