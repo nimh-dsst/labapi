@@ -73,7 +73,7 @@ Choose the install target that includes the helpers you need:
 Optional Extras
 ---------------
 
-``labapi`` has three optional extras:
+``labapi`` has four optional extras:
 
 - ``dotenv`` lets :class:`~labapi.client.Client` read ``API_URL``,
   ``ACCESS_KEYID``, and ``ACCESS_PWD`` from a local ``.env`` file.
@@ -84,6 +84,9 @@ Optional Extras
 - ``export`` installs ``py7zr`` so
   :meth:`~labapi.tree.notebook.Notebook.export` can read native LabArchives
   backup archives. Live ``source="walk"`` exports do not need it.
+- ``truststore`` lets ``Client(ssl_host_bundle=True)`` verify TLS
+  certificates against the operating system's trust store, for example behind
+  a TLS-inspecting proxy. See :ref:`faq`.
 
 Configuration
 -------------
