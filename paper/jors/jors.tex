@@ -95,8 +95,7 @@ upload. It identifies pages by internal tree IDs, however, and returns the
 notebook's contents one folder level at a time \citep{labarchives_api}. Code that wants
 to write to QC/sub-01 has to list the top level of the notebook, find the
 QC folder by name, list that folder, find the page, and only then sign and
-send the request that adds the entry. None of the other clients in
-Table~\ref{tab:comparison} does this.
+send the request that adds the entry.
 
 labapi performs that lookup, signs the request, and creates any missing folders
 or pages along the way. Two applications we maintain at NIMH
@@ -108,7 +107,10 @@ support laboratories on LabArchives.
 
 Benchling, RSpace and eLabFTW each ship an official Python client for their
 API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives
-publishes none. We considered building on labarchives-py \citep{mcmero},
+publishes none, and the public LabArchives clients in
+Table~\ref{tab:comparison} do not combine path navigation, entry handling
+and attachment transfer in a single client. We considered building on
+labarchives-py \citep{mcmero},
 which signs arbitrary API requests, but we would still have had to write
 the notebook model, so we wrote a separate client. The ReDBox research data portal and a Model
 Context Protocol server also have LabArchives integrations, but neither
