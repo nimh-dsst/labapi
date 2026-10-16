@@ -79,3 +79,63 @@ jobs:
         with:
           name: preprint
           path: paper/paper.preprint.pdf
+
+  # Builds the JORS software metapaper from paper/jors/jors.tex with the
+  # official JORS class. The Inara image lacks sectsty, which jors.cls
+  # requires, so this job uses Ubuntu's TeX Live packages instead. The SVG
+  # figure is converted to PDF for pdflatex.
+  jors:
+    runs-on: ubuntu-latest
+    name: JORS manuscript PDF
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-bibtex-extra librsvg2-bin \
+            poppler-utils pandoc
+
+      - name: Compile JORS manuscript
+        working-directory: paper/jors
+        run: |
+          rsvg-convert -f pdf -o ../figures/object-model.pdf ../figures/object-model.svg
+          pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+          bibtex jors
+          pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+          pdflatex -interaction=nonstopmode -halt-on-error jors.tex
+          ! grep -E "Citation .* undefined|Reference .* undefined" jors.log
+          # Page previews for reviewing layout without a local TeX install.
+          mkdir -p pages
+          pdftoppm -r 70 -png jors.pdf pages/page
+
+      - name: Convert JORS manuscript to Word
+        working-directory: paper/jors
+        run: |
+          # Word cannot embed PDF figures, so render the SVG as a PNG too.
+          rsvg-convert -f png -d 300 -p 300 -o ../figures/object-model.png ../figures/object-model.svg
+          # NLM citation-sequence is the numbered Vancouver style JORS asks for.
+          curl -fsSL -o vancouver.csl \
+            https://raw.githubusercontent.com/citation-style-language/styles/master/nlm-citation-sequence.csl
+          # pandoc misreads two print-only LaTeX details: \small inside the
+          # table, and enumitem options on the description lists. Strip them
+          # from a Word-only copy; the PDF still uses jors.tex unchanged.
+          sed -e '/^[[:space:]]*\\small[[:space:]]*$/d' \
+              -e 's/\\begin{description}\[[^]]*\]/\\begin{description}/' \
+              -e 's/{lp{6\.2cm}l}/{lll}/' \
+              jors.tex > jors_word.tex
+          pandoc jors_word.tex --citeproc --bibliography=../paper.bib --csl=vancouver.csl \
+            --metadata reference-section-title=References \
+            --default-image-extension=png --resource-path=.:.. -o jors.docx
+
+      - name: Upload JORS PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: jors
+          path: |
+            paper/jors/jors.pdf
+            paper/jors/jors.docx
+            paper/jors/pages/

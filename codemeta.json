@@ -14,6 +14,25 @@
   "programmingLanguage": "Python",
   "runtimePlatform": "Python 3.10 or later",
   "operatingSystem": "Cross-platform",
+  "softwareRequirements": [
+    "cryptography>=50",
+    "lxml>=6.1.1",
+    "requests>=2.33",
+    "typing-extensions"
+  ],
+  "downloadUrl": "https://pypi.org/project/labapi/",
+  "releaseNotes": "https://github.com/nimh-dsst/labapi/blob/main/CHANGELOG.md",
+  "funding": "NIMH Intramural Research Program project ZICMH002960; NCI Contract No. 75N91019D00024",
+  "funder": [
+    {
+      "@type": "Organization",
+      "name": "National Institute of Mental Health, National Institutes of Health"
+    },
+    {
+      "@type": "Organization",
+      "name": "National Cancer Institute, National Institutes of Health"
+    }
+  ],
   "applicationCategory": "Research software",
   "keywords": [
     "electronic lab notebook",
