@@ -153,7 +153,10 @@ during a session are not visible to labapi until \texttt{refresh()} reloads
 the folder.
 \texttt{dir()} and \texttt{page()} return the folder or page at a path,
 creating it and any missing parent folders if needed. \texttt{traverse()}
-follows only paths that already exist.
+follows only paths that already exist. A whole notebook can also be
+downloaded, either as the backup LabArchives uses for restoring it
+(\texttt{Notebook.backup()}) or as a plain copy with one file per entry
+(\texttt{Notebook.export()}).
 
 \begin{figure}[htbp]
     \centering
@@ -180,14 +183,6 @@ environment variables or a \texttt{.env} file. They stay in the
 \texttt{Client}, separate from the \texttt{User} sessions it creates, so a
 shared service can keep one copy of its institution's access key and still
 open a session for each researcher who logs in.
-
-\texttt{Notebook.backup()} downloads LabArchives' own 7-Zip backup of a
-whole notebook, with or without attachments, in the format LabArchives can
-restore from; LabArchives provides it only to the notebook's owner.
-\texttt{Notebook.export()} serves a different purpose: it writes a plain
-copy for reading outside LabArchives, as a folder tree with one file per
-entry. It builds that copy from a backup when one is available and
-otherwise walks the notebook through the API.
 
 \texttt{create\_json\_entry()} stores structured results as a JSON
 attachment that code can read back, plus a formatted preview for people
