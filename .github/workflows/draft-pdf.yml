@@ -97,7 +97,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             texlive-latex-recommended texlive-latex-extra \
             texlive-fonts-recommended texlive-bibtex-extra librsvg2-bin \
-            poppler-utils
+            poppler-utils pandoc
 
       - name: Compile JORS manuscript
         working-directory: paper/jors
@@ -112,10 +112,21 @@ jobs:
           mkdir -p pages
           pdftoppm -r 70 -png jors.pdf pages/page
 
+      - name: Convert JORS manuscript to Word
+        working-directory: paper/jors
+        run: |
+          # Word cannot embed PDF figures, so render the SVG as a PNG too.
+          rsvg-convert -f png -d 300 -p 300 -o ../figures/object-model.png ../figures/object-model.svg
+          curl -fsSL -o vancouver.csl \
+            https://raw.githubusercontent.com/citation-style-language/styles/master/vancouver.csl
+          pandoc jors.tex --citeproc --bibliography=../paper.bib --csl=vancouver.csl \
+            --default-image-extension=png --resource-path=.:.. -o jors.docx
+
       - name: Upload JORS PDF
         uses: actions/upload-artifact@v4
         with:
           name: jors
           path: |
             paper/jors/jors.pdf
+            paper/jors/jors.docx
             paper/jors/pages/
