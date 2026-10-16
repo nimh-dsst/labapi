@@ -117,8 +117,9 @@ jobs:
         run: |
           # Word cannot embed PDF figures, so render the SVG as a PNG too.
           rsvg-convert -f png -d 300 -p 300 -o ../figures/object-model.png ../figures/object-model.svg
+          # NLM citation-sequence is the numbered Vancouver style JORS asks for.
           curl -fsSL -o vancouver.csl \
-            https://raw.githubusercontent.com/citation-style-language/styles/master/vancouver.csl
+            https://raw.githubusercontent.com/citation-style-language/styles/master/nlm-citation-sequence.csl
           pandoc jors.tex --citeproc --bibliography=../paper.bib --csl=vancouver.csl \
             --default-image-extension=png --resource-path=.:.. -o jors.docx
 
