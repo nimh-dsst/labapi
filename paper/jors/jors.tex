@@ -108,15 +108,9 @@ support laboratories on LabArchives.
 
 Benchling, RSpace and eLabFTW each ship an official Python client for their
 API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives
-publishes none. Of the standalone clients, two come closest to labapi.
-labarchives-py \citep{mcmero} is a single Python module that signs
-arbitrary GET requests and returns the raw responses, leaving the caller to
-pick endpoints, parse the XML and walk the tree. provision-labarchives
-\citep{provision_labarchives}, the Node.js layer behind ReDBox's
-LabArchives plugin, wraps a fixed set of user, notebook, tree and entry
-endpoints, but it reaches pages only by tree ID and cannot upload
-attachments. We considered building on labarchives-py, but we would still
-have had to write the notebook model, so we wrote a separate client. The ReDBox plugin itself and a Model Context Protocol server
+publishes none. We considered building on labarchives-py \citep{mcmero},
+which signs arbitrary API requests, but we would still have had to write
+the notebook model, so we wrote a separate client. The ReDBox plugin itself and a Model Context Protocol server
 also connect to LabArchives, but neither offers a general Python interface
 to notebooks
 \citep{redbox_labarchives,labarchives_mcp}.
