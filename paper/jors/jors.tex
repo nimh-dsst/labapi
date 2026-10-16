@@ -181,13 +181,13 @@ environment variables or a \texttt{.env} file. They stay in the
 shared service can keep one copy of its institution's access key and still
 open a session for each researcher who logs in.
 
-A whole notebook can be saved with \texttt{Notebook.backup()}, which
-downloads the 7-Zip archive that LabArchives itself produces, with or
-without attachments. LabArchives produces this archive only for the
-notebook's owner. \texttt{Notebook.export()} instead writes the notebook to
-disk as a folder tree with one file per entry. It unpacks a backup when the
-user owns the notebook and otherwise walks the notebook through the API,
-which works for anyone who can open it.
+\texttt{Notebook.backup()} downloads LabArchives' own 7-Zip backup of a
+whole notebook, with or without attachments, in the format LabArchives can
+restore from; LabArchives provides it only to the notebook's owner.
+\texttt{Notebook.export()} serves a different purpose: it writes a plain
+copy for reading outside LabArchives, as a folder tree with one file per
+entry. It builds that copy from a backup when one is available and
+otherwise walks the notebook through the API.
 
 \texttt{create\_json\_entry()} stores structured results as a JSON
 attachment that code can read back, plus a formatted preview for people
