@@ -183,9 +183,11 @@ open a session for each researcher who logs in.
 
 A whole notebook can be saved with \texttt{Notebook.backup()}, which
 downloads the 7-Zip archive that LabArchives itself produces, with or
-without attachments. \texttt{Notebook.export()} instead writes the notebook
-to disk as a folder tree with one file per entry, built either by walking
-the notebook through the API or by unpacking a backup.
+without attachments. LabArchives produces this archive only for the
+notebook's owner. \texttt{Notebook.export()} instead writes the notebook to
+disk as a folder tree with one file per entry. It unpacks a backup when the
+user owns the notebook and otherwise walks the notebook through the API,
+which works for anyone who can open it.
 
 \texttt{create\_json\_entry()} stores structured results as a JSON
 attachment that code can read back, plus a formatted preview for people
