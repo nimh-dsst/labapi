@@ -43,6 +43,7 @@ version = ".".join(release.split(".")[:2])
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    "myst_parser",
     "sphinx_multiversion",
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
