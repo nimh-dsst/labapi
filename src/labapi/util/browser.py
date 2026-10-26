@@ -89,7 +89,7 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
     # under a key that differs from our canonical name (e.g. Edge as "msedge"),
     # so match on the same substring basis autodetection uses.
     try:
-        installed = installed_browsers.browsers()
+        installed = list(installed_browsers.browsers())
     # TODO(BLE001): intentional broad catch — installed-browsers probe may raise; fall back to an empty list; narrow if a specific type becomes known.
     except Exception:  # noqa: BLE001
         installed = []

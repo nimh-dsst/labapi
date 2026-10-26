@@ -226,3 +226,20 @@ def test_browser_detection_explicit_terminal_override(browser_module, monkeypatc
     """Test terminal override from LA_AUTH_BROWSER."""
     monkeypatch.setenv("LA_AUTH_BROWSER", "terminal")
     assert browser_module.detect_default_browser() == "terminal"
+
+
+def test_configured_browser_linear_search_iteration_error_falls_back(
+    browser_module, mock_installed_browsers, monkeypatch
+):
+    """Test errors while lazily enumerating installed browsers fall back gracefully."""
+    monkeypatch.setenv("LA_AUTH_BROWSER", "chrome")
+    mock_installed_browsers.do_i_have_installed.return_value = False
+    mock_installed_browsers.what_is_the_default_browser.return_value = None
+
+    def raising_browsers():
+        yield {"name": "Some Browser"}
+        raise OSError("registry read failed mid-iteration")
+
+    mock_installed_browsers.browsers.side_effect = lambda: raising_browsers()
+
+    assert browser_module.detect_default_browser() == "terminal"
