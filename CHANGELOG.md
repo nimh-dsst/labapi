@@ -13,6 +13,16 @@ details that affect development workflows.
 ### Added
 
 - Official support for Python 3.14; the CI matrix now tests against it.
+- `Client(ssl_host_bundle=True)` verifies TLS certificates against the
+  operating system's trust store via `truststore`, for networks behind a
+  TLS-inspecting proxy whose root CA is installed only in the OS store. It
+  requires the new `labapi[truststore]` extra.
+
+### Deprecated
+
+- The `Client(strict_cert=...)` option. Passing it explicitly now emits a
+  `DeprecationWarning`; behavior is otherwise unchanged, and it has no effect
+  when `ssl_host_bundle=True`. Use `ssl_host_bundle=True` instead.
 
 ### Changed
 

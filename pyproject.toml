@@ -58,10 +58,14 @@ dotenv = [
 export = [
     "py7zr>=1.1.3",
 ]
+truststore = [
+    "truststore>=0.10.5",
+]
 
 [dependency-groups]
 dev = [
     "py7zr>=1.1.3",
+    "truststore>=0.10.5",
     "pytest>=9.0.3",
     "pytest-cov>=7.0.0",
     "pyright>=1.1.406",
