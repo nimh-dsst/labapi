@@ -65,7 +65,7 @@ class ModelLogger:
             NotebookDirectory, self.user.email, if_exists=InsertBehavior.Retain
         )
 
-        timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
+        timestamp = datetime.now().isoformat(timespec="microseconds").replace(":", "-")
         run_dir = user_dir.create(NotebookDirectory, timestamp)
 
         # Create the log page

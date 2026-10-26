@@ -250,7 +250,7 @@ class NotebookLogger:
             NotebookDirectory, self.user.email, if_exists=InsertBehavior.Retain
         )
 
-        timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
+        timestamp = datetime.now().isoformat(timespec="microseconds").replace(":", "-")
         page = user_dir.create(NotebookPage, timestamp)
         entries = page.entries
         tags_html = "".join(
