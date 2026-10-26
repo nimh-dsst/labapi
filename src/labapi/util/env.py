@@ -34,10 +34,10 @@ def getenv(key: str, default: T | None = None) -> str | T | None:
     global _loaded
 
     if not _loaded:
+        _loaded = True
         with contextlib.suppress(ImportError):
             from dotenv import load_dotenv  # pyright: ignore[reportMissingImports]
 
             load_dotenv()
-            _loaded = True
 
     return _getenv(key, default)
