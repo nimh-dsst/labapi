@@ -341,10 +341,20 @@ def test_write_tree_supports_a_long_windows_path(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "error", [ImportError(), ApiError("denied", 4547), ApiError("failed", 5000)]
+    "error",
+    [
+        ImportError(),
+        ApiError("denied", 4547),
+        ApiError("failed", 5000),
+        # Corrupt/unreadable backup: these previously escaped instead of
+        # falling back to the live walk.
+        RuntimeError("corrupt 7z archive"),
+        ValueError("invalid backup database"),
+        OSError("backup read failed"),
+    ],
 )
 def test_auto_falls_back_to_walk(monkeypatch, notebook: LA.Notebook, tmp_path, error):
-    """Automatic exports fall back to the API tree when backup is unavailable."""
+    """Automatic exports fall back to the API tree when the backup is unusable."""
     monkeypatch.setattr(notebook_module, "_backup_tree", Mock(side_effect=error))
     monkeypatch.setattr(notebook_module, "_walk_tree", Mock(return_value={}))
 
@@ -375,3 +385,110 @@ def test_backup_source_chains_the_backup_error(
         notebook.export(tmp_path / "export", source="backup")
 
     assert raised.value.__cause__ is error
+
+
+def test_auto_fallback_when_backup_populated_its_temp_dir(
+    monkeypatch, notebook: LA.Notebook, tmp_path
+):
+    """A backup that staged temp files before failing must not block the walk."""
+
+    def fake_backup(_nb, tmpdir):
+        # Mirror _backup_tree's real side effect (it creates <tmpdir>/entries)
+        # before failing at the parse stage.
+        (tmpdir / "entries").mkdir()
+        raise RuntimeError("corrupt backup database")
+
+    def fake_walk(_nb, tmpdir):
+        # Mirror _walk_tree's real bare mkdir; a shared temp dir would collide.
+        (tmpdir / "entries").mkdir()
+        return {}
+
+    monkeypatch.setattr(notebook_module, "_backup_tree", fake_backup)
+    monkeypatch.setattr(notebook_module, "_walk_tree", fake_walk)
+
+    export = notebook.export(tmp_path / "export")
+
+    assert export.path == tmp_path / "export"
+
+
+def test_auto_falls_back_when_backup_write_fails(
+    monkeypatch, notebook: LA.Notebook, tmp_path
+):
+    """A backup that fails at write time (e.g. a missing staged file) falls back."""
+    dest = tmp_path / "export"
+    monkeypatch.setattr(notebook_module, "_backup_tree", Mock(return_value={}))
+    monkeypatch.setattr(notebook_module, "_walk_tree", Mock(return_value={}))
+    monkeypatch.setattr(
+        notebook_module,
+        "_write_tree",
+        Mock(side_effect=[FileNotFoundError("missing staged attachment"), dest]),
+    )
+
+    export = notebook.export(dest)
+
+    assert export.path == dest
+
+
+def test_auto_walk_replaces_a_partial_backup_write(
+    monkeypatch, notebook: LA.Notebook, tmp_path
+):
+    """The walk fallback may overwrite files the failed backup write left."""
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "backup.txt").write_text("backup", encoding="utf-8")
+    (staged / "walk.txt").write_text("walk", encoding="utf-8")
+    dest = tmp_path / "export"
+    backup_tree = {"backup.txt": staged / "backup.txt", "gone.txt": staged / "gone"}
+    walk_tree = Mock(return_value={"walk.txt": staged / "walk.txt"})
+    monkeypatch.setattr(notebook_module, "_backup_tree", Mock(return_value=backup_tree))
+    monkeypatch.setattr(notebook_module, "_walk_tree", walk_tree)
+
+    export = notebook.export(dest)
+
+    walk_tree.assert_called_once()
+    assert export.path == dest
+    assert sorted(path.name for path in dest.iterdir()) == ["walk.txt"]
+
+
+@pytest.mark.parametrize("source", ["auto", "backup"])
+def test_non_empty_destination_fails_before_export(
+    monkeypatch, notebook: LA.Notebook, tmp_path, source
+):
+    """A non-empty destination is rejected before any backup or walk runs."""
+    dest = tmp_path / "export"
+    dest.mkdir()
+    (dest / "old.txt").write_text("old", encoding="utf-8")
+    backup_tree = Mock(return_value={})
+    walk_tree = Mock(return_value={})
+    monkeypatch.setattr(notebook_module, "_backup_tree", backup_tree)
+    monkeypatch.setattr(notebook_module, "_walk_tree", walk_tree)
+
+    with pytest.raises(FileExistsError, match="not empty"):
+        notebook.export(dest, source=source)
+
+    backup_tree.assert_not_called()
+    walk_tree.assert_not_called()
+    assert (dest / "old.txt").read_text(encoding="utf-8") == "old"
+
+
+@pytest.mark.parametrize(
+    "fail_at", ["read", "write"], ids=["unreadable-backup", "failed-write"]
+)
+def test_backup_source_reraises_unexpected_errors(
+    monkeypatch, notebook: LA.Notebook, tmp_path, fail_at
+):
+    """Explicit backup exports surface non-availability errors unchanged."""
+    error = ValueError("invalid backup database")
+    if fail_at == "read":
+        monkeypatch.setattr(notebook_module, "_backup_tree", Mock(side_effect=error))
+    else:
+        monkeypatch.setattr(notebook_module, "_backup_tree", Mock(return_value={}))
+        monkeypatch.setattr(notebook_module, "_write_tree", Mock(side_effect=error))
+    walk_tree = Mock(return_value={})
+    monkeypatch.setattr(notebook_module, "_walk_tree", walk_tree)
+
+    with pytest.raises(ValueError, match="invalid backup database") as raised:
+        notebook.export(tmp_path / "export", source="backup")
+
+    assert raised.value is error
+    walk_tree.assert_not_called()

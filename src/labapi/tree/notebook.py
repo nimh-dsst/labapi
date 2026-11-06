@@ -17,7 +17,7 @@ from typing_extensions import override
 
 from labapi.exceptions import ApiError
 
-from ._export import _backup_tree, _walk_tree, _write_tree
+from ._export import _backup_tree, _check_destination, _walk_tree, _write_tree
 from .mixins import AbstractTreeContainer, HasNameMixin
 from .search import EntrySearch
 
@@ -128,27 +128,65 @@ class Notebook(AbstractTreeContainer):
             live API tree; ``"backup"`` downloads and unpacks the native backup
             archive (requires the notebook owner's sign-in and the optional
             ``py7zr`` dependency: ``pip install 'labapi[export]'``); ``"auto"``
-            uses the backup archive when available and falls back to the walk.
+            uses the backup archive when it can be produced and read, and falls
+            back to the walk if the backup is unavailable or unreadable.
         :param overwrite: When ``destination`` exists and is not empty, raise
-            unless ``overwrite`` is ``True``.
+            unless ``overwrite`` is ``True``. This is checked before anything
+            is downloaded; an existing export is only replaced once the new
+            one starts being written.
         :returns: A completed :class:`NotebookExport`. Its ``path`` is the
             export directory.
+        :raises FileExistsError: If ``destination`` is not a directory, or is
+            not empty and ``overwrite`` is ``False``.
+        :raises RuntimeError: If ``source="backup"`` and the backup is
+            unavailable (``py7zr`` missing or the download rejected).
         """
-        backup_error = None
+        _check_destination(destination, overwrite)
+        backup_error: Exception | None = None
+        # Set once the backup tree has started writing into ``destination``;
+        # the walk fallback may then replace what this call just wrote.
+        wrote_partial = False
         with TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
 
             if source != "walk":
+                # Isolate the backup attempt in its own subdirectory so a
+                # partially-populated temp tree from a failed backup cannot
+                # collide with the walk fallback's own staging below.
+                backup_tmp = tmp_path / "backup"
+                backup_tmp.mkdir()
+                # A backup can be unavailable (py7zr missing, download
+                # rejected) or unreadable (corrupt archive, invalid database,
+                # malformed row, attachment missing from the archive). In
+                # "auto" mode any such failure degrades to the live walk below;
+                # "backup" mode re-raises unreadable-backup errors as-is and
+                # reports unavailability via the RuntimeError at the end.
                 try:
-                    tree = _backup_tree(self, tmp_path)
+                    tree = _backup_tree(self, backup_tmp)
                 except (ImportError, ApiError) as error:
                     backup_error = error
+                except Exception as error:
+                    if source == "backup":
+                        raise
+                    backup_error = error
                 else:
-                    return NotebookExport(_write_tree(tree, destination, overwrite))
+                    try:
+                        return NotebookExport(_write_tree(tree, destination, overwrite))
+                    except Exception as error:
+                        if source == "backup":
+                            raise
+                        backup_error = error
+                        wrote_partial = True
 
             if source != "backup":
+                walk_tmp = tmp_path / "walk"
+                walk_tmp.mkdir()
                 return NotebookExport(
-                    _write_tree(_walk_tree(self, tmp_path), destination, overwrite)
+                    _write_tree(
+                        _walk_tree(self, walk_tmp),
+                        destination,
+                        overwrite or wrote_partial,
+                    )
                 )
 
         raise RuntimeError(
