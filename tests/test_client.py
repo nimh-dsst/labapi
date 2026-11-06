@@ -6,6 +6,7 @@ import contextlib
 import socket
 import ssl
 import sys
+import traceback
 import warnings
 from datetime import UTC, datetime, timedelta
 from http.client import HTTPConnection
@@ -19,12 +20,14 @@ from urllib.parse import parse_qsl, urlsplit
 import pytest
 import truststore
 from lxml.etree import XMLSyntaxError
-from requests import Response
+from requests import Request, Response
 from requests.adapters import HTTPAdapter
-from requests.exceptions import RequestException
+from requests.exceptions import ChunkedEncodingError, StreamConsumedError
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from urllib3.exceptions import MaxRetryError, NewConnectionError, ProtocolError
 
-from labapi import Client, User
-from labapi.client import _313HTTPAdapter
+from labapi import Client, TransportError, User
+from labapi.client import StreamingResponse, _313HTTPAdapter
 from labapi.exceptions import ApiError, AuthenticationError
 
 
@@ -66,6 +69,37 @@ def make_response(
     response._content = body.encode("utf-8")
     response.encoding = "utf-8"
     return response
+
+
+SIGNED_URL_SECRETS = (
+    "SECRET-AKID",
+    "SECRET-SIG",
+    "SECRET-AUTH-CODE",
+    "user%40example.com",
+)
+SIGNED_URL = (
+    "https://api.test.com/api/users/user_access_info"
+    "?login_or_email=user%40example.com&password=SECRET-AUTH-CODE"
+    "&akid=SECRET-AKID&expires=1700000000000&sig=SECRET-SIG"
+)
+
+
+def raise_requests_connection_error(url: str, **_kwargs: object) -> Response:
+    """Fail like ``HTTPAdapter.send`` does when the host is unreachable.
+
+    The urllib3 error names the path and query string, and requests wraps it
+    while still handling it (so it is ``__context__``) and attaches the
+    prepared request carrying the full signed URL.
+    """
+    parts = urlsplit(url)
+    try:
+        raise MaxRetryError(
+            Mock(),
+            f"{parts.path}?{parts.query}",
+            reason=NewConnectionError(Mock(), "Failed to establish a new connection"),
+        )
+    except MaxRetryError as e:
+        raise RequestsConnectionError(e, request=Request("GET", url).prepare())  # noqa: B904
 
 
 def reserve_local_port() -> int:
@@ -407,55 +441,157 @@ class TestClientUnit:
 
     def test_client_handle_request_status_failure(self):
         """Test Client._handle_request_status with failed response."""
-        response = Mock(spec=Response)
-        response.status_code = 404
-        response.url = "https://api.test.com/endpoint"
-        response.text = "Not Found"
+        response = make_response(404, "Not Found")
 
         with pytest.raises(ApiError, match="API request failed with status code 404"):
             Client._handle_request_status(response)
 
-    def test_client_handle_request_status_sanitizes_url(self):
-        """Test Client._handle_request_status sanitizes sensitive query params."""
-        response = Mock(spec=Response)
-        response.status_code = 500
-        response.url = "https://api.test.com/endpoint?akid=secret&password=pass&sig=123&normal=true"
-        response.text = "Internal Error"
+    def test_handle_request_status_xml_error_message(self):
+        """XML errors report status, endpoint path, and the LabArchives code."""
+        response = make_response(
+            400,
+            (
+                "<error>"
+                "<error-code>4547</error-code>"
+                "<error-description>not an owner</error-description>"
+                "</error>"
+            ),
+            url=SIGNED_URL,
+        )
 
         with pytest.raises(ApiError) as exc_info:
             Client._handle_request_status(response)
 
-        error_msg = str(exc_info.value)
-        assert "akid=%2A%2A%2A" in error_msg
-        assert "password=%2A%2A%2A" in error_msg
-        assert "sig=%2A%2A%2A" in error_msg
-        assert "normal=true" in error_msg
-        assert "=secret" not in error_msg
-        assert "=pass" not in error_msg
+        assert str(exc_info.value) == (
+            "API request failed with status code 400 for /api/users/user_access_info"
+            ": [4547] not an owner"
+        )
+        assert exc_info.value.error_code == 4547
 
-    def test_transport_exception_masks_credentials(self):
-        """A transport failure must not leak the signed URL or the auth code."""
-        client = Client("https://api.test.com", "test_akid", "test_password")
-        auth_code = "super-secret-auth-code"
-
-        def fail(url: str, **_kwargs: object) -> Response:
-            # requests embeds the full request URL in transport exceptions.
-            raise RequestException(f"Max retries exceeded with url: {url}")
-
-        client.session.get = Mock(side_effect=fail)
+    def test_handle_request_status_non_xml_hides_url_and_body(self):
+        """A non-XML body echoing the signed URL leaks nothing into the error."""
+        response = make_response(
+            502, f"<html>Bad gateway for {SIGNED_URL} BODY-MARKER</html>", SIGNED_URL
+        )
+        response.headers["Content-Type"] = "text/html"
 
         with pytest.raises(ApiError) as exc_info:
-            client.raw_api_get(
+            Client._handle_request_status(response)
+
+        message = str(exc_info.value)
+        assert message == (
+            "API request failed with status code 502 for /api/users/user_access_info"
+            f": no LabArchives error in response (text/html, {len(response.content)}"
+            " bytes)"
+        )
+        assert exc_info.value.error_code is None
+        assert "?" not in message
+        for secret in SIGNED_URL_SECRETS:
+            assert secret not in message
+        assert "BODY-MARKER" not in message
+
+    def test_handle_request_status_non_xml_without_content_type(self):
+        """A missing Content-Type header is reported as such."""
+        with pytest.raises(ApiError, match=r"\(no Content-Type, 0 bytes\)$"):
+            Client._handle_request_status(make_response(500, "", SIGNED_URL))
+
+    @pytest.mark.parametrize(
+        ("method", "session_attr", "args", "expected_kwargs"),
+        [
+            ("raw_api_get", "get", (), {}),
+            ("raw_api_post", "post", ({"k": "v"},), {"data": {"k": "v"}}),
+            ("stream_api_get", "get", (), {"stream": True}),
+            (
+                "stream_api_post",
+                "post",
+                ({"k": "v"},),
+                {"data": {"k": "v"}, "stream": True},
+            ),
+        ],
+    )
+    def test_transport_failure_raises_transport_error_without_url(
+        self,
+        method: str,
+        session_attr: str,
+        args: tuple[object, ...],
+        expected_kwargs: dict[str, object],
+    ):
+        """A transport failure surfaces as TransportError with no signed URL."""
+        client = Client(
+            "https://api.test.com", "test_akid", "test_password", timeout=12.5
+        )
+        send = Mock(side_effect=raise_requests_connection_error)
+        setattr(client.session, session_attr, send)
+
+        with pytest.raises(TransportError) as exc_info:
+            getattr(client, method)(
                 "users/user_access_info",
+                *args,
                 login_or_email="user@example.com",
-                password=auth_code,
+                password="super-secret-auth-code",
             )
 
-        msg = str(exc_info.value)
-        assert auth_code not in msg
-        assert "test_akid" not in msg
-        assert "user@example.com" not in msg
-        assert "password=%2A%2A%2A" in msg
+        exc = exc_info.value
+        assert str(exc) == (
+            "ConnectionError during request to /api/users/user_access_info"
+        )
+        assert exc.error_code is None
+        assert exc.__cause__ is None
+        assert exc.__context__ is None
+        rendered = "".join(traceback.format_exception(exc))
+        for secret in (
+            "super-secret-auth-code",
+            "user@example.com",
+            "test_akid",
+            "sig=",
+            "expires=",
+            "Max retries",
+        ):
+            assert secret not in rendered
+        assert send.call_args.kwargs == {"timeout": 12.5, **expected_kwargs}
+
+    def test_streaming_response_broken_stream_raises_transport_error(self):
+        """A stream broken mid-read raises TransportError and still closes."""
+        response = MagicMock(spec=Response)
+        response.url = SIGNED_URL
+
+        def chunks(_size: int):
+            yield b"chunk-1"
+            try:
+                raise ProtocolError(f"Connection broken reading {SIGNED_URL}")
+            except ProtocolError as e:
+                raise ChunkedEncodingError(e) from e
+
+        response.iter_content.side_effect = chunks
+        stream = StreamingResponse(response)
+        received: list[bytes] = []
+
+        with pytest.raises(TransportError) as exc_info:
+            received.extend(stream)
+
+        exc = exc_info.value
+        assert received == [b"chunk-1"]
+        assert str(exc) == (
+            "ChunkedEncodingError while streaming /api/users/user_access_info"
+        )
+        assert exc.__cause__ is None
+        assert exc.__context__ is None
+        rendered = "".join(traceback.format_exception(exc))
+        for secret in SIGNED_URL_SECRETS:
+            assert secret not in rendered
+        response.close.assert_called_once()
+
+    def test_streaming_response_consumed_stream_is_not_transport_error(self):
+        """Iterating an already-consumed stream is a caller error, not transport."""
+        response = MagicMock(spec=Response)
+        response.url = SIGNED_URL
+        response.iter_content.side_effect = StreamConsumedError()
+        stream = StreamingResponse(response)
+
+        with pytest.raises(StreamConsumedError):
+            list(stream)
+
+        response.close.assert_called_once()
 
     def test_raw_api_get_returns_response(self):
         """Test raw_api_get returns the raw response and calls session.get directly."""
@@ -1271,6 +1407,7 @@ class TestClientUnit:
         response = MagicMock(spec=Response)
         response.status_code = 404
         response.url = "https://api.test.com/api/attachments/download"
+        response.headers = {}
         response.text = "Not Found"
         client.session.get = Mock(return_value=response)
 
@@ -1286,6 +1423,7 @@ class TestClientUnit:
         response = MagicMock(spec=Response)
         response.status_code = 500
         response.url = "https://api.test.com/api/attachments/upload"
+        response.headers = {}
         response.text = "Internal Server Error"
         client.session.post = Mock(return_value=response)
 

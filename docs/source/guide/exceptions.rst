@@ -18,6 +18,7 @@ All custom exceptions inherit from
    `-- LabArchivesError
        |-- AuthenticationError
        |-- ApiError
+       |   `-- TransportError
        |-- NodeExistsError
        |-- PathError
        `-- TraversalError
