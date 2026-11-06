@@ -5,6 +5,7 @@ from __future__ import annotations
 import socket
 import ssl
 import sys
+import time
 import warnings
 from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
@@ -281,23 +282,30 @@ class TestClientUnit:
         expires = dict(parse_qsl(urlsplit(signed_url).query))["expires"]
         assert int(expires) == round(absolute_expiry.timestamp() * 1000)
 
-    def test_client_construct_url_treats_naive_datetime_expiry_as_utc(self, client):
-        """Test naive datetime expiries are interpreted as UTC, not local time (#375)."""
+    def test_client_construct_url_treats_naive_datetime_expiry_as_local_time(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Test naive datetime expiries are interpreted as local time (#375)."""
+        tzset = getattr(time, "tzset", None)
+        if tzset is None:
+            pytest.skip("time.tzset is unavailable on Windows")
+        client = Client("https://api.test.com", "test_akid", "test_password")
         naive_expiry = datetime(2099, 1, 1, 12, 0, 0)  # noqa: DTZ001 -- naive is the point
-        aware_expiry = naive_expiry.replace(tzinfo=timezone.utc)
+        # Under UTC-5, local noon is 17:00 UTC; naive-as-UTC would give 12:00 UTC.
+        expected_utc = datetime(2099, 1, 1, 17, 0, 0, tzinfo=timezone.utc)
 
-        naive_url = client.construct_url(
-            "users/get_info", {"uid": "123"}, expires_in=naive_expiry
-        )
-        aware_url = client.construct_url(
-            "users/get_info", {"uid": "123"}, expires_in=aware_expiry
-        )
+        monkeypatch.setenv("TZ", "EST5")
+        tzset()
+        try:
+            signed_url = client.construct_url(
+                "users/get_info", {"uid": "123"}, expires_in=naive_expiry
+            )
+        finally:
+            monkeypatch.undo()
+            tzset()
 
-        naive_expires = dict(parse_qsl(urlsplit(naive_url).query))["expires"]
-        aware_expires = dict(parse_qsl(urlsplit(aware_url).query))["expires"]
-
-        assert naive_expires == aware_expires
-        assert int(naive_expires) == round(aware_expiry.timestamp() * 1000)
+        expires = dict(parse_qsl(urlsplit(signed_url).query))["expires"]
+        assert int(expires) == round(expected_utc.timestamp() * 1000)
 
     @pytest.mark.parametrize("expires_in", [timedelta(0), timedelta(seconds=-1)])
     def test_client_construct_url_rejects_non_positive_duration_expiry(

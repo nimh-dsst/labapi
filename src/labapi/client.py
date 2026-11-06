@@ -946,7 +946,10 @@ class Client:
         :param query: A dictionary of query parameters to include in the URL.
         :param expires_in: The duration for which the URL should be valid. Can be a
                            `timedelta` object or a specific `datetime` object. If None,
-                           defaults to 60 seconds from now.
+                           defaults to 60 seconds from now. A naive ``datetime`` is
+                           interpreted as local time (as
+                           :meth:`datetime.datetime.timestamp` does); pass a
+                           timezone-aware datetime to be explicit.
         :param should_prefix_api: If True, ensures the API method path starts with "api/".
                                   Defaults to True.
         :param signature_method: An optional string to use as the API method for
@@ -1026,7 +1029,10 @@ class Client:
         :param api_method: The specific API method name used for signature generation.
         :param expires_in: The duration for which the URL should be valid. Can be a
                            `timedelta` object or a specific `datetime` object. Defaults
-                           to 60 seconds from the current time.
+                           to 60 seconds from the current time. A naive ``datetime``
+                           is interpreted as local time (as
+                           :meth:`datetime.datetime.timestamp` does); pass a
+                           timezone-aware datetime to be explicit.
         :returns: The fully signed URL.
         :raises ValueError: If ``expires_in`` is not a future expiry.
         """
@@ -1038,12 +1044,7 @@ class Client:
                 raise ValueError("expires_in must be a positive duration")
             expiry = round((datetime.now(timezone.utc) + expires_in).timestamp() * 1000)
         else:
-            expires_dt = (
-                expires_in
-                if expires_in.tzinfo is not None
-                else expires_in.replace(tzinfo=timezone.utc)
-            )
-            expiry = round(expires_dt.timestamp() * 1000)
+            expiry = round(expires_in.timestamp() * 1000)
             if expiry <= round(datetime.now(timezone.utc).timestamp() * 1000):
                 raise ValueError("expires_in must be a future datetime")
         sig = self._signature(api_method, expiry)
