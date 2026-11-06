@@ -168,7 +168,7 @@ Attachment entries (:class:`~labapi.entry.entries.attachment.AttachmentEntry`) r
    print(f"Filename: {attachment.filename}")
    print(f"MIME Type: {attachment.mime_type}")
    print(f"Caption: {attachment.caption}")
-
+   
    # Read the file data
    data = attachment.read()
 

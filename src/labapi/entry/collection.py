@@ -14,13 +14,7 @@ from typing_extensions import override
 from labapi.util import extract_etree
 
 from .attachment import Attachment
-from .entries import (
-    AttachmentEntry,
-    Entry,
-    PlainTextEntry,
-    TextEntry,
-    UnknownEntry,
-)
+from .entries import AttachmentEntry, Entry, PlainTextEntry, TextEntry, UnknownEntry
 
 E = TypeVar("E", bound="Entry[Any]")
 
