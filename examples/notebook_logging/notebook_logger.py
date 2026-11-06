@@ -55,7 +55,7 @@ class NotebookLogger:
 
     def _configure_figure_capture(self) -> None:
         """Configure IPython/matplotlib hooks to capture rendered figures."""
-        ip = get_ipython()
+        ip = get_ipython() if get_ipython else None
         if not ip:
             return
 
