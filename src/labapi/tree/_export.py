@@ -216,24 +216,43 @@ def _walk_tree(notebook: Notebook, tmpdir: Path) -> dict:
     return walk(notebook)
 
 
-def _write_tree(
-    tree: dict, destination: str | PathLike[str], overwrite: bool = False
-) -> Path:
-    """Copy an export tree to ``destination``."""
-    destination = Path(destination)
-    filesystem_destination = destination
+def _filesystem_path(destination: Path) -> Path:
+    """Return ``destination`` in a form that tolerates long Windows paths."""
     if os.name == "nt" and not str(destination).startswith("\\\\?\\"):
-        filesystem_destination = Path("\\\\?\\" + str(destination.resolve()))
+        return Path("\\\\?\\" + str(destination.resolve()))
+    return destination
 
+
+def _check_destination(destination: str | PathLike[str], overwrite: bool) -> None:
+    """Raise if ``destination`` cannot receive an export; never modify it.
+
+    :raises FileExistsError: If ``destination`` exists but is not a directory,
+        or is a non-empty directory and ``overwrite`` is ``False``.
+    """
+    destination = Path(destination)
+    filesystem_destination = _filesystem_path(destination)
     if filesystem_destination.exists():
         if not filesystem_destination.is_dir():
             raise FileExistsError(
                 f"Export destination is not a directory: {destination}"
             )
-        if any(filesystem_destination.iterdir()):
-            if not overwrite:
-                raise FileExistsError(f"Export destination is not empty: {destination}")
-            shutil.rmtree(filesystem_destination)
+        if not overwrite and any(filesystem_destination.iterdir()):
+            raise FileExistsError(f"Export destination is not empty: {destination}")
+
+
+def _write_tree(
+    tree: dict, destination: str | PathLike[str], overwrite: bool = False
+) -> Path:
+    """Copy an export tree to ``destination``.
+
+    A non-empty ``destination`` is removed first when ``overwrite`` is
+    ``True``; see :func:`_check_destination` for when it raises instead.
+    """
+    destination = Path(destination)
+    _check_destination(destination, overwrite)
+    filesystem_destination = _filesystem_path(destination)
+    if filesystem_destination.exists() and any(filesystem_destination.iterdir()):
+        shutil.rmtree(filesystem_destination)
 
     filesystem_destination.mkdir(parents=True, exist_ok=True)
 
