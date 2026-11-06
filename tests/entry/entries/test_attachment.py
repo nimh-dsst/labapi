@@ -413,6 +413,48 @@ class TestAttachmentEntryIntegration:
         assert len(created_backings) == 1
         assert created_backings[0].closed is True
 
+    def test_get_attachment_closes_output_on_copy_error(
+        self, client, user: User, monkeypatch
+    ):
+        """get_attachment closes its per-call copy if copying from the cache raises."""
+        entry = AttachmentEntry("eid_att", "Caption", user)
+
+        created_backings: list[BytesIO] = []
+
+        def _tracking_make_backing_io(use_tempfile: bool) -> BytesIO:  # noqa: ARG001
+            io_obj = BytesIO()
+            created_backings.append(io_obj)
+            return io_obj
+
+        monkeypatch.setattr(
+            "labapi.entry.entries.attachment._make_backing_io",
+            _tracking_make_backing_io,
+        )
+
+        def _raising_copyfileobj(*_args: object, **_kwargs: object) -> None:
+            raise OSError("copy failed")
+
+        monkeypatch.setattr(
+            "labapi.entry.entries.attachment.shutil.copyfileobj",
+            _raising_copyfileobj,
+        )
+
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Disposition": 'attachment; filename="test.txt"',
+        }
+        mock_response.iter_content.return_value = [b"Content"]
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        with pytest.raises(OSError, match="copy failed"):
+            entry.get_attachment()
+
+        # [0] is the cached download backing; [1] is the per-call copy.
+        assert len(created_backings) == 2
+        assert created_backings[0].closed is False
+        assert created_backings[1].closed is True
+
     def test_get_attachment_tempfile_copies_in_chunks(self, client, user: User):
         """get_attachment(use_tempfile=True) must not read the full payload at once.
 

@@ -144,9 +144,13 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
 
         # Return an independent copy so each caller gets isolated read/seek/close state
         # while still sharing a single downloaded backing attachment in the cache.
-        self._filedata.seek(0)
-        shutil.copyfileobj(self._filedata, output)
-        output.seek(0)
+        try:
+            self._filedata.seek(0)
+            shutil.copyfileobj(self._filedata, output)
+            output.seek(0)
+        except Exception:
+            output.close()
+            raise
 
         return Attachment(
             output,
