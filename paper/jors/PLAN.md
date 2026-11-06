@@ -147,9 +147,7 @@ and [Submissions](https://openresearchsoftware.metajnl.com/about/submissions):
 
 `paper/jors/jors.tex` is the manuscript source. It uses the official JORS
 LaTeX class (`jors.cls`, template v0.2), numbered citations from
-`paper/paper.bib`, and marks every open item with a `TODO` comment. The
-Markdown skeleton `paper/jors/paper.md` records the first mapping and is no
-longer edited.
+`paper/paper.bib`, and marks every open item with a `TODO` comment.
 
 ## 5. Task list
 
