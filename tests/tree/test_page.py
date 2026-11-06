@@ -4,14 +4,24 @@ from __future__ import annotations
 
 import warnings
 from datetime import datetime, timezone
+from functools import partial
 from io import BytesIO
 from unittest.mock import Mock
 
 import pytest
 
-from labapi import Index, Notebook, NotebookPage
+from labapi import Index, Notebook, NotebookDirectory, NotebookPage
 from labapi.entry import Attachment, AttachmentEntry, Entries, UnknownEntry, WidgetEntry
 from labapi.user import User
+
+
+def _bind_copy_impl(source: Mock, cls: type) -> None:
+    """Route a mocked copy source's ``_copy_to`` to the real implementation.
+
+    The public ``copy_to`` delegates to ``_copy_to``, which ``Mock(spec=...)``
+    would otherwise stub out.
+    """
+    source._copy_to = partial(cls._copy_to, source)
 
 
 class TestNotebookPageUnit:
@@ -40,6 +50,7 @@ class TestNotebookPageUnit:
     def test_copy_to_copies_attachment_and_closes_attachment(self):
         """Test NotebookPage.copy_to uploads attachments and closes local handles."""
         source_page = Mock(spec=NotebookPage)
+        _bind_copy_impl(source_page, NotebookPage)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -76,6 +87,7 @@ class TestNotebookPageUnit:
     def test_copy_to_warns_and_continues_when_attachment_copy_fails(self):
         """Test NotebookPage.copy_to warns and skips entries that fail to copy."""
         source_page = Mock(spec=NotebookPage)
+        _bind_copy_impl(source_page, NotebookPage)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -113,6 +125,7 @@ class TestNotebookPageUnit:
     def test_copy_to_warns_and_continues_when_entry_create_raises(self):
         """Test NotebookPage.copy_to catches per-entry create failures and continues."""
         source_page = Mock(spec=NotebookPage)
+        _bind_copy_impl(source_page, NotebookPage)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -153,6 +166,7 @@ class TestNotebookPageUnit:
     def test_copy_to_warns_and_continues_when_attachment_fetch_fails(self):
         """Test NotebookPage.copy_to warns and continues when reading attachment content fails."""
         source_page = Mock(spec=NotebookPage)
+        _bind_copy_impl(source_page, NotebookPage)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -195,6 +209,7 @@ class TestNotebookPageUnit:
         that exception is still caught and reported as a per-entry warning.
         """
         source_page = Mock(spec=NotebookPage)
+        _bind_copy_impl(source_page, NotebookPage)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -216,6 +231,61 @@ class TestNotebookPageUnit:
             NotebookPage.copy_to(source_page, destination)
 
         new_page_entries.create.assert_not_called()
+
+    def test_copy_to_rolls_back_page_when_copy_aborts(self):
+        """Test NotebookPage.copy_to deletes the created page when the copy aborts."""
+        source_page = Mock(spec=NotebookPage)
+        _bind_copy_impl(source_page, NotebookPage)
+        source_page.name = "Source Page"
+        source_page.id = "source-page-id"
+
+        class ExplodingEntries:
+            """Entries whose iteration fails, aborting the copy mid-way."""
+
+            def __iter__(self):
+                raise RuntimeError("failed to load entries")
+
+        source_page.entries = ExplodingEntries()
+
+        new_page = Mock(spec=NotebookPage)
+        new_page.id = "new-page-id"
+
+        destination = Mock()
+        destination.create.return_value = new_page
+
+        with pytest.raises(RuntimeError, match="failed to load entries"):
+            NotebookPage.copy_to(source_page, destination)
+
+        # The partially created destination page is rolled back, leaving nothing behind.
+        new_page.delete.assert_called_once_with()
+
+    def test_copy_to_warns_when_rollback_fails(self):
+        """Test NotebookPage.copy_to warns (but still re-raises) if rollback fails."""
+        source_page = Mock(spec=NotebookPage)
+        _bind_copy_impl(source_page, NotebookPage)
+        source_page.name = "Source Page"
+        source_page.id = "source-page-id"
+
+        class ExplodingEntries:
+            def __iter__(self):
+                raise RuntimeError("failed to load entries")
+
+        source_page.entries = ExplodingEntries()
+
+        new_page = Mock(spec=NotebookPage)
+        new_page.id = "new-page-id"
+        new_page.delete.side_effect = RuntimeError("delete failed")
+
+        destination = Mock()
+        destination.create.return_value = new_page
+
+        with (
+            pytest.warns(RuntimeWarning, match="Failed to roll back"),
+            pytest.raises(RuntimeError, match="failed to load entries"),
+        ):
+            NotebookPage.copy_to(source_page, destination)
+
+        new_page.delete.assert_called_once_with()
 
 
 class TestNotebookPageIntegration:
@@ -524,3 +594,90 @@ class TestNotebookPageIntegration:
         api_call = client.pop_api_call()
         assert api_call[0] == "tree_tools/get_entries_for_page"
         client.clear_api_calls()
+
+    def _queue_two_text_entries(self, client) -> None:
+        """Queue a source-page entries response with two text entries."""
+        client.api_response = client.entries_response(
+            client.entry_xml(
+                "entry_1", part_type="text entry", entry_data="<p>First</p>"
+            ),
+            client.entry_xml(
+                "entry_2", part_type="text entry", entry_data="<p>Second</p>"
+            ),
+            include_response=False,
+        )
+
+    def test_copy_to_strict_entry_failure_aborts_and_moves_copy_to_trash(
+        self, client, notebook_tree: Notebook
+    ):
+        """With strict=True, an entry failure aborts the copy and trashes the new page."""
+        source_page = notebook_tree[Index.Id : "page-1"]
+        destination = notebook_tree[Index.Id : "dir-1"]
+        assert isinstance(source_page, NotebookPage)
+        assert isinstance(destination, NotebookDirectory)
+
+        client.api_response = client.tree_node_response("page-copy")
+        self._queue_two_text_entries(client)
+        client.api_response = client.entries_response()  # new page's entries
+        client.api_response = RuntimeError("add failed")
+        # Rollback: create API Deleted Items, rename the copy, move it there.
+        client.api_response = client.tree_node_response("trash")
+        client.api_response = client.xml("success")
+        client.api_response = client.xml("success")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            with pytest.raises(RuntimeError, match="add failed"):
+                source_page.copy_to(destination, strict=True)
+
+        assert client.pop_api_call()[0] == "tree_tools/insert_node"
+        source_load = client.pop_api_call()
+        assert source_load[1]["page_tree_id"] == "page-1"
+        destination_load = client.pop_api_call()
+        assert destination_load[1]["page_tree_id"] == "page-copy"
+        # The second entry is never attempted.
+        assert client.pop_api_call()[0] == "entries/add_entry"
+        assert client.pop_api_call()[1]["display_text"] == "API Deleted Items"
+        rename = client.pop_api_call()
+        move = client.pop_api_call()
+        assert rename[1]["tree_id"] == move[1]["tree_id"] == "page-copy"
+        assert move[1]["parent_tree_id"] == "trash"
+        assert client.api_calls == ()
+
+        trash = notebook_tree[Index.Id : "trash"]
+        assert isinstance(trash, NotebookDirectory)
+        assert [child.id for child in trash.children] == ["page-copy"]
+        assert "page-copy" not in [child.id for child in destination.children]
+
+    def test_copy_to_non_strict_entry_failure_warns_and_skips(
+        self, client, notebook_tree: Notebook
+    ):
+        """By default an entry failure is warned about and skipped; nothing is trashed."""
+        source_page = notebook_tree[Index.Id : "page-1"]
+        destination = notebook_tree[Index.Id : "dir-1"]
+        assert isinstance(source_page, NotebookPage)
+        assert isinstance(destination, NotebookDirectory)
+
+        client.api_response = client.tree_node_response("page-copy")
+        self._queue_two_text_entries(client)
+        client.api_response = client.entries_response()  # new page's entries
+        client.api_response = RuntimeError("add failed")
+        client.api_response = client.entries_response(client.entry_xml("new_eid"))
+
+        with pytest.warns(RuntimeWarning, match="'entry_1'.*This entry was skipped"):
+            new_page = source_page.copy_to(destination)
+
+        assert client.pop_api_call()[0] == "tree_tools/insert_node"
+        source_load = client.pop_api_call()
+        assert source_load[1]["page_tree_id"] == "page-1"
+        destination_load = client.pop_api_call()
+        assert destination_load[1]["page_tree_id"] == "page-copy"
+        assert client.pop_api_call()[0] == "entries/add_entry"
+        second = client.pop_api_call()
+        assert second[0] == "entries/add_entry"
+        assert second[1]["entry_data"] == "<p>Second</p>"
+        assert client.api_calls == ()
+
+        assert new_page.id == "page-copy"
+        assert "page-copy" in [child.id for child in destination.children]
+        assert "API Deleted Items" not in notebook_tree

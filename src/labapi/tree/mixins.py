@@ -315,10 +315,28 @@ class AbstractTreeNode(AbstractBaseTreeNode):
         self._invalidate_path()
 
     @abstractmethod
-    def copy_to(self, destination: AbstractTreeContainer) -> Self:
+    def copy_to(
+        self, destination: AbstractTreeContainer, *, strict: bool = False
+    ) -> Self:
         """Copy this node into ``destination``.
 
         :param destination: The target container to copy the node to.
+        :param strict: If ``True``, any entry that fails to copy aborts the whole
+            copy instead of being warned about and skipped.
+        :returns: A new instance of the copied node in the destination.
+        """
+
+    @abstractmethod
+    def _copy_to(
+        self, destination: AbstractTreeContainer, *, rollback: bool, strict: bool
+    ) -> Self:
+        """Copy this node into ``destination`` (implementation of :meth:`copy_to`).
+
+        :param destination: The target container to copy the node to.
+        :param rollback: If ``True``, move the node created here to *API Deleted
+            Items* (via :meth:`delete`) when the copy aborts. Only the outermost call of a recursive copy rolls back, so an
+            aborted copy leaves exactly one node in *API Deleted Items*.
+        :param strict: See :meth:`copy_to`.
         :returns: A new instance of the copied node in the destination.
         """
 

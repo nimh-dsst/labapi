@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+from functools import partial
 from unittest.mock import Mock
 
 import pytest
 
 from labapi import Index, Notebook, NotebookDirectory
 from labapi.user import User
+
+
+def _bind_copy_impl(source: Mock, cls: type) -> None:
+    """Route a mocked copy source's ``_copy_to`` to the real implementation.
+
+    The public ``copy_to`` delegates to ``_copy_to``, which ``Mock(spec=...)``
+    would otherwise stub out.
+    """
+    source._copy_to = partial(cls._copy_to, source)
 
 
 class TestNotebookDirectoryUnit:
@@ -32,6 +42,64 @@ class TestNotebookDirectoryUnit:
         assert directory.parent is mock_parent
         assert directory.root is mock_root
         assert directory.is_dir() is True
+
+    def test_copy_to_rolls_back_subtree_when_descendant_copy_fails(self):
+        """Test NotebookDirectory.copy_to deletes the created subtree on failure."""
+        source_dir = Mock(spec=NotebookDirectory)
+        _bind_copy_impl(source_dir, NotebookDirectory)
+        source_dir.name = "Source Dir"
+        source_dir.is_parent_of.return_value = False
+
+        good_child = Mock()
+        failing_child = Mock()
+        failing_child._copy_to.side_effect = RuntimeError("descendant copy failed")
+        source_dir.children = [good_child, failing_child]
+
+        new_dir = Mock(spec=NotebookDirectory)
+        new_dir.id = "new-dir-id"
+
+        destination = Mock()
+        destination.create.return_value = new_dir
+
+        with pytest.raises(RuntimeError, match="descendant copy failed"):
+            NotebookDirectory.copy_to(source_dir, destination, strict=True)
+
+        # Both children were copied into the newly created directory before the
+        # abort, without rolling back themselves and with strict propagated...
+        good_child._copy_to.assert_called_once_with(
+            new_dir, rollback=False, strict=True
+        )
+        failing_child._copy_to.assert_called_once_with(
+            new_dir, rollback=False, strict=True
+        )
+        # ...and only the outermost directory is rolled back, taking the subtree along.
+        new_dir.delete.assert_called_once_with()
+
+    def test_copy_to_warns_when_subtree_rollback_fails(self):
+        """Test NotebookDirectory.copy_to warns (but still re-raises) if rollback fails."""
+        source_dir = Mock(spec=NotebookDirectory)
+        _bind_copy_impl(source_dir, NotebookDirectory)
+        source_dir.name = "Source Dir"
+        source_dir.is_parent_of.return_value = False
+
+        failing_child = Mock()
+        failing_child._copy_to.side_effect = RuntimeError("descendant copy failed")
+        source_dir.children = [failing_child]
+
+        new_dir = Mock(spec=NotebookDirectory)
+        new_dir.id = "new-dir-id"
+        new_dir.delete.side_effect = RuntimeError("delete failed")
+
+        destination = Mock()
+        destination.create.return_value = new_dir
+
+        with (
+            pytest.warns(RuntimeWarning, match="Failed to roll back"),
+            pytest.raises(RuntimeError, match="descendant copy failed"),
+        ):
+            NotebookDirectory.copy_to(source_dir, destination)
+
+        new_dir.delete.assert_called_once_with()
 
 
 class TestNotebookDirectoryIntegration:
@@ -97,3 +165,80 @@ class TestNotebookDirectoryIntegration:
 
         with pytest.raises(ValueError, match="Cannot copy"):
             source_dir.copy_to(descendant_dir)
+
+    def test_copy_to_nested_failure_moves_only_outermost_copy_to_trash(
+        self, client, notebook_tree: Notebook
+    ):
+        """A failure deep in a recursive copy trashes only the outermost new directory.
+
+        Exercises the real soft delete: the partial copy leaves the destination
+        parent, and *API Deleted Items* gains exactly one node.
+        """
+        source_dir = notebook_tree[Index.Id : "dir-2"]
+        assert isinstance(source_dir, NotebookDirectory)
+
+        client.api_response = client.tree_node_response("copy-dir-2")
+        client.api_response = client.tree_node_response("copy-dir-2-1")
+        client.api_response = client.tree_node_response("copy-dir-2-2")
+        # Copying the grandchild "Dir2 Subfolder B Subfolder" fails.
+        client.api_response = RuntimeError("insert failed")
+        # Rollback: create API Deleted Items, rename the copy, move it there.
+        client.api_response = client.tree_node_response("trash")
+        client.api_response = client.xml("success")
+        client.api_response = client.xml("success")
+
+        with pytest.raises(RuntimeError, match="insert failed"):
+            source_dir.copy_to(notebook_tree)
+
+        copy_inserts = [client.pop_api_call() for _ in range(3)]
+        assert [call[0] for call in copy_inserts] == ["tree_tools/insert_node"] * 3
+        assert [call[1]["parent_tree_id"] for call in copy_inserts] == [
+            notebook_tree.tree_id,
+            "copy-dir-2",
+            "copy-dir-2",
+        ]
+        failed_insert = client.pop_api_call()
+        assert failed_insert[0] == "tree_tools/insert_node"
+        assert failed_insert[1]["parent_tree_id"] == "copy-dir-2-2"
+        trash_insert = client.pop_api_call()
+        assert trash_insert[0] == "tree_tools/insert_node"
+        assert trash_insert[1]["display_text"] == "API Deleted Items"
+        rename = client.pop_api_call()
+        move = client.pop_api_call()
+        assert rename[0] == move[0] == "tree_tools/update_node"
+        assert rename[1]["tree_id"] == move[1]["tree_id"] == "copy-dir-2"
+        assert move[1]["parent_tree_id"] == "trash"
+        assert client.api_calls == ()
+
+        trash = notebook_tree[Index.Id : "trash"]
+        assert isinstance(trash, NotebookDirectory)
+        assert [child.id for child in trash.children] == ["copy-dir-2"]
+        assert "copy-dir-2" not in [child.id for child in notebook_tree.children]
+
+    def test_copy_to_rollback_failure_warns_and_reraises_original(
+        self, client, notebook_tree: Notebook
+    ):
+        """A failed rollback warns without masking the error that aborted the copy."""
+        source_dir = notebook_tree[Index.Id : "dir-1"]
+        assert isinstance(source_dir, NotebookDirectory)
+
+        client.api_response = client.tree_node_response("copy-dir-1")
+        # Copying the first child page fails...
+        client.api_response = RuntimeError("insert failed")
+        # ...and so does creating API Deleted Items for the rollback.
+        client.api_response = RuntimeError("trash unavailable")
+
+        with (
+            pytest.warns(
+                RuntimeWarning, match="Failed to roll back.*trash unavailable"
+            ),
+            pytest.raises(RuntimeError, match="insert failed"),
+        ):
+            source_dir.copy_to(notebook_tree)
+
+        for _ in range(3):
+            assert client.pop_api_call()[0] == "tree_tools/insert_node"
+        assert client.api_calls == ()
+
+        # The rollback failed, so the partial copy is still in the destination.
+        assert "copy-dir-1" in [child.id for child in notebook_tree.children]
