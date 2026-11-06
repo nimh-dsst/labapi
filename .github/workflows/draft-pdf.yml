@@ -125,7 +125,7 @@ jobs:
           # from a Word-only copy; the PDF still uses jors.tex unchanged.
           sed -e '/^[[:space:]]*\\small[[:space:]]*$/d' \
               -e 's/\\begin{description}\[[^]]*\]/\\begin{description}/' \
-              -e 's/{lp{6\.2cm}l}/{lll}/' \
+              -e 's/{p{3\.6cm}p{1\.1cm}p{1\.9cm}p{2\.0cm}p{2\.1cm}}/{lllll}/' \
               jors.tex > jors_word.tex
           pandoc jors_word.tex --citeproc --bibliography=../paper.bib --csl=vancouver.csl \
             --metadata reference-section-title=References \

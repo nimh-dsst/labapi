@@ -69,14 +69,14 @@ Bethesda, MD, USA. ORCID 0000-0002-2850-1419
 
 \section*{Abstract}
 
-Without an API client, the outputs of analysis pipelines reach an
-electronic lab notebook only when a researcher uploads them by hand. labapi
-is a Python library that lets pipelines read from and write to the
-LabArchives notebook directly. Code refers to a page by the folder path a
-researcher sees in the web interface, such as QC/sub-01, and labapi finds or
-creates the matching page through the API. The library is released under
-the MIT licence, archived on Zenodo and installable from PyPI. It needs API
-credentials, which LabArchives issues to the user's institution on request.
+labapi is a Python library that lets analysis pipelines read from and write
+to LabArchives electronic lab notebooks, reducing the need to upload
+pipeline outputs by hand. Pages are addressed using paths that match the
+notebook's folder structure, such as \texttt{QC/sub-01}. labapi resolves
+these paths through the API and can create missing folders and pages. The
+library is released under the MIT licence, archived on Zenodo and
+installable from PyPI. It requires API credentials, which LabArchives
+issues to the user's institution on request.
 
 \section*{Keywords}
 
@@ -90,24 +90,17 @@ notebooks approved for new research in the NIH Intramural Research Program
 \citep{labarchives,nih_eln_policy}. An output added to a LabArchives page
 sits beside the notes and revision history that document the experiment,
 but getting it there from a pipeline means opening the web interface after
-each run and uploading by hand. The LabArchives web API can automate the
-upload. It identifies pages by internal tree IDs, however, and returns the
-notebook's contents one folder level at a time \citep{labarchives_api}. Code that wants
-to write to QC/sub-01 has to list the top level of the notebook, find the
-QC folder by name, list that folder, find the page, and only then sign and
-send the request that adds the entry.
+each run and uploading by hand. The LabArchives web API can automate
+uploads, but it identifies pages by internal tree IDs and returns the
+notebook's contents one folder level at a time \citep{labarchives_api}.
+Writing to \texttt{QC/sub-01} therefore requires locating the \texttt{QC}
+folder, locating the page within it, and signing and sending the request
+that adds the entry.
 
-labapi performs that lookup, signs the request, and creates any missing folders
-or pages along the way. Two applications we maintain at NIMH
-are built on it: muronto, which records the outputs of behavioural
-neuroscience experiments, and save-my-jupyter, which deposits Jupyter
-notebook snapshots \citep{muronto,save_my_jupyter}. labapi is meant for
-computational researchers and for the research software engineers who
-support laboratories on LabArchives.
-
-Benchling, RSpace and eLabFTW each ship an official Python client for their
-API \citep{benchling_sdk,rspace_client,elabapi_python}, but LabArchives
-publishes none, and the public LabArchives clients in
+Other electronic lab notebooks, including Benchling, RSpace and eLabFTW,
+provide official Python clients for their APIs
+\citep{benchling_sdk,rspace_client,elabapi_python}. We found no public
+official Python client for LabArchives. The public LabArchives clients in
 Table~\ref{tab:comparison} do not combine path navigation, entry handling
 and attachment transfer in a single client. We considered building on
 labarchives-py \citep{mcmero},
@@ -119,21 +112,28 @@ offers a general Python interface to notebooks
 
 \begin{table}[htbp]
 	\centering
-	\caption{Public standalone LabArchives clients, checked 16 October 2026.}
+	\caption{Public standalone LabArchives clients with implemented API
+    helpers, checked 2 November 2026.
+    Generic GET calls require the application to select endpoints and
+    handle responses; they are not dedicated entry or attachment helpers.}
 	\label{tab:comparison}
 	\small
-	\begin{tabular}{lp{6.2cm}l}
+	\begin{tabular}{p{3.6cm}p{1.1cm}p{1.9cm}p{2.0cm}p{2.1cm}}
 		\hline
-		\textbf{Project} & \textbf{What it provides} & \textbf{Path navigation} \\
+		\textbf{Project} & \textbf{Auth.} & \textbf{Path navigation} & \textbf{Entry helpers} & \textbf{Attachments} \\
 		\hline
-		labapi & General Python client & Yes \\
-		labarchives-py \citep{mcmero} & Signed generic GET-call wrapper & No \\
-		labarchives-js \citep{marcellofuschi} & Login, image-entry search, attachment URLs & No \\
-		provision-labarchives \citep{provision_labarchives} & Fixed-endpoint Node.js wrapper used by ReDBox & No \\
-		labarchives-client \citep{alaninmcr} & Repository only; nothing released & No \\
+		labapi & Yes & Yes & Read/write & Upload/download \\
+		labarchives-py \citep{mcmero} & Yes & No & Generic GET & Generic GET \\
+		labarchives-js \citep{marcellofuschi} & Yes & No & Image search & URLs only \\
+		provision-labarchives \citep{provision_labarchives} & Yes & No & Read/write & Download \\
 		\hline
 	\end{tabular}
 \end{table}
+
+labapi provides a Python interface that combines notebook path navigation,
+entry handling and attachment transfer. It is intended for computational
+researchers and the research software engineers who support laboratories
+using LabArchives.
 
 \section*{Implementation and architecture}
 
@@ -146,9 +146,9 @@ labapi parses with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
 interface (Figure~\ref{fig:model}). labapi calls folders directories, as in
-\texttt{NotebookDirectory} and \texttt{dir()}. Nothing is fetched until code
-looks inside a folder; at that point one \texttt{get\_tree\_level} call
-loads it, and the result is cached. Edits that someone makes in the browser
+\texttt{NotebookDirectory} and \texttt{dir()}. Folder contents are fetched
+on first access; at that point one \texttt{get\_tree\_level} call loads
+them, and the result is cached. Edits that someone makes in the browser
 during a session are not visible to labapi until \texttt{refresh()} reloads
 the folder.
 \texttt{dir()} and \texttt{page()} return the folder or page at a path,
@@ -204,8 +204,8 @@ needs a LabArchives login, so we run it by hand. Both suites run under
 \texttt{pytest}; passing \texttt{--integration} enables the live suite,
 which reads credentials from environment variables (see the contributing
 guide). For every push and pull request, GitHub Actions runs the unit
-tests on Python 3.10 to 3.14 alongside Ruff, type checking and a
-documentation build.
+tests on Python 3.10 to 3.14 on Ubuntu and macOS, and Python 3.10 to 3.13
+on Windows. Separate jobs run Ruff, type checking and a documentation build.
 
 For a new user, the quickest way to see whether an installation works is
 the JSON synchronisation example, one of five runnable workflows in the
@@ -270,8 +270,10 @@ The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{../figures/cohort-dashboard-example.png}
-    \caption{The LabArchives page produced by the second stage, showing the
-    cohort summary, its formatted preview and the uploaded figure.}
+    \caption{The LabArchives page produced by the second stage.
+    (A) Notebook interface and dashboard page title.
+    (B) Stored JSON attachment and its formatted preview.
+    (C) Uploaded cohort DVARS figure.}
     \label{fig:dashboard}
 \end{figure}
 
@@ -280,10 +282,10 @@ The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 
 \section*{Operating system}
 
-Platform-independent (pure Python). Continuous integration runs on GitHub's
-current Ubuntu runner, Ubuntu 24.04 at the time of writing. The authors
-also use it on Windows 11, but neither Windows nor macOS is covered by
-automated tests.
+Platform-independent (pure Python). The unit-test workflow is configured
+for GitHub's current Ubuntu and macOS runners on Python 3.10 to 3.14, and
+Windows runners on Python 3.10 to 3.13. The authors also use the library
+on Windows 11.
 
 \section*{Programming language}
 
@@ -294,7 +296,9 @@ Python 3.10 or later; tested on Python 3.10 to 3.14.
 Network access to a LabArchives API endpoint, and an API access key ID and
 password issued by LabArchives through the user's institution. The optional
 browser-based login requires a local installation of Chrome, Firefox or
-Edge.
+Edge. On Windows, its \texttt{installed-browsers} dependency currently
+requires \texttt{pywin32} versions without Python 3.14 wheels, so the
+\texttt{builtin-auth} extra is limited to Python 3.10 to 3.13 there.
 
 \section*{Dependencies}
 
@@ -343,14 +347,18 @@ English
 
 \section*{(3) Reuse potential}
 
-A biochemistry lab could use the calls shown in the quality-control example to file
-plate-reader exports
+The Systems Neuroscience Imaging Resource, an NIMH imaging core, uses
+labapi to schedule notebook backups, and the backup feature was developed
+together with that core \citep{labapi_issue_264}. Two applications we
+maintain at NIMH are also built on labapi: muronto records the outputs of
+behavioural neuroscience experiments, and save-my-jupyter deposits Jupyter
+notebook snapshots \citep{muronto,save_my_jupyter}. Both applications are
+used by other NIMH intramural laboratories, beyond the authors' team.
+
+Other laboratories could adapt the quality-control example to their own
+outputs. For example, a biochemistry lab could file plate-reader exports
 on the page for each assay, and a core facility could schedule backups of
-the notebooks it looks after. The Systems Neuroscience Imaging Resource, an
-NIMH imaging core, already schedules backups this way, and the backup
-feature was developed together with that core \citep{labapi_issue_264}.
-muronto and save-my-jupyter are also used by other NIMH intramural
-laboratories, not only by the authors' team.
+the notebooks it looks after.
 
 The other examples in the repository are meant to be copied and changed.
 One uploads CSV files as formatted tables and fetches them back; others
@@ -416,18 +424,5 @@ The authors declare that they have no competing interests.
 {\raggedright
 \bibliography{../paper}
 }
-
-\vspace{2cm}
-
-\rule{\textwidth}{1pt}
-
-{ \bf Copyright Notice} \\
-Authors who publish with this journal agree to the following terms: \\
-
-Authors retain copyright and grant the journal right of first publication with the work simultaneously licensed under a \href{http://creativecommons.org/licenses/by/3.0/}{Creative Commons Attribution License} that allows others to share the work with an acknowledgement of the work's authorship and initial publication in this journal. \\
-
-Authors are able to enter into separate, additional contractual arrangements for the non-exclusive distribution of the journal's published version of the work (e.g., post it to an institutional repository or publish it in a book), with an acknowledgement of its initial publication in this journal. \\
-
-By submitting this paper you agree to the terms of this Copyright Notice, which will apply to this submission if and when it is published by this journal.
 
 \end{document}
