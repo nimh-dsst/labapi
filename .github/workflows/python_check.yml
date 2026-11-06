@@ -9,6 +9,10 @@ on:
       command:
         required: true
         type: string
+      runner:
+        required: false
+        type: string
+        default: ubuntu-latest
       append_python_version_arg:
         required: false
         type: boolean
@@ -21,7 +25,7 @@ on:
 jobs:
   check:
     name: ${{ inputs.job_name }} (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     strategy:
       fail-fast: false
       matrix:
