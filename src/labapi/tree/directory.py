@@ -48,8 +48,6 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
             copy (and triggers the rollback above) instead of being warned about
             and skipped.
         :returns: A new instance of the copied directory in the destination.
-        :raises ValueError: If ``destination`` is this directory or one of its
-            descendants.
         :raises RuntimeWarning: Emitted when the rollback of an aborted copy
             fails; the original error is still raised.
         """
