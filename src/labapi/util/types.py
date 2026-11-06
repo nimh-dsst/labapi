@@ -69,7 +69,7 @@ serialized to or deserialized from JSON.
 
 When serializing, sequences and mappings other than ``list``, ``tuple`` and
 ``dict`` (such as ``range`` or ``MappingProxyType``) are converted to
-``list`` and ``dict``. Mapping keys must be strings. Bytes-like values
+``list`` and ``dict``. Bytes-like values
 (``bytes``, ``bytearray``, ``memoryview``) are rejected with ``TypeError``;
 decode them to ``str`` first.
 """
