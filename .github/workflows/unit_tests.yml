@@ -12,8 +12,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     uses: ./.github/workflows/python_check.yml
     with:
-      job_name: Unit tests (${{ matrix.os }})
+      job_name: Unit tests
       command: uv run pytest
       runner: ${{ matrix.os }}
       # installed-browsers pins pywin32<311, which has no Windows CPython 3.14 wheel.
-      python_versions: ${{ matrix.os == 'windows-latest' && '["3.10", "3.11", "3.12", "3.13"]' || '["3.10", "3.11", "3.12", "3.13", "3.14"]' }}
+      matrix_exclude: ${{ matrix.os == 'windows-latest' && '[{"python-version": "3.14"}]' || '[]' }}

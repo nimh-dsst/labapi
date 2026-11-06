@@ -21,6 +21,11 @@ on:
         required: false
         type: string
         default: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
+      # JSON list of matrix combinations to drop, e.g. '[{"python-version": "3.14"}]'.
+      matrix_exclude:
+        required: false
+        type: string
+        default: '[]'
 
 jobs:
   check:
@@ -30,6 +35,10 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ${{ fromJSON(inputs.python_versions) }}
+        exclude: ${{ fromJSON(inputs.matrix_exclude) }}
+    env:
+      # Without this, `uv sync` and `uv run` follow .python-version, not the matrix.
+      UV_PYTHON: ${{ matrix.python-version }}
 
     steps:
       - name: Checkout code
