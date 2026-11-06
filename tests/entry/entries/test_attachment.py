@@ -127,6 +127,8 @@ class TestAttachmentEntryIntegration:
         [
             ('"../../x"', "x"),
             (r'"..\\..\\x"', "x"),
+            ('"D:evil"', "evil"),
+            ('"//srv/share/x"', "x"),
             ('"report.pdf"', "report.pdf"),
         ],
     )

@@ -10,6 +10,7 @@ from unittest.mock import Mock
 import pytest
 
 from labapi import Index, Notebook, NotebookPage
+from labapi.client import StreamingResponse
 from labapi.entry import Attachment, AttachmentEntry, Entries, UnknownEntry, WidgetEntry
 from labapi.user import User
 
@@ -420,6 +421,63 @@ class TestNotebookPageIntegration:
         assert entry._filename == "original.txt"  # pyright: ignore[reportPrivateUsage]
         _ = client.pop_api_call()
         client.clear_api_calls()
+
+    @pytest.mark.parametrize(
+        ("listing_filename", "expected_filename"),
+        [
+            ("../../x", "x"),
+            ("..\\..\\x", "x"),
+            ("D:evil", "evil"),
+            ("C:\\Windows\\evil.dll", "evil.dll"),
+            ("//srv/share/x", "x"),
+            ("\\\\srv\\share\\x", "x"),
+            ("/etc/passwd", "passwd"),
+            ("..", "header.txt"),
+            ("D:", "header.txt"),
+            ("//srv/share", "header.txt"),
+        ],
+    )
+    def test_page_listing_attachment_filename_is_sanitized(
+        self,
+        client,
+        notebook_tree: Notebook,
+        listing_filename: str,
+        expected_filename: str,
+    ):
+        """A hostile listing ``attach-file-name`` is reduced to a safe basename.
+
+        Names with no usable basename fall back to the Content-Disposition header.
+        """
+        page = notebook_tree[Index.Id : "page-1"].as_page()
+        client.clear_api_calls()
+        client.api_response = client.entries_response(
+            client.entry_xml(
+                "attachment-1",
+                part_type="Attachment",
+                attach_file_name=listing_filename,
+                entry_data="Caption",
+            ),
+            include_response=False,
+        )
+
+        entry = page.entries[0]
+        _ = client.pop_api_call()
+        client.clear_api_calls()
+
+        assert isinstance(entry, AttachmentEntry)
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Disposition": 'attachment; filename="header.txt"',
+        }
+        mock_response.history = []
+        mock_response.iter_content.return_value = [b"content"]
+        client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
+
+        attachment = entry.get_attachment()
+
+        assert attachment.filename == expected_filename
+        assert attachment.read() == b"content"
 
     def test_page_entries_preserve_widget_entry_without_warning(
         self, client, notebook_tree: Notebook
