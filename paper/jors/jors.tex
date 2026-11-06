@@ -204,7 +204,7 @@ needs a LabArchives login, so we run it by hand. Both suites run under
 \texttt{pytest}; passing \texttt{--integration} enables the live suite,
 which reads credentials from environment variables (see the contributing
 guide). For every push and pull request, GitHub Actions runs the unit
-tests on Python 3.10 to 3.14 on Ubuntu and macOS, and Python 3.10 to 3.13
+tests on Python 3.11 to 3.14 on Ubuntu and macOS, and Python 3.11 to 3.13
 on Windows. Separate jobs run Ruff, type checking and a documentation build.
 
 For a new user, the quickest way to see whether an installation works is
@@ -283,13 +283,13 @@ The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 \section*{Operating system}
 
 Platform-independent (pure Python). The unit-test workflow is configured
-for GitHub's current Ubuntu and macOS runners on Python 3.10 to 3.14, and
-Windows runners on Python 3.10 to 3.13. The authors also use the library
+for GitHub's current Ubuntu and macOS runners on Python 3.11 to 3.14, and
+Windows runners on Python 3.11 to 3.13. The authors also use the library
 on Windows 11.
 
 \section*{Programming language}
 
-Python 3.10 or later; tested on Python 3.10 to 3.14.
+Python 3.11 or later; tested on Python 3.11 to 3.14.
 
 \section*{Additional system requirements}
 
@@ -298,7 +298,7 @@ password issued by LabArchives through the user's institution. The optional
 browser-based login requires a local installation of Chrome, Firefox or
 Edge. On Windows, its \texttt{installed-browsers} dependency currently
 requires \texttt{pywin32} versions without Python 3.14 wheels, so the
-\texttt{builtin-auth} extra is limited to Python 3.10 to 3.13 there.
+\texttt{builtin-auth} extra is limited to Python 3.11 to 3.13 there.
 
 \section*{Dependencies}
 
