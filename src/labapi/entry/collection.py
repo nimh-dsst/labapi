@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from datetime import UTC, datetime
 from html import escape
 from io import BytesIO
@@ -22,6 +22,29 @@ if TYPE_CHECKING:
     from labapi.tree import NotebookPage
     from labapi.user import User
     from labapi.util import JsonData
+
+
+def _json_default(obj: object) -> object:
+    """Convert values allowed by :data:`~labapi.util.types.JsonData` for ``json.dumps``.
+
+    ``json.dumps`` natively handles only ``dict``, ``list``, ``tuple``, ``str``,
+    ``int``, ``float``, ``bool`` and ``None`` (and their subclasses). It calls
+    this hook for anything else: other mappings become ``dict`` and other
+    sequences become ``list``. Bytes-like values are rejected rather than
+    serialized as lists of integers.
+
+    :raises TypeError: If ``obj`` is bytes-like or not a mapping or sequence.
+    """
+    if isinstance(obj, (bytes, bytearray, memoryview)):
+        raise TypeError(
+            f"Object of type {type(obj).__name__} is not JSON serializable; "
+            "decode it to str (or base64-encode it) first"
+        )
+    if isinstance(obj, Mapping):
+        return dict(obj)
+    if isinstance(obj, Sequence):
+        return list(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 class Entries(Sequence["Entry[Any]"]):
@@ -106,12 +129,12 @@ class Entries(Sequence["Entry[Any]"]):
 
         name = filename or f"uploaded_data_{datetime.now(UTC).timestamp():.0f}.json"
         display_caption = caption or name
-        preview_json = escape(dumps(data, indent=4))
+        preview_json = escape(dumps(data, indent=4, default=_json_default))
 
         file_entry = self.create(
             AttachmentEntry,
             Attachment(
-                BytesIO(dumps(data).encode()),
+                BytesIO(dumps(data, default=_json_default).encode()),
                 "application/json",
                 name,
                 display_caption,
