@@ -17,6 +17,19 @@ details that affect development workflows.
   operating system's trust store via `truststore`, for networks behind a
   TLS-inspecting proxy whose root CA is installed only in the OS store. It
   requires the new `labapi[truststore]` extra.
+- `get_by_id()` and `get_by_name()` on `user.notebooks` and tree containers,
+  readable equivalents of `[Index.Id:...]` and `[Index.Name:...]`.
+  `get_by_id()` raises `KeyError` when nothing matches; `get_by_name()` returns
+  a list, empty when nothing matches.
+- `children_by_id` on tree containers: a snapshot `dict` of child ID to child
+  node that does not change with later refreshes or edits.
+- `Entries.get_by_id()`, which raises `KeyError` for an unknown entry ID.
+- `Entries.of_type()`, `Entries.attachments()`, and `Entries.texts()` filter a
+  page's entries by class.
+- `AttachmentEntry.filename` and `AttachmentEntry.mime_type` report the
+  attachment's name and type from the page listing, without downloading it.
+- `user.notebooks.default` returns the notebook marked as the user's default,
+  or `None`.
 
 ### Deprecated
 
