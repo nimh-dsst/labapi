@@ -6,7 +6,7 @@ import socket
 import ssl
 import sys
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from http.client import HTTPConnection
 from os import getenv
 from threading import Thread
@@ -239,7 +239,7 @@ class TestClientUnit:
     def test_client_generate_auth_url_uses_longer_expiry(self):
         """Test auth URLs use a longer auth-specific expiration window."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now
@@ -253,7 +253,7 @@ class TestClientUnit:
     def test_client_construct_url_defaults_to_sixty_second_expiry(self):
         """Test ordinary signed URLs still use the default 60 second TTL."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now
@@ -267,7 +267,7 @@ class TestClientUnit:
     def test_client_construct_url_accepts_absolute_datetime_expiry(self):
         """Test construct_url preserves explicit absolute expiration datetimes."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
         absolute_expiry = fixed_now + timedelta(minutes=5)
 
         with patch("labapi.client.datetime") as mock_datetime:
@@ -298,7 +298,7 @@ class TestClientUnit:
     def test_client_construct_url_rejects_expired_absolute_datetime(self):
         """Test explicit expired absolute datetime expiries are rejected."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now

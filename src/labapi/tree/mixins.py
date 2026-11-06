@@ -18,10 +18,10 @@ from collections.abc import (
     Sequence,
     ValuesView,
 )
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Literal, TypeVar, cast, overload
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Literal, Self, TypeVar, cast, overload
 
-from typing_extensions import Self, override
+from typing_extensions import override
 
 from labapi.exceptions import (
     ExtractionError,
@@ -377,7 +377,7 @@ class AbstractTreeNode(AbstractBaseTreeNode):
                 "Delete it from the LabArchives web interface instead."
             )
 
-        self.name = f"{self.name} - Deleted at {datetime.now(timezone.utc).astimezone().strftime('%Y-%m-%d %H:%M:%S')}"
+        self.name = f"{self.name} - Deleted at {datetime.now(UTC).astimezone().strftime('%Y-%m-%d %H:%M:%S')}"
         self.move_to(api_deleted_items)
 
         return self

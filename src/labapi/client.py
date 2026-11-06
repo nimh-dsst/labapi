@@ -11,14 +11,14 @@ import warnings
 from base64 import b64encode
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import suppress
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 from operator import itemgetter
 from secrets import token_urlsafe
 from socketserver import TCPServer
 from time import monotonic
 from types import TracebackType
-from typing import IO, Any
+from typing import IO, Any, Self
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from cryptography.hazmat.primitives.hashes import SHA512
@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.hmac import HMAC
 from lxml.etree import Element, fromstring
 from requests import Response, Session
 from requests.adapters import HTTPAdapter
-from typing_extensions import Self, override
+from typing_extensions import override
 
 from .exceptions import ApiError, AuthenticationError
 from .user import User
@@ -1036,10 +1036,10 @@ class Client:
         if isinstance(expires_in, timedelta):
             if expires_in <= timedelta(0):
                 raise ValueError("expires_in must be a positive duration")
-            expiry = round((datetime.now(timezone.utc) + expires_in).timestamp() * 1000)
+            expiry = round((datetime.now(UTC) + expires_in).timestamp() * 1000)
         else:
             expiry = round(expires_in.timestamp() * 1000)
-            if expiry <= round(datetime.now(timezone.utc).timestamp() * 1000):
+            if expiry <= round(datetime.now(UTC).timestamp() * 1000):
                 raise ValueError("expires_in must be a future datetime")
         sig = self._signature(api_method, expiry)
 

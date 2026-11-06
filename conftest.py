@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import IO, Any, NamedTuple
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -69,8 +69,7 @@ class MockClient(LA.Client):
 
         if isinstance(expires_in, timedelta):
             expiry = round(
-                (datetime.fromtimestamp(0, tz=timezone.utc) + expires_in).timestamp()
-                * 1000
+                (datetime.fromtimestamp(0, tz=UTC) + expires_in).timestamp() * 1000
             )
         else:
             expiry = round(expires_in.timestamp() * 1000)
