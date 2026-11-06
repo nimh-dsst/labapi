@@ -35,6 +35,7 @@ from .exceptions import (
     NodeExistsError,
     PartialEntryCreateError,
     PathError,
+    TransportError,
     TraversalError,
     TreeChildParseError,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "PathError",
     "PlainTextEntry",
     "TextEntry",
+    "TransportError",
     "TraversalError",
     "TreeChildParseError",
     "UnimplementedEntry",
