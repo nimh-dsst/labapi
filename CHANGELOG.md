@@ -39,6 +39,13 @@ details that affect development workflows.
 - The type-check CI job now installs the optional extras so the built-in-auth
   and dotenv code paths are type-checked.
 
+### Removed
+
+- Support for Python 3.10, which reached end of life in October 2026.
+  `labapi` now requires Python 3.11 or newer. The security fixes for the
+  locked `pillow` (13.0.0) and `filelock` (4.2.1) dependencies are only
+  published for Python 3.11+.
+
 ### Security
 
 - Raised the minimum `cryptography` (to 50.0.0), `lxml` (to 6.1.1), and
