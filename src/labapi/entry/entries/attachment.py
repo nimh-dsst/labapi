@@ -8,7 +8,7 @@ from datetime import datetime
 from email.message import Message
 from io import BytesIO
 from mimetypes import guess_extension
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, PureWindowsPath
 from tempfile import TemporaryFile
 from typing import IO, TYPE_CHECKING
 from urllib.parse import unquote, urlsplit
@@ -26,6 +26,24 @@ if TYPE_CHECKING:
 
 def _make_backing_io(use_tempfile: bool) -> IO[bytes]:
     return TemporaryFile() if use_tempfile else BytesIO()
+
+
+def _safe_basename(name: str | None) -> str | None:
+    r"""Reduce a possibly-hostile filename to a sanitized basename.
+
+    Rejects `None`/empty input and path-traversal components (`.`, `..`).
+    Parses with Windows path rules so both ``/`` and ``\`` act as
+    separators and drive/UNC prefixes (e.g. ``D:evil``, ``//srv/share/x``)
+    are stripped, regardless of the host platform.
+    """
+    if name is None:
+        return None
+
+    basename = PureWindowsPath(name).name
+    if not basename.strip() or basename in {".", ".."}:
+        return None
+
+    return basename
 
 
 def _s3_filename_from_url(url: str) -> str | None:
@@ -98,9 +116,9 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
                     msg["Content-Disposition"] = content_disposition
 
                 mime_type = msg.get_content_type()
-                filename = self._filename or msg.get_filename()
-                if filename is not None and not filename.strip():
-                    filename = None
+                filename = _safe_basename(self._filename) or _safe_basename(
+                    msg.get_filename()
+                )
                 if filename is None and attachment_stream.response.history:
                     filename = _s3_filename_from_url(attachment_stream.url)
 
