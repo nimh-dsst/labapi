@@ -120,6 +120,6 @@ All new code must be fully type-annotated. Key conventions:
 - `overload` on APIs such as `__getitem__` that return different types for
   different index kinds
 
-The project targets Python 3.10 and newer. Keep source syntax compatible with
-Python 3.10, using `typing_extensions` where needed. For example, use
+The project targets Python 3.11 and newer. Keep source syntax compatible with
+Python 3.11, using `typing_extensions` where needed. For example, use
 `TypeVar` and `Generic` rather than PEP 695 generic parameter syntax.

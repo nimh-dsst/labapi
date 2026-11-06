@@ -7,7 +7,7 @@ name = "labapi"
 dynamic = ["version"]
 description = "A Python client for the LabArchives API."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [
   { name = "Christoph Li", email = "christoph.li@nih.gov" },
@@ -23,7 +23,6 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -119,7 +118,7 @@ invalid-assignment = "ignore"
 unresolved-attribute = "ignore"
 
 [tool.ty.environment]
-python-version = "3.10"
+python-version = "3.11"
 root = ["./src"]
 
 [tool.ty.src]
@@ -129,7 +128,7 @@ include = ["src/labapi"]
 error-on-warning = true
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 extend-select = ["A", "ARG", "B", "C4", "C90", "D", "I", "ICN", "INP", "PIE", "PLR0912", "PT", "PTH", "RET", "RUF", "SIM", "UP"]

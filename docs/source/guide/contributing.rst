@@ -149,9 +149,9 @@ Key conventions:
 - ``overload`` is used on ``__getitem__`` to express the different return
   types produced by different index kinds.
 
-The project targets Python 3.10+; use typing features supported by Python 3.10
+The project targets Python 3.11+; use typing features supported by Python 3.11
 or available from ``typing_extensions``. Keep
-source syntax compatible with Python 3.10; for example, prefer
+source syntax compatible with Python 3.11; for example, prefer
 ``TypeVar``/``Generic`` over PEP 695 generic parameter syntax.
 
 Related Pages

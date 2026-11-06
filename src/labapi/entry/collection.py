@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from html import escape
 from io import BytesIO
 from json import dumps
@@ -104,10 +104,7 @@ class Entries(Sequence["Entry[Any]"]):
         """
         # TODO treat this as one entry in the code
 
-        name = (
-            filename
-            or f"uploaded_data_{datetime.now(timezone.utc).timestamp():.0f}.json"
-        )
+        name = filename or f"uploaded_data_{datetime.now(UTC).timestamp():.0f}.json"
         display_caption = caption or name
         preview_json = escape(dumps(data, indent=4))
 

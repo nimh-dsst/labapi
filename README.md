@@ -2,7 +2,7 @@
 
 A high-level Python interface to LabArchives notebooks.
 
-[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://github.com/nimh-dsst/labapi/actions/workflows/unit_tests.yml/badge.svg?branch=main)](https://github.com/nimh-dsst/labapi/actions/workflows/unit_tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19599400.svg)](https://doi.org/10.5281/zenodo.19599400)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
@@ -29,7 +29,7 @@ search-result pagination, and entry-type decoding.
 
 Requirements:
 
-- Python 3.10+
+- Python 3.11+
 - `uv` (recommended) or `pip`
 
 Recommended install for local use:

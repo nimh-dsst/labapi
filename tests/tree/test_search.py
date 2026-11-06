@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from lxml.etree import fromstring
@@ -199,10 +199,8 @@ class TestEntrySearchIteration:
         result = EntrySearch(FakeNotebook(), "q", page_size=2).page(0)  # type: ignore[arg-type]
 
         entry = result.entries[0]
-        assert entry.created_at == datetime(
-            2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc
-        )
-        assert entry.updated_at == datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
+        assert entry.created_at == datetime(2026, 7, 29, 22, 12, 57, tzinfo=UTC)
+        assert entry.updated_at == datetime(2026, 7, 30, 1, 2, 3, tzinfo=UTC)
         assert entry.version == 3
 
     def test_result_entries_tolerate_absent_metadata(self) -> None:

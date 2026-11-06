@@ -30,7 +30,6 @@ body:
       label: Python version
       description: Which Python version reproduces the issue?
       options:
-        - "3.10"
         - "3.11"
         - "3.12"
         - "3.13"

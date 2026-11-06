@@ -9,7 +9,7 @@ Install ``labapi`` with the extras you need, then configure credentials with
 Python Version
 --------------
 
-Supports Python 3.10 and newer.
+Supports Python 3.11 and newer.
 
 Choose an Install Profile
 -------------------------
