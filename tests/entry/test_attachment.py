@@ -7,6 +7,7 @@ import pickle
 import tempfile
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -275,6 +276,48 @@ def test_attachment_can_be_pickled():
     assert restored.mime_type == "text/plain"
     assert restored.caption == "Test"
     assert restored.read() == b"Test data"
+
+
+def test_attachment_from_file_closes_backing_on_copy_error(monkeypatch):
+    """Test from_file closes the spooled backing buffer if the copy raises."""
+    created_backings: list[Any] = []
+    real_spooled_temporary_file = tempfile.SpooledTemporaryFile
+
+    class TrackingSpooledFile:
+        def __init__(self, *args: Any, **kwargs: Any):
+            self._real = real_spooled_temporary_file(*args, **kwargs)
+            self.closed = False
+            created_backings.append(self)
+
+        def close(self) -> None:
+            self.closed = True
+            self._real.close()
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self._real, name)
+
+    monkeypatch.setattr(
+        "labapi.entry.attachment.tempfile.SpooledTemporaryFile", TrackingSpooledFile
+    )
+
+    class RaisingFile(BytesIO):
+        def __init__(self, data: bytes, name: str):
+            super().__init__(data)
+            self.name = name
+
+        def read(self, size: int | None = -1, /) -> bytes:  # noqa: ARG002
+            raise OSError("boom")
+
+    file = RaisingFile(b"Test content", "payload.bin")
+    file.seek(4)
+
+    with pytest.raises(OSError, match="boom"):
+        Attachment.from_file(file)
+
+    assert len(created_backings) == 1
+    assert created_backings[0].closed is True
+    # The source cursor is still restored on the error path.
+    assert file.tell() == 4
 
 
 def test_attachment_seeks_to_beginning():
