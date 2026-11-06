@@ -17,6 +17,10 @@ details that affect development workflows.
   operating system's trust store via `truststore`, for networks behind a
   TLS-inspecting proxy whose root CA is installed only in the OS store. It
   requires the new `labapi[truststore]` extra.
+- `NotebookPage.copy_to()` and `NotebookDirectory.copy_to()` accept
+  `strict=True`, which makes any entry that fails to copy abort the whole copy
+  instead of being warned about and skipped. The default, `strict=False`, keeps
+  the warn-and-skip behavior.
 
 ### Deprecated
 
@@ -38,6 +42,11 @@ details that affect development workflows.
   unchanged.
 - The type-check CI job now installs the optional extras so the built-in-auth
   and dotenv code paths are type-checked.
+- When `copy_to()` aborts partway, the page or directory it created is moved to
+  *API Deleted Items* (the public API has no hard delete), so the destination
+  no longer holds a partial copy. A recursive directory copy moves only the
+  outermost new directory there. If that rollback fails, a `RuntimeWarning` is
+  emitted and the original error is still raised.
 
 ### Security
 

@@ -158,7 +158,9 @@ class NotebookPage(AbstractTreeNode):
         return self._entries
 
     @override
-    def copy_to(self, destination: AbstractTreeContainer) -> NotebookPage:
+    def copy_to(
+        self, destination: AbstractTreeContainer, *, strict: bool = False
+    ) -> NotebookPage:
         """Copy this page and its entries into ``destination``.
 
         .. warning::
@@ -169,30 +171,39 @@ class NotebookPage(AbstractTreeNode):
            - Some entry types may fail to copy and will cause errors
 
         :param destination: The target container to copy the page to.
+        :param strict: If ``True``, any entry that fails to copy aborts the whole
+            copy (and triggers the rollback below) instead of being warned about
+            and skipped.
         :returns: A new instance of the copied page in the destination.
 
         Attachment handling during copy:
 
         - attachment payloads are copied by reading and re-uploading the attachment content,
         - attachment resources opened during copy are always released,
-        - any per-entry copy failure is reported via warning and that entry is skipped.
+        - by default, any per-entry copy failure is reported via warning and that entry is skipped.
 
         .. note::
-           A per-entry copy failure emits a :class:`RuntimeWarning` (it is
-           *not* raised as an exception) and the entry is skipped, so a partial
-           copy does not abort. To detect skipped entries, capture warnings with
-           ``warnings.catch_warnings(record=True)``.
+           By default (``strict=False``), a per-entry copy failure emits a
+           :class:`RuntimeWarning` (it is *not* raised as an exception) and the
+           entry is skipped, so a partial copy does not abort. To detect skipped
+           entries, capture warnings with ``warnings.catch_warnings(record=True)``,
+           or pass ``strict=True`` to turn such failures into an aborted copy.
 
-        Failure invariant:
+        Failure handling: if the copy aborts (e.g. the source entries cannot be
+        loaded, or, with ``strict=True``, any entry fails), the page created here is
+        moved to *API Deleted Items* before the error is re-raised (the public API
+        has no hard delete), so the destination no longer contains it.
 
-        - a per-entry failure is warned about and skipped, so it never aborts the copy;
-        - a failure that aborts the copy (e.g. the source entries cannot be loaded)
-          rolls back the destination page created here before re-raising, so a failed
-          copy never leaves a partially populated destination page behind.
-
-        :raises RuntimeWarning: Emitted when an individual entry fails to copy, or
-            when best-effort rollback of an aborted copy fails.
+        :raises RuntimeWarning: Emitted when an individual entry fails to copy and
+            ``strict`` is ``False``, or when the rollback of an aborted copy fails;
+            in the latter case the original error is still raised.
         """
+        return self._copy_to(destination, rollback=True, strict=strict)
+
+    @override
+    def _copy_to(  # noqa: PLR0912
+        self, destination: AbstractTreeContainer, *, rollback: bool, strict: bool
+    ) -> NotebookPage:
         new_page = destination.create(
             NotebookPage, self.name, if_exists=InsertBehavior.Ignore
         )
@@ -213,29 +224,35 @@ class NotebookPage(AbstractTreeNode):
                             "content to copy"
                         )
                     new_page.entries.create(cast(Any, entry.__class__), entry_content)
-                # TODO(BLE001): intentional broad catch — copy_to skips an entry it cannot copy and warns; one failure must not abort the whole copy; narrow if a specific type becomes known.
-                except Exception as exc:  # noqa: BLE001
+                # Intentionally broad: by default copy_to skips an entry it cannot copy
+                # and warns, so one failure does not abort the whole copy; strict=True
+                # re-raises instead. Narrow if a specific type becomes known.
+                except Exception as exc:
+                    if strict:
+                        raise
                     warnings.warn(
                         f"Failed to copy entry {entry.id!r} ({entry.content_type!r}) from page "
                         f"{self.id!r} to page {new_page.id!r}: {exc}. This entry was skipped.",
                         RuntimeWarning,
-                        stacklevel=2,
+                        stacklevel=3,
                     )
                 finally:
                     if isinstance(entry_content, Attachment):
                         entry_content.close()
         # Broad by design: any error that escapes the per-entry handling aborts the
-        # copy, so roll back the page created above before re-raising.
+        # copy. Only the outermost call rolls back, and a failed rollback must not
+        # mask the original error.
         except Exception:
-            try:
-                new_page.delete()
-            except Exception as cleanup_exc:  # noqa: BLE001
-                warnings.warn(
-                    f"Failed to roll back partially copied page {new_page.id!r} after a "
-                    f"copy failure: {cleanup_exc}. The destination may contain a partial page.",
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+            if rollback:
+                try:
+                    new_page.delete()
+                except Exception as cleanup_exc:  # noqa: BLE001
+                    warnings.warn(
+                        f"Failed to roll back partially copied page {new_page.id!r} after a "
+                        f"copy failure: {cleanup_exc}. The destination may contain a partial page.",
+                        RuntimeWarning,
+                        stacklevel=3,
+                    )
             raise
 
         return new_page
