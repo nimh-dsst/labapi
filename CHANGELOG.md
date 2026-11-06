@@ -43,7 +43,7 @@ details that affect development workflows.
 
 - Support for Python 3.10, which reached end of life in October 2026.
   `labapi` now requires Python 3.11 or newer. The security fixes for the
-  locked `pillow` (13.0.0) and `filelock` (4.2.1) dependencies are only
+  locked `pillow` (13.0.0) and `filelock` (4.2.9) dependencies are only
   published for Python 3.11+.
 
 ### Security
