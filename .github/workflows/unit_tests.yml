@@ -16,4 +16,5 @@ jobs:
       command: uv run pytest
       runner: ${{ matrix.os }}
       # installed-browsers pins pywin32<311, which has no Windows CPython 3.14 wheel.
-      matrix_exclude: ${{ matrix.os == 'windows-latest' && '[{"python-version": "3.14"}]' || '[]' }}
+      matrix_exclude: >-
+        ${{ matrix.os == 'windows-latest' && '[{"python-version": "3.14"}]' || '[]' }}
