@@ -138,11 +138,9 @@ class Notebook(AbstractTreeContainer):
             export directory.
         :raises FileExistsError: If ``destination`` is not a directory, or is
             not empty and ``overwrite`` is ``False``.
-        :raises RuntimeError: If ``source="backup"`` and the backup is
-            unavailable (``py7zr`` missing or the download rejected).
         """
         _check_destination(destination, overwrite)
-        backup_error: Exception | None = None
+        backup_error = None
         # Set once the backup tree has started writing into ``destination``;
         # the walk fallback may then replace what this call just wrote.
         wrote_partial = False

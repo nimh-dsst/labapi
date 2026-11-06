@@ -236,13 +236,6 @@ def _walk_tree(notebook: Notebook, tmpdir: Path) -> dict:
     return walk(notebook)
 
 
-def _filesystem_path(destination: Path) -> Path:
-    """Return ``destination`` in a form that tolerates long Windows paths."""
-    if os.name == "nt" and not str(destination).startswith("\\\\?\\"):
-        return Path("\\\\?\\" + str(destination.resolve()))
-    return destination
-
-
 def _check_destination(destination: str | PathLike[str], overwrite: bool) -> None:
     """Raise if ``destination`` cannot receive an export; never modify it.
 
@@ -250,7 +243,10 @@ def _check_destination(destination: str | PathLike[str], overwrite: bool) -> Non
         or is a non-empty directory and ``overwrite`` is ``False``.
     """
     destination = Path(destination)
-    filesystem_destination = _filesystem_path(destination)
+    filesystem_destination = destination
+    if os.name == "nt" and not str(destination).startswith("\\\\?\\"):
+        filesystem_destination = Path("\\\\?\\" + str(destination.resolve()))
+
     if filesystem_destination.exists():
         if not filesystem_destination.is_dir():
             raise FileExistsError(
@@ -269,8 +265,11 @@ def _write_tree(
     ``True``; see :func:`_check_destination` for when it raises instead.
     """
     destination = Path(destination)
+    filesystem_destination = destination
+    if os.name == "nt" and not str(destination).startswith("\\\\?\\"):
+        filesystem_destination = Path("\\\\?\\" + str(destination.resolve()))
+
     _check_destination(destination, overwrite)
-    filesystem_destination = _filesystem_path(destination)
     if filesystem_destination.exists() and any(filesystem_destination.iterdir()):
         shutil.rmtree(filesystem_destination)
 
