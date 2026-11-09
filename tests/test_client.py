@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import socket
-from datetime import datetime, timedelta, timezone
+import ssl
+import sys
+import warnings
+from datetime import UTC, datetime, timedelta
 from http.client import HTTPConnection
 from os import getenv
 from threading import Thread
@@ -13,10 +17,13 @@ from unittest.mock import MagicMock, Mock, patch
 from urllib.parse import parse_qsl, urlsplit
 
 import pytest
+import truststore
 from lxml.etree import XMLSyntaxError
 from requests import Response
+from requests.adapters import HTTPAdapter
 
 from labapi import Client, User
+from labapi.client import _313HTTPAdapter
 from labapi.exceptions import ApiError, AuthenticationError
 
 
@@ -88,6 +95,13 @@ def local_get(port: int, path: str) -> tuple[int, str]:
         return response.status, response.read().decode("utf-8")
     finally:
         connection.close()
+
+
+def https_adapter(client: Client) -> HTTPAdapter:
+    """Return the requests adapter the client's session uses for HTTPS."""
+    adapter = client.session.get_adapter("https://api.test.com")
+    assert isinstance(adapter, HTTPAdapter)
+    return adapter
 
 
 class TestClientUnit:
@@ -176,6 +190,17 @@ class TestClientUnit:
         assert "/api_user_login" in url
         assert "akid=test_akid" in url
 
+    def test_client_construct_url_retains_blank_query_param(self):
+        """Test construct_url keeps explicitly-blank query parameter values."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+
+        url = client.construct_url("entries/update", {"caption": ""}, expires_in=None)
+
+        query = dict(parse_qsl(urlsplit(url).query, keep_blank_values=True))
+        assert "caption" in query
+        assert query["caption"] == ""
+        assert "caption=" in url
+
     @pytest.mark.parametrize(
         ("api_method_uri", "kwargs"),
         [
@@ -215,7 +240,7 @@ class TestClientUnit:
     def test_client_generate_auth_url_uses_longer_expiry(self):
         """Test auth URLs use a longer auth-specific expiration window."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now
@@ -229,7 +254,7 @@ class TestClientUnit:
     def test_client_construct_url_defaults_to_sixty_second_expiry(self):
         """Test ordinary signed URLs still use the default 60 second TTL."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now
@@ -243,7 +268,7 @@ class TestClientUnit:
     def test_client_construct_url_accepts_absolute_datetime_expiry(self):
         """Test construct_url preserves explicit absolute expiration datetimes."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
         absolute_expiry = fixed_now + timedelta(minutes=5)
 
         with patch("labapi.client.datetime") as mock_datetime:
@@ -274,7 +299,7 @@ class TestClientUnit:
     def test_client_construct_url_rejects_expired_absolute_datetime(self):
         """Test explicit expired absolute datetime expiries are rejected."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_now = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
 
         with patch("labapi.client.datetime") as mock_datetime:
             mock_datetime.now.return_value = fixed_now
@@ -323,6 +348,15 @@ class TestClientUnit:
         response.status_code = 200
 
         Client._handle_request_status(response)
+
+    def test_client_handle_request_status_accepts_non_200_2xx(self):
+        """Test _handle_request_status treats the whole 2xx range as success."""
+        response = make_response(204, "")
+
+        Client._handle_request_status(response)
+
+        with pytest.raises(ApiError, match="API request failed with status code 400"):
+            Client._handle_request_status(make_response(400, "Bad Request"))
 
     def test_client_close_closes_session(self):
         """Test Client.close closes the underlying requests session."""
@@ -436,6 +470,121 @@ class TestClientUnit:
 
         client.raw_api_get("test")
         assert client.session.get.call_args.kwargs["timeout"] == 5.0
+
+    def test_default_client_mounts_stock_https_adapter(self):
+        """Test the default client keeps requests' stock HTTPS adapter."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            client = Client("https://api.test.com", "test_akid", "test_password")
+
+        adapter = https_adapter(client)
+        assert type(adapter) is HTTPAdapter
+        assert "ssl_context" not in adapter.poolmanager.connection_pool_kw
+
+    def test_ssl_host_bundle_uses_truststore_context(self):
+        """Test ssl_host_bundle=True verifies with an unmodified truststore context."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            client = Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                ssl_host_bundle=True,
+            )
+
+        adapter = https_adapter(client)
+        context = adapter.poolmanager.connection_pool_kw["ssl_context"]
+        assert isinstance(context, truststore.SSLContext)
+        expected = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT).verify_flags
+        assert context.verify_flags == expected
+
+    @pytest.mark.parametrize("strict_cert", [True, False])
+    def test_strict_cert_is_deprecated(self, strict_cert: bool):
+        """Test passing strict_cert explicitly warns at the caller's line."""
+        with pytest.warns(
+            DeprecationWarning, match="strict_cert is deprecated"
+        ) as record:
+            Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                strict_cert=strict_cert,
+            )
+
+        assert "ssl_host_bundle=True" in str(record[0].message)
+        assert record[0].filename == __file__
+
+    def test_ssl_host_bundle_ignores_strict_cert(self):
+        """Test strict_cert only warns and leaves the truststore context unchanged."""
+        with pytest.warns(DeprecationWarning, match="strict_cert is deprecated"):
+            client = Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                strict_cert=False,
+                ssl_host_bundle=True,
+            )
+
+        adapter = https_adapter(client)
+        context = adapter.poolmanager.connection_pool_kw["ssl_context"]
+        assert isinstance(context, truststore.SSLContext)
+        expected = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT).verify_flags
+        assert context.verify_flags == expected
+
+    def test_ssl_host_bundle_context_is_used_through_proxies(self):
+        """Test proxied HTTPS connections also verify with the truststore context."""
+        client = Client(
+            "https://api.test.com",
+            "test_akid",
+            "test_password",
+            ssl_host_bundle=True,
+        )
+
+        adapter = https_adapter(client)
+        context = adapter.poolmanager.connection_pool_kw["ssl_context"]
+        proxy_manager = adapter.proxy_manager_for("http://proxy.test:8080")
+        assert proxy_manager.connection_pool_kw["ssl_context"] is context
+
+    def test_strict_cert_true_mounts_stock_https_adapter(self):
+        """Test explicit strict_cert=True keeps requests' stock HTTPS adapter."""
+        with pytest.warns(DeprecationWarning, match="strict_cert is deprecated"):
+            client = Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                strict_cert=True,
+            )
+
+        assert type(https_adapter(client)) is HTTPAdapter
+
+    def test_strict_cert_false_alone_mounts_313_adapter(self):
+        """Test strict_cert=False without ssl_host_bundle keeps _313HTTPAdapter."""
+        with pytest.warns(DeprecationWarning, match="strict_cert is deprecated"):
+            client = Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                strict_cert=False,
+            )
+
+        adapter = https_adapter(client)
+        assert type(adapter) is _313HTTPAdapter
+        context = adapter.poolmanager.connection_pool_kw["ssl_context"]
+        assert not isinstance(context, truststore.SSLContext)
+        assert not context.verify_flags & ssl.VERIFY_X509_STRICT
+
+    def test_ssl_host_bundle_without_truststore_raises_import_error(self):
+        """Test a missing truststore dependency points at the labapi extra."""
+        with (
+            patch.dict(sys.modules, {"truststore": None}),
+            pytest.raises(ImportError, match=r"labapi\[truststore\]"),
+        ):
+            Client(
+                "https://api.test.com",
+                "test_akid",
+                "test_password",
+                ssl_host_bundle=True,
+            )
 
     def test_raw_api_get_raises_api_error_from_xml_error_body(self):
         """Test raw_api_get surfaces LabArchives XML error payloads."""
@@ -958,6 +1107,121 @@ class TestClientUnit:
 
             connection.close()
             thread.join(timeout=5)
+
+    def test_collect_auth_response_drops_stalled_connection_and_still_succeeds(self):
+        """Test a connection that never finishes its request is dropped, not left open forever."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        login = Mock(return_value=Mock(spec=User))
+        port = reserve_local_port()
+        result: dict[str, User] = {}
+        errors: list[BaseException] = []
+
+        def run_collect_auth_response() -> None:
+            try:
+                with client.collect_auth_response(
+                    port=port,
+                    callback_path="/expected/",
+                    timeout=5.0,
+                ) as auth_response_collector:
+                    result["user"] = auth_response_collector.wait()
+            # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
+            except BaseException as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        with (
+            patch("labapi.client._AUTH_CALLBACK_CONNECTION_TIMEOUT", 0.2),
+            patch.object(client, "login", login),
+        ):
+            thread = Thread(target=run_collect_auth_response, daemon=True)
+            thread.start()
+            wait_for_local_listener(port)
+
+            # Connect and send an incomplete request line, then go silent —
+            # this simulates a stray/slow client that never completes its
+            # request. Without a per-connection read timeout on the handler,
+            # this would block the handler (and the overall auth wait)
+            # indefinitely.
+            stalled_socket = socket.create_connection(("127.0.0.1", port), timeout=2)
+            try:
+                stalled_socket.sendall(b"GET ")
+                start = monotonic()
+                stalled_socket.settimeout(2)
+                # The server must close the connection once its bounded
+                # per-connection timeout elapses, well before our 2s guard.
+                assert stalled_socket.recv(1) == b""
+                assert monotonic() - start < 2.0
+            finally:
+                stalled_socket.close()
+
+            # The accept loop must still be alive afterwards, and the
+            # legitimate callback must still succeed within the overall
+            # auth timeout.
+            status, _ = local_get(
+                port,
+                "/expected/?auth_code=good-code&email=user%40example.com",
+            )
+            assert status == 200
+
+            thread.join(timeout=5)
+
+        assert not thread.is_alive()
+        assert not errors
+        assert result["user"] is login.return_value
+        login.assert_called_once_with("user@example.com", "good-code")
+
+    def test_collect_auth_response_records_code_when_response_write_fails(self):
+        """Regression (#372): a valid auth code is recorded even when writing the browser response raises."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        login = Mock(return_value=Mock(spec=User))
+        port = reserve_local_port()
+        result: dict[str, object] = {}
+        errors: list[BaseException] = []
+
+        def run_collect_auth_response() -> None:
+            try:
+                with client.collect_auth_response(
+                    port=port,
+                    callback_path="/expected/",
+                    timeout=2.0,
+                ) as auth_response_collector:
+                    httpd = auth_response_collector._httpd
+                    assert httpd is not None
+                    # Simulate the browser resetting the connection: the response
+                    # write fails after the callback query has been parsed.
+                    with patch.object(
+                        httpd.RequestHandlerClass,
+                        "_write_response",
+                        side_effect=BrokenPipeError("browser reset the connection"),
+                    ):
+                        user = auth_response_collector.wait()
+                    result["auth_code"] = auth_response_collector._auth_code
+                    result["email"] = auth_response_collector._email
+                    result["user"] = user
+            # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
+            except BaseException as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        with patch.object(client, "login", login):
+            thread = Thread(target=run_collect_auth_response, daemon=True)
+            thread.start()
+            wait_for_local_listener(port)
+
+            # The server never writes a response (the write raises), so the
+            # client sees a dropped connection; that is expected here.
+            with contextlib.suppress(OSError):
+                local_get(
+                    port,
+                    "/expected/?auth_code=good-code&email=user%40example.com",
+                )
+
+            thread.join(timeout=5)
+
+        assert not thread.is_alive()
+        assert not errors
+        assert result["auth_code"] == "good-code"
+        assert result["email"] == "user@example.com"
+        assert result["user"] is login.return_value
+        login.assert_called_once_with("user@example.com", "good-code")
 
     def test_stream_api_get_yields_chunks_and_returns_response(self):
         """Test stream_api_get yields streamed chunks and returns the response."""

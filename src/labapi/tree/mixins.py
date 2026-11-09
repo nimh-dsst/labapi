@@ -18,10 +18,10 @@ from collections.abc import (
     Sequence,
     ValuesView,
 )
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Literal, TypeVar, cast, overload
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Literal, Self, TypeVar, cast, overload
 
-from typing_extensions import Self, override
+from typing_extensions import override
 
 from labapi.exceptions import (
     ExtractionError,
@@ -377,7 +377,7 @@ class AbstractTreeNode(AbstractBaseTreeNode):
                 "Delete it from the LabArchives web interface instead."
             )
 
-        self.name = f"{self.name} - Deleted at {datetime.now(timezone.utc).astimezone().strftime('%Y-%m-%d %H:%M:%S')}"
+        self.name = f"{self.name} - Deleted at {datetime.now(UTC).astimezone().strftime('%Y-%m-%d %H:%M:%S')}"
         self.move_to(api_deleted_items)
 
         return self
@@ -502,13 +502,21 @@ class AbstractTreeContainer(
     def __contains__(self, key: object) -> bool:
         """Return whether the container contains the given key.
 
+        A single-node lookup (by name or ``Index.Id``) is present when it
+        resolves without raising -- even an empty child directory, which is
+        falsy via ``__len__``. An ``Index.Name`` lookup returns a list, so it
+        is present only when that list is non-empty.
+
         :param key: The key or indexed selector to check for.
-        :returns: True if the key is found and not empty, False otherwise.
+        :returns: True if the key is found, False otherwise.
         """
         try:
-            return bool(self[key])  # type: ignore  # pyright: ignore[reportArgumentType]
+            result = self[key]  # type: ignore  # pyright: ignore[reportArgumentType]
         except (KeyError, TypeError):
             return False
+        if isinstance(result, AbstractBaseTreeNode):
+            return True
+        return len(result) > 0
 
     @override
     def keys(self) -> KeysView[str]:

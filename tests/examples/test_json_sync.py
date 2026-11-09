@@ -9,10 +9,9 @@ from collections.abc import Iterator, Sequence
 from io import BytesIO
 from pathlib import Path
 from types import TracebackType
-from typing import cast
+from typing import Self, cast
 
 import pytest
-from typing_extensions import Self
 
 from labapi import (
     Attachment,

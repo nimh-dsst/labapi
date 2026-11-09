@@ -40,11 +40,20 @@ How Do I Handle SSL/TLS Certificate Issues?
 By default, :class:`~labapi.client.Client` verifies TLS certificates on every
 HTTPS request.
 
-Can I Disable Strict Certificate Verification?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+How Do I Connect From Behind a TLS-Inspecting Proxy?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For short-lived tests against systems whose certificates fail strict
-validation, pass ``strict_cert=False``:
+Corporate and institutional networks often inspect HTTPS traffic with a proxy
+that re-signs certificates using a private root CA installed only in the
+operating system's trust store. Pass ``ssl_host_bundle=True`` to verify
+certificates against that store (the Windows certificate store, the macOS
+Keychain, or the Linux system CA bundle). This is the recommended option in
+that situation, because certificates are still fully verified. It requires
+the ``truststore`` extra:
+
+.. code-block:: bash
+
+   pip install "labapi[truststore]"
 
 .. code-block:: python
 
@@ -54,8 +63,17 @@ validation, pass ``strict_cert=False``:
        base_url="https://api.labarchives.com",
        akid="your_access_key_id",
        akpass="your_password",
-       strict_cert=False,
+       ssl_host_bundle=True,
    )
+
+Can I Disable Strict Certificate Verification?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use ``ssl_host_bundle=True`` (see above) instead. The ``strict_cert`` option
+is deprecated: passing it emits a :class:`DeprecationWarning`, it has no
+effect when ``ssl_host_bundle=True``, and it will be removed in a future
+release. Until then, ``strict_cert=False`` still relaxes strict X.509
+validation of the default certificate bundle.
 
 .. warning::
    Relaxing strict X.509 validation (``strict_cert=False``) can expose you

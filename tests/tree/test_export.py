@@ -17,7 +17,7 @@ import labapi as LA
 from labapi.entry import Attachment, AttachmentEntry, PlainTextEntry, TextEntry
 from labapi.exceptions import ApiError
 from labapi.tree import notebook as notebook_module
-from labapi.tree._export import _backup_tree, _walk_tree, _write_tree
+from labapi.tree._export import _backup_tree, _walk_tree, _writable_name, _write_tree
 
 
 def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
@@ -111,6 +111,72 @@ def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
     }
     assert (exported / "1_Folder" / "2_Empty page").is_dir()
     assert (exported / "2_Empty").is_dir()
+
+
+def test_backup_tree_generates_name_for_null_attach_file_name(tmp_path):
+    """A NULL attach_file_name falls back to a generated name instead of raising.
+
+    Regression test for #324: ``Path(None).name`` raises ``TypeError`` and
+    used to abort the entire backup export.
+    """
+    py7zr = pytest.importorskip("py7zr")
+    backup = tmp_path / "backup" / "notebook"
+    attachment = backup / "attachments" / "20" / "1" / "original" / "attachment_20"
+    attachment.parent.mkdir(parents=True)
+    attachment.write_bytes(b"no filename on record")
+
+    database = sqlite3.connect(backup / "db.sqlite3")
+    database.executescript(
+        """
+        CREATE TABLE tree_nodes (
+            id INTEGER PRIMARY KEY,
+            parent_id INTEGER,
+            relative_position REAL,
+            entry_id INTEGER,
+            display_text TEXT
+        );
+        CREATE TABLE entry_parts (
+            id INTEGER PRIMARY KEY,
+            entry_id INTEGER,
+            part_type INTEGER,
+            entry_data TEXT,
+            relative_position REAL,
+            attach_file_name TEXT,
+            version INTEGER
+        );
+        INSERT INTO tree_nodes VALUES (1, 0, 1, 10, NULL);
+        INSERT INTO entry_parts VALUES (19, 10, 0, 'Page', 1, NULL, 1);
+        INSERT INTO entry_parts VALUES (20, 10, 2, NULL, 2, NULL, 1);
+        """
+    )
+    database.close()
+
+    archive_path = tmp_path / "backup.7z"
+    with py7zr.SevenZipFile(archive_path, "w") as archive:
+        archive.write(backup / "db.sqlite3", "notebook/db.sqlite3")
+        archive.write(attachment, "notebook/attachments/20/1/original/attachment_20")
+
+    class Notebook:
+        def backup(self, destination, **_kwargs):
+            shutil.copy2(archive_path, destination)
+            return destination
+
+    work = tmp_path / "work"
+    work.mkdir()
+    tree = _backup_tree(cast(LA.Notebook, Notebook()), work)
+    exported = _write_tree(tree, tmp_path / "export")
+
+    page = exported / "1_Page"
+    assert (page / "1_attachment_20").read_bytes() == b"no filename on record"
+    metadata = json.loads((page / ".labarchives.json").read_text(encoding="utf-8"))
+    assert metadata["entries"] == [
+        {
+            "file": "1_attachment_20",
+            "id": "20",
+            "type": "Attachment",
+            "filename": "attachment_20",
+        }
+    ]
 
 
 def test_walk_tree_stages_all_entries(monkeypatch, tmp_path):
@@ -216,6 +282,40 @@ def test_write_tree_shortens_an_overlong_filename(tmp_path):
 
     assert len(files) == 1
     assert len(files[0].name) <= 240
+    assert files[0].suffix == ".txt"
+    readable_path = files[0]
+    if os.name == "nt":
+        readable_path = Path("\\\\?\\" + str(readable_path.resolve()))
+    assert readable_path.read_text(encoding="utf-8") == "contents"
+
+
+def test_writable_name_shortens_by_encoded_byte_length():
+    """Many-multibyte-character names are bounded by UTF-8 bytes, not code points."""
+    emoji_name = "\U0001f600" * 100  # 100 emoji: 100 code points, 400 UTF-8 bytes
+
+    result = _writable_name(emoji_name)
+
+    assert len(emoji_name) <= 240  # stays under the old code-point cap
+    assert len(emoji_name.encode("utf-8")) > 240  # but not the byte cap
+    assert len(result.encode("utf-8")) <= 240
+    # The truncation never split a multibyte character.
+    assert result.encode("utf-8").decode("utf-8") == result
+
+
+def test_write_tree_shortens_an_overlong_multibyte_filename(tmp_path):
+    """Multibyte names are shortened by encoded bytes, not code points."""
+    source = tmp_path / "source.txt"
+    source.write_text("contents", encoding="utf-8")
+
+    emoji_name = "\U0001f600" * 100 + ".txt"  # 100 emoji, 1 code point each
+    exported = _write_tree({emoji_name: source}, tmp_path / "export")
+    files = list(exported.iterdir())
+
+    assert len(files) == 1
+    name = files[0].name
+    assert len(name.encode("utf-8")) <= 240
+    # The truncation never split a multibyte character.
+    assert name.encode("utf-8").decode("utf-8") == name
     assert files[0].suffix == ".txt"
     readable_path = files[0]
     if os.name == "nt":

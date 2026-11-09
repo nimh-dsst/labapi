@@ -11,23 +11,22 @@ import warnings
 from base64 import b64encode
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import suppress
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 from operator import itemgetter
 from secrets import token_urlsafe
 from socketserver import TCPServer
 from time import monotonic
 from types import TracebackType
-from typing import IO, Any
+from typing import IO, Any, Self
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from cryptography.hazmat.primitives.hashes import SHA512
 from cryptography.hazmat.primitives.hmac import HMAC
 from lxml.etree import Element, fromstring
 from requests import Response, Session
-from requests import codes as status_codes
 from requests.adapters import HTTPAdapter
-from typing_extensions import Self, override
+from typing_extensions import override
 
 from .exceptions import ApiError, AuthenticationError
 from .user import User
@@ -47,6 +46,16 @@ _DEFAULT_AUTH_CALLBACK_HOST = "127.0.0.1"
 _DEFAULT_AUTH_CALLBACK_PORT = 8089
 
 _DEFAULT_AUTH_CALLBACK_TIMEOUT = 300.0
+
+# Per-connection read timeout for the loopback auth callback handler. This
+# bounds how long a single accepted connection may block waiting for the
+# client to finish sending its HTTP request; without it, a connection that is
+# opened but never completes (e.g. a stray local process, or a slow/broken
+# client) can stall the handler indefinitely, which in turn defeats the
+# overall auth callback timeout enforced by ``_AuthResponseCollector.wait``.
+# A legitimate browser redirect sends its request essentially immediately, so
+# this can be small without risking the normal flow.
+_AUTH_CALLBACK_CONNECTION_TIMEOUT = 5.0
 
 _WEB_UI_HOSTS = {
     "api.labarchives.com": "mynotebook.labarchives.com",
@@ -154,6 +163,90 @@ class _313HTTPAdapter(HTTPAdapter):
         super().init_poolmanager(*args, **kwargs, ssl_context=context)  # pyright: ignore[reportUnknownMemberType]
 
 
+class _SSLContextHTTPAdapter(HTTPAdapter):
+    """HTTP adapter that verifies TLS with a caller-supplied SSL context.
+
+    The context is used both for direct connections and for HTTPS requests
+    tunneled through a proxy, since ``requests`` does not forward the pool
+    manager's ``ssl_context`` to the proxy managers it creates.
+    """
+
+    def __init__(self, ssl_context: ssl.SSLContext, **kwargs: Any):
+        """Initialize the adapter with the SSL context to verify against.
+
+        :param ssl_context: The SSL context used for every HTTPS connection.
+        :param kwargs: Keyword arguments to pass to :class:`HTTPAdapter`.
+        """
+        self._ssl_context = ssl_context
+        super().__init__(**kwargs)
+
+    @override
+    def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the connection pool manager with the configured SSL context.
+
+        :param args: Positional arguments to pass to the parent init_poolmanager.
+        :param kwargs: Keyword arguments to pass to the parent init_poolmanager.
+        """
+        kwargs.setdefault("ssl_context", self._ssl_context)
+        super().init_poolmanager(*args, **kwargs)  # pyright: ignore[reportUnknownMemberType]
+
+    @override
+    def proxy_manager_for(self, proxy: str, **proxy_kwargs: Any) -> Any:
+        """Return a proxy manager whose tunneled connections use the SSL context.
+
+        :param proxy: The proxy URL to return a manager for.
+        :param proxy_kwargs: Keyword arguments to pass to the parent proxy_manager_for.
+        """
+        proxy_kwargs.setdefault("ssl_context", self._ssl_context)
+        return super().proxy_manager_for(proxy, **proxy_kwargs)  # pyright: ignore[reportUnknownMemberType]
+
+
+def _host_trust_ssl_context() -> ssl.SSLContext:
+    """Build an SSL context that verifies against the operating system trust store.
+
+    :returns: A :class:`truststore.SSLContext` for TLS client connections.
+    :raises ImportError: If the optional ``truststore`` dependency is missing.
+    """
+    try:
+        import truststore
+    except ImportError as e:
+        raise ImportError(
+            "The truststore dependency is required for ssl_host_bundle=True. "
+            "Install with: pip install 'labapi[truststore]'"
+        ) from e
+
+    return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+
+def _build_https_adapter(
+    *, strict_cert: bool | None, ssl_host_bundle: bool
+) -> HTTPAdapter | None:
+    """Return the HTTPS adapter for the requested TLS options, if any.
+
+    Warns when the deprecated ``strict_cert`` option is passed explicitly.
+    The warning's ``stacklevel`` assumes this is called from ``Client.__init__``.
+
+    :param strict_cert: The caller's ``strict_cert`` value, or None if omitted.
+    :param ssl_host_bundle: Whether to verify against the OS trust store.
+    :returns: The adapter to mount on ``https://``, or None for the default.
+    :raises ImportError: If ``ssl_host_bundle`` is True and ``truststore`` is
+                         not installed.
+    """
+    if strict_cert is not None:
+        warnings.warn(
+            "strict_cert is deprecated and will be removed in a future release; "
+            "use ssl_host_bundle=True to verify against the operating system's "
+            "trust store instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+    if ssl_host_bundle:
+        return _SSLContextHTTPAdapter(_host_trust_ssl_context())
+    if strict_cert is False:
+        return _313HTTPAdapter()
+    return None
+
+
 def _close_auth_driver(driver: Any) -> None:
     """Close an auth browser driver without masking authentication results."""
     try:
@@ -196,6 +289,15 @@ class _AuthResponseCollector:
         callback_path = self._callback_path
 
         class AuthRequestHandler(BaseHTTPRequestHandler):
+            # Bound how long we wait on an accepted-but-idle connection for
+            # the client to send its request. ``http.server`` honors this by
+            # calling ``socket.settimeout()`` on the accepted connection in
+            # ``StreamRequestHandler.setup`` and treating a resulting
+            # ``socket.timeout`` as a normal (silent) connection close in
+            # ``handle_one_request``, so the accept loop in ``wait()`` simply
+            # continues and the overall auth deadline is still honored.
+            timeout = _AUTH_CALLBACK_CONNECTION_TIMEOUT
+
             def _write_response(self, status_code: int, message: str) -> None:
                 self.send_response(status_code)
                 self.send_header("Content-type", "text/plain")
@@ -213,19 +315,19 @@ class _AuthResponseCollector:
 
                 error = query.get("error")
                 if error is not None:
-                    self._write_response(200, f"Error: {error}")
                     collector._error = error
+                    self._write_response(200, f"Error: {error}")
                     return
 
                 auth_code = query.get("auth_code")
                 email = query.get("email")
                 if auth_code is not None and email is not None:
+                    collector._auth_code = auth_code
+                    collector._email = email
                     self._write_response(
                         200,
                         "Thanks for Authenticating. Close this Window",
                     )
-                    collector._auth_code = auth_code
-                    collector._email = email
                     return
 
                 self._write_response(400, "Invalid authentication callback.")
@@ -298,7 +400,8 @@ class Client:
         akpass: bytes | str | None = None,
         *,
         web_url: str | None = None,
-        strict_cert: bool = True,
+        strict_cert: bool | None = None,
+        ssl_host_bundle: bool = False,
         timeout: float | tuple[float, float] | None = 60.0,
     ):
         """Initialize a LabArchives API client.
@@ -321,10 +424,26 @@ class Client:
         :param strict_cert: Whether to use strict X.509 certificate verification.
                            If False, disables the VERIFY_X509_STRICT flag to allow connections
                            to servers with certificates that may not pass strict validation.
-                           Defaults to True. **Warning:** Setting this to False reduces security.
+                           Omitting it keeps strict verification (the effective default is
+                           True). Has no effect when ``ssl_host_bundle`` is True.
+                           **Warning:** Setting this to False reduces security.
+
+                           .. deprecated:: 1.3.0
+                              Passing ``strict_cert`` emits a :class:`DeprecationWarning`;
+                              it will be removed in a future release. Use
+                              ``ssl_host_bundle=True`` instead.
+        :param ssl_host_bundle: Whether to verify TLS certificates against the operating
+                                system's trust store via ``truststore`` (the Windows
+                                certificate store, the macOS Keychain/Security framework,
+                                or the Linux system CA bundle). Use this, for example,
+                                behind a TLS-inspecting proxy whose private root
+                                certificate is installed only in the OS store. Requires
+                                the ``labapi[truststore]`` extra. Defaults to False.
         :param timeout: How many seconds to wait for the server to send data before giving up.
                         Can be a float, a (connect timeout, read timeout) tuple, or None to
                         wait indefinitely. Defaults to 60.0 seconds.
+        :raises ImportError: If ``ssl_host_bundle`` is True and the optional
+                             ``truststore`` dependency is not installed.
         """
         super().__init__()
 
@@ -364,11 +483,14 @@ class Client:
         self._hmac = HMAC(
             bytes(akpass, "utf8") if isinstance(akpass, str) else akpass, SHA512()
         )
+        https_adapter = _build_https_adapter(
+            strict_cert=strict_cert, ssl_host_bundle=ssl_host_bundle
+        )
         self.session = Session()
         self.timeout = timeout
         self._closed = False
-        if not strict_cert:
-            self.session.mount("https://", _313HTTPAdapter())
+        if https_adapter is not None:
+            self.session.mount("https://", https_adapter)
 
     @property
     def web_url(self) -> str:
@@ -485,7 +607,7 @@ class Client:
         :raises ApiError: For all other non-200 responses.
         """
         # NOTE: See https://mynotebook.labarchives.com/share/LabArchives%2520API/NDEuNnwyNy8zMi9UcmVlTm9kZS83NDE1Mjk1NTJ8MTA1LjY= [ELN Error Codes]
-        if response.status_code != status_codes.ok:
+        if not (200 <= response.status_code < 300):
             error_code: int | None = None
             error_desc: str | None = None
             try:
@@ -789,7 +911,9 @@ class Client:
         exit.
 
         :param port: The local callback port to listen on. Defaults to ``8089``.
-        :param callback_path: The callback path to accept. Defaults to ``/``.
+        :param callback_path: The callback path to accept. When omitted or ``None``,
+                              a random, unguessable path of the form ``/auth/<token>/``
+                              is generated; pass a value to override it.
         :param timeout: Maximum number of seconds to wait for a valid callback.
                         Defaults to five minutes. Pass ``None`` to wait indefinitely.
         :returns: An enterable collector with a ``wait()`` method for the authentication callback.
@@ -909,15 +1033,15 @@ class Client:
         :raises ValueError: If ``expires_in`` is not a future expiry.
         """
         scheme, netloc, path, querystring, _f = urlsplit(url)
-        query = dict(parse_qsl(querystring))
+        query = dict(parse_qsl(querystring, keep_blank_values=True))
 
         if isinstance(expires_in, timedelta):
             if expires_in <= timedelta(0):
                 raise ValueError("expires_in must be a positive duration")
-            expiry = round((datetime.now(timezone.utc) + expires_in).timestamp() * 1000)
+            expiry = round((datetime.now(UTC) + expires_in).timestamp() * 1000)
         else:
             expiry = round(expires_in.timestamp() * 1000)
-            if expiry <= round(datetime.now(timezone.utc).timestamp() * 1000):
+            if expiry <= round(datetime.now(UTC).timestamp() * 1000):
                 raise ValueError("expires_in must be a future datetime")
         sig = self._signature(api_method, expiry)
 

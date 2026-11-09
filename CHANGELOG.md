@@ -13,6 +13,16 @@ details that affect development workflows.
 ### Added
 
 - Official support for Python 3.14; the CI matrix now tests against it.
+- `Client(ssl_host_bundle=True)` verifies TLS certificates against the
+  operating system's trust store via `truststore`, for networks behind a
+  TLS-inspecting proxy whose root CA is installed only in the OS store. It
+  requires the new `labapi[truststore]` extra.
+
+### Deprecated
+
+- The `Client(strict_cert=...)` option. Passing it explicitly now emits a
+  `DeprecationWarning`; behavior is otherwise unchanged, and it has no effect
+  when `ssl_host_bundle=True`. Use `ssl_host_bundle=True` instead.
 
 ### Changed
 
@@ -28,6 +38,13 @@ details that affect development workflows.
   unchanged.
 - The type-check CI job now installs the optional extras so the built-in-auth
   and dotenv code paths are type-checked.
+
+### Removed
+
+- Support for Python 3.10, which reached end of life in October 2026.
+  `labapi` now requires Python 3.11 or newer. The security fixes for the
+  locked `pillow` (13.0.0) and `filelock` (4.2.1) dependencies are only
+  published for Python 3.11+.
 
 ### Security
 

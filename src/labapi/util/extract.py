@@ -86,7 +86,9 @@ def to_datetime(s: str) -> datetime:
     :returns: The parsed datetime.
     :raises ValueError: If the string is not a valid ISO-8601 timestamp.
     """
-    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    # Explicit replacement keeps accepting date-only values with a trailing Z,
+    # which fromisoformat rejects on its own.
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))  # noqa: FURB162
 
 
 def extract_etree(

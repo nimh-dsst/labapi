@@ -135,6 +135,9 @@ class Attachment:
         try:
             file.seek(0)
             shutil.copyfileobj(file, backing)
+        except Exception:
+            backing.close()
+            raise
         finally:
             file.seek(original_position)
         backing.seek(0)
@@ -179,6 +182,14 @@ class Attachment:
         :returns: The attribute value from the backing object.
         :raises AttributeError: If the attribute does not exist on the backing object.
         """
+        if attr == "_backing" or "_backing" not in self.__dict__:
+            raise AttributeError(attr)
+        # Dunder names (e.g. __getstate__, __reduce_ex__, __setstate__) must
+        # never delegate to the backing object: doing so hijacks generic
+        # protocols like copy/pickle with the backing stream's own reduction
+        # behavior instead of Attachment's, breaking copy/deepcopy/pickle.
+        if attr.startswith("__") and attr.endswith("__"):
+            raise AttributeError(attr)
         return getattr(self._backing, attr)
 
     def read(self, size: int = -1, /) -> bytes:

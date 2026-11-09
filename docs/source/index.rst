@@ -14,6 +14,7 @@ update entries from scripts, tools, and integrations.
    examples/index
    faq
    reference/index
+   changelog
 
 Start Here
 ----------

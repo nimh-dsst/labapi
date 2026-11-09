@@ -4,7 +4,7 @@ import json
 import os
 import time
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
 
@@ -157,7 +157,7 @@ def test_env(
     data_dir_structure: LA.NotebookDirectory,
 ):
     """Create an isolated timestamped workspace for the current test."""
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     test_folder_name = f"test: {request.node.name} {timestamp}"  # pyright: ignore[reportUnknownMemberType]
 
     # Create the isolated workspace

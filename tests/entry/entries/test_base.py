@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock
 
 import pytest
@@ -115,8 +115,8 @@ class TestEntryIntegration:
     )
     def test_entry_from_part_type_propagates_metadata(self, part_type: str, user: User):
         """Test lifecycle metadata reaches every entry factory path."""
-        created_at = datetime(2026, 7, 29, 22, 12, 57, tzinfo=timezone.utc)
-        updated_at = datetime(2026, 7, 30, 1, 2, 3, tzinfo=timezone.utc)
+        created_at = datetime(2026, 7, 29, 22, 12, 57, tzinfo=UTC)
+        updated_at = datetime(2026, 7, 30, 1, 2, 3, tzinfo=UTC)
 
         entry = Entry.from_part_type(
             part_type,

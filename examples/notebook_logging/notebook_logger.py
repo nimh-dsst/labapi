@@ -55,7 +55,7 @@ class NotebookLogger:
 
     def _configure_figure_capture(self) -> None:
         """Configure IPython/matplotlib hooks to capture rendered figures."""
-        ip = get_ipython()
+        ip = get_ipython() if get_ipython else None
         if not ip:
             return
 
@@ -250,7 +250,7 @@ class NotebookLogger:
             NotebookDirectory, self.user.email, if_exists=InsertBehavior.Retain
         )
 
-        timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
+        timestamp = datetime.now().isoformat(timespec="microseconds").replace(":", "-")
         page = user_dir.create(NotebookPage, timestamp)
         entries = page.entries
         tags_html = "".join(
