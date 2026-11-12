@@ -579,7 +579,6 @@ class TestClientUnit:
     def test_streaming_response_consumed_stream_is_not_transport_error(self):
         """Iterating an already-consumed stream is a caller error, not transport."""
         response = MagicMock(spec=Response)
-        response.url = SIGNED_URL
         response.iter_content.side_effect = StreamConsumedError()
         stream = StreamingResponse(response)
 
