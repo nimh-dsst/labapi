@@ -112,9 +112,9 @@ class StreamingResponse:
 
         :raises TransportError: If the connection breaks while streaming.
         """
+        failure = None
         try:
             yield from self._response.iter_content(1024 * 1024)
-            return
         except StreamConsumedError:
             # A caller error (iterating twice), not a transport failure;
             # its message carries no URL.
@@ -123,9 +123,12 @@ class StreamingResponse:
             failure = type(exc).__name__
         finally:
             self.close()
-        raise TransportError(
-            f"{failure} while streaming {urlsplit(self._response.url).path}"
-        )
+        if failure:
+            # Raised outside ``except`` so the original error, whose message
+            # holds the signed URL, is not chained.
+            raise TransportError(
+                f"{failure} while streaming {urlsplit(self._response.url).path}"
+            )
 
     @property
     def response(self) -> Response:
