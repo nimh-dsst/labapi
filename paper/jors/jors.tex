@@ -289,10 +289,9 @@ The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 
 \section*{Operating system}
 
-Platform-independent (pure Python). The unit-test workflow is configured
-for GitHub's current Ubuntu and macOS runners on Python 3.11 to 3.14, and
-Windows runners on Python 3.11 to 3.13. The authors also use the library
-on Windows 11.
+Platform-independent (pure Python). The unit tests run on Ubuntu and macOS
+with Python 3.11 to 3.14, and on Windows with Python 3.11 to 3.13. The
+authors also use the library on Windows 11.
 
 \section*{Programming language}
 
@@ -303,9 +302,8 @@ Python 3.11 or later; tested on Python 3.11 to 3.14.
 Network access to a LabArchives API endpoint, and an API access key ID and
 password issued by LabArchives through the user's institution. The optional
 browser-based login requires a local installation of Chrome, Firefox or
-Edge. On Windows, its \texttt{installed-browsers} dependency currently
-requires \texttt{pywin32} versions without Python 3.14 wheels, so the
-\texttt{builtin-auth} extra is limited to Python 3.11 to 3.13 there.
+Edge. On Windows it is limited to Python 3.11 to 3.13, because one of its
+dependencies has no Python 3.14 build yet.
 
 \section*{Dependencies}
 
