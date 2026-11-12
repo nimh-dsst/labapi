@@ -51,7 +51,6 @@ class TestNotebookDirectoryUnit:
         new_dir._discard_partial_copy = partial(
             NotebookDirectory._discard_partial_copy, new_dir
         )
-        new_dir.id = "new-dir-id"
 
         destination = Mock()
         destination.create.return_value = new_dir
