@@ -478,8 +478,7 @@ class TestClientUnit:
         with pytest.raises(ApiError) as exc_info:
             Client._handle_request_status(response)
 
-        message = str(exc_info.value)
-        assert message == (
+        assert str(exc_info.value) == (
             "API request failed with status code 502 for /api/users/user_access_info"
             f": no LabArchives error in response (text/html, {len(response.content)}"
             " bytes)"
