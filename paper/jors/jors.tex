@@ -214,23 +214,25 @@ failed requests or handle rate limiting.
 
 The unit tests run against a mocked network layer, so they need no
 credentials, and they cover request signing, path parsing, tree operations
-and notebook backup; each bundled example is tested too. A second
+and notebook backup; each bundled example is tested too. An integration
 suite repeats the same operations against a real LabArchives account. It
 needs a LabArchives login, so we run it by hand. Both suites run under
-\texttt{pytest}; passing \texttt{--integration} enables the live suite,
+\texttt{pytest}; passing \texttt{--integration} enables the integration
+suite,
 which reads credentials from environment variables (see the contributing
 guide). For every push and pull request, GitHub Actions runs the unit
 tests on Python 3.11 to 3.14 on Ubuntu and macOS, and Python 3.11 to 3.13
 on Windows. Separate jobs run Ruff, type checking and a documentation build.
 
 For a new user, the quickest way to see whether an installation works is
-the JSON synchronisation example, one of five runnable workflows in the
+the JSON synchronisation example, one of five runnable examples in the
 repository (three ship with sample input). It uploads the two files in its
 \texttt{sample\_data} folder to a notebook page; running its download
 command should then give back files identical to the originals.
 
-A fuller example is a two-stage quality-control workflow for five subjects
-from the public OpenNeuro dataset ds000228 \citep{ds000228}, whose
+The example in this paper is separate from those five: a two-stage
+quality-control workflow for five subjects from the public OpenNeuro
+dataset ds000228 \citep{ds000228}, whose
 participants watched the short film Partly Cloudy. For each subject, the
 first stage creates or reuses a page in a Partly Cloudy QC folder and
 writes the subject's group (child or adult) and mean DVARS (the derivative
