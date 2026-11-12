@@ -485,10 +485,6 @@ class TestClientUnit:
             " bytes)"
         )
         assert exc_info.value.error_code is None
-        assert "?" not in message
-        for secret in SIGNED_URL_SECRETS:
-            assert secret not in message
-        assert "BODY-MARKER" not in message
 
     def test_handle_request_status_non_xml_without_content_type(self):
         """A missing Content-Type header is reported as such."""

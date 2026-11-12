@@ -91,16 +91,6 @@ def _normalize_web_url(web_url: str) -> str:
     )
 
 
-def _endpoint_path(url: str) -> str:
-    """Return only the path of a request URL, for use in error messages.
-
-    Signed request URLs carry ``akid``/``sig``/``expires`` and, for login,
-    ``login_or_email``/``password`` (the one-hour auth code) in the query
-    string, so error messages name the endpoint by path alone.
-    """
-    return urlsplit(url).path or "/"
-
-
 class StreamingResponse:
     """Wrapper for streamed API responses.
 
@@ -123,24 +113,19 @@ class StreamingResponse:
         :raises TransportError: If the connection breaks while streaming.
         """
         try:
-            failure: str | None = None
-            try:
-                yield from self._response.iter_content(1024 * 1024)
-                return
-            except StreamConsumedError:
-                # A caller error (iterating twice), not a transport failure;
-                # its message carries no URL.
-                raise
-            except RequestException as exc:
-                failure = type(exc).__name__
-            # Raised outside the ``except`` block so the original exception,
-            # whose chain can carry the signed request URL, is neither
-            # ``__cause__`` nor ``__context__``.
-            raise TransportError(
-                f"{failure} while streaming {_endpoint_path(self._response.url)}"
-            )
+            yield from self._response.iter_content(1024 * 1024)
+            return
+        except StreamConsumedError:
+            # A caller error (iterating twice), not a transport failure;
+            # its message carries no URL.
+            raise
+        except RequestException as exc:
+            failure = type(exc).__name__
         finally:
             self.close()
+        raise TransportError(
+            f"{failure} while streaming {urlsplit(self._response.url).path}"
+        )
 
     @property
     def response(self) -> Response:
@@ -637,18 +622,16 @@ class Client:
         """
         # NOTE: See https://mynotebook.labarchives.com/share/LabArchives%2520API/NDEuNnwyNy8zMi9UcmVlTm9kZS83NDE1Mjk1NTJ8MTA1LjY= [ELN Error Codes]
         if not (200 <= response.status_code < 300):
-            # The message carries only the status, the endpoint path (the query
-            # string holds the signed credentials) and LabArchives' own error
-            # code/description -- never the raw body, which may echo the URL.
+            # Never include the raw body: it may echo the signed URL.
             prefix = (
                 f"API request failed with status code {response.status_code} "
-                f"for {_endpoint_path(response.url)}"
+                f"for {urlsplit(response.url).path}"
             )
             body = b""
             error_code: int | None = None
             error_desc: str | None = None
             try:
-                body = response.content or b""
+                body = response.content
                 tree = fromstring(body)
                 code_text = tree.findtext(".//error-code")
                 if code_text is not None:
@@ -671,27 +654,16 @@ class Client:
             )
 
     def _send(self, send: Callable[..., Response], url: str, **kwargs: Any) -> Response:
-        """Call ``send(url, **kwargs)``, hiding the URL if the transport fails.
+        """Call ``send(url, **kwargs)``, raising :class:`TransportError` on failure.
 
-        ``requests`` exceptions for transport failures (DNS, connect, TLS,
-        proxy, timeout) embed the full signed URL -- in the message, in the
-        chained ``urllib3`` exception, and on ``exc.request``. They are
-        replaced by a :class:`TransportError` naming only the exception type
-        and the endpoint path.
-
-        :param send: ``self.session.get`` or ``self.session.post``.
-        :param url: The signed request URL.
-        :param kwargs: Passed through to ``send`` unchanged.
-        :raises TransportError: If no HTTP response was received.
+        The query string holds signed credentials, so only the path is used, and
+        the error is raised outside ``except`` so nothing is chained.
         """
-        failure: str | None = None
         try:
             return send(url, **kwargs)
         except RequestException as exc:
             failure = type(exc).__name__
-        # Raised outside the ``except`` block so the original exception is
-        # neither ``__cause__`` nor ``__context__`` of the new one.
-        raise TransportError(f"{failure} during request to {_endpoint_path(url)}")
+        raise TransportError(f"{failure} during request to {urlsplit(url).path}")
 
     def stream_api_get(
         self, api_method_uri: str | Sequence[str], **kwargs: Any
