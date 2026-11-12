@@ -119,8 +119,7 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
         """Return all notebooks with the given name.
 
         This is a readable equivalent of ``notebooks[Index.Name:name]``. Names
-        are not unique, so this returns a (possibly empty) list of every
-        matching notebook rather than a single notebook.
+        are not unique, so several notebooks can match.
 
         :param name: The name of the notebooks to retrieve.
         :returns: A list of :class:`~labapi.tree.notebook.Notebook` objects with
@@ -133,8 +132,7 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
         """Return the user's default notebook, if one is marked.
 
         LabArchives marks at most one notebook as the user's default via its
-        ``is-default`` flag. This accessor scans the collection and returns that
-        notebook.
+        ``is-default`` flag.
 
         :returns: The default :class:`~labapi.tree.notebook.Notebook` (the first
                   one, if several are marked), or ``None`` if none is marked.

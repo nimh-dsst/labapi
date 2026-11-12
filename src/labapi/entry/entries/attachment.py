@@ -232,24 +232,22 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
 
     @property
     def filename(self) -> str | None:
-        """Return the attachment filename reported by the page listing.
+        """Return the attachment filename without downloading the payload.
 
-        This value comes from the page entry listing (or the name supplied at
-        upload time) and is available without downloading the attachment
-        payload. It may be ``None`` if the listing did not report a filename.
+        The value comes from the page entry listing, or from the name supplied
+        at upload time.
 
-        :returns: The listing filename, or ``None`` if unavailable.
+        :returns: The filename, or ``None`` if the listing did not report one.
         """
         return self._filename
 
     @property
     def mime_type(self) -> str | None:
-        """Return the attachment MIME type reported by the page listing.
+        """Return the attachment MIME type without downloading the payload.
 
-        This value comes from the page entry listing (or the type supplied at
-        upload time) and is available without downloading the attachment
-        payload. It may be ``None`` if the listing did not report a MIME type.
+        The value comes from the page entry listing, or from the type supplied
+        at upload time.
 
-        :returns: The listing MIME type, or ``None`` if unavailable.
+        :returns: The MIME type, or ``None`` if the listing did not report one.
         """
         return self._mime_type

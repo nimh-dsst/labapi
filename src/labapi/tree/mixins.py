@@ -626,8 +626,7 @@ class AbstractTreeContainer(
         """Return all child nodes with the given name.
 
         This is a readable equivalent of ``container[Index.Name:name]``. Names
-        are not unique within a container, so this returns a (possibly empty)
-        sequence of every matching child rather than a single node.
+        are not unique within a container, so several children can match.
 
         :param name: The name of the child nodes to retrieve.
         :returns: A sequence of :class:`AbstractBaseTreeNode` objects with the
