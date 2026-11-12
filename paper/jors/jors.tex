@@ -103,27 +103,21 @@ that adds the entry.
 
 Other electronic lab notebooks, including Benchling, RSpace and eLabFTW,
 provide official Python clients for their APIs
-\citep{benchling_sdk,rspace_client,elabapi_python}. We found no public
-official Python client for LabArchives. The public LabArchives clients in
-Table~\ref{tab:comparison} do not combine path navigation, entry handling
-and attachment transfer in a single client. We considered building on
-labarchives-py \citep{mcmero}, which signs arbitrary GET requests and
-returns the raw responses. That leaves the caller to choose endpoints,
-parse responses and implement notebook navigation, entry handling and file
-transfer, so we wrote a separate client. The ReDBox research data portal
-and a Model
-Context Protocol server also have LabArchives integrations, but neither
-offers a general Python interface to notebooks
+\citep{benchling_sdk,rspace_client,elabapi_python}. We found no official
+Python client for LabArchives, and none of the public clients in
+Table~\ref{tab:comparison} combines path navigation, entry handling and
+attachment transfer. We considered building on labarchives-py
+\citep{mcmero}, but it only signs GET requests and returns the raw
+responses, so we wrote a separate client. The ReDBox research data portal
+and a Model Context Protocol server also have LabArchives integrations,
+but neither offers a general Python interface to notebooks
 \citep{redbox_labarchives,labarchives_mcp}.
 
 \begin{table}[htbp]
 	\centering
-	\caption{Public standalone LabArchives clients with implemented API
-    helpers, checked 2 November 2026.
-    Generic GET calls require the application to select endpoints and
-    handle responses; they are not dedicated entry or attachment helpers.
-    Beyond login, labarchives-js provides only image-entry search and
-    attachment-URL helpers.}
+	\caption{Public standalone LabArchives clients, checked 2 November 2026.
+    ``Generic GET'' means the client signs a request, and the caller
+    chooses the endpoint and parses the response.}
 	\label{tab:comparison}
 	\small
 	\begin{tabular}{p{3.6cm}p{1.1cm}p{1.9cm}p{2.0cm}p{2.1cm}}
@@ -138,8 +132,8 @@ offers a general Python interface to notebooks
 	\end{tabular}
 \end{table}
 
-labapi provides a Python interface that combines notebook path navigation,
-entry handling and attachment transfer. It is intended for computational
+labapi combines all three in one Python interface. It is intended for
+computational
 researchers and the research software engineers who support laboratories
 using LabArchives.
 
