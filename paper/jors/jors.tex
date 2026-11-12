@@ -218,24 +218,21 @@ tests on Python 3.11 to 3.14 on Ubuntu and macOS, and Python 3.11 to 3.13
 on Windows. Separate jobs run Ruff, type checking and a documentation build.
 
 For a new user, the quickest way to see whether an installation works is
-the JSON synchronisation example, one of five runnable examples in the
-repository (three ship with sample input). It uploads the two files in its
+the JSON synchronisation example, one of five examples in the repository.
+It uploads the two files in its
 \texttt{sample\_data} folder to a notebook page; running its download
 command should then give back files holding the same data as the originals.
 
-The example in this paper is separate from those five: a two-stage
-quality-control workflow for five subjects from the public OpenNeuro
-dataset ds000228 \citep{ds000228}, whose
-participants watched the short film Partly Cloudy. For each subject, the
-first stage creates or reuses a page in a Partly Cloudy QC folder and
-writes the subject's group (child or adult) and mean DVARS (the derivative
-of root mean square variance over voxels), a quality-control measure of how
-much a functional magnetic resonance imaging (fMRI) scan changes between
-successive time points \citep{power2012dvars}. In the listings,
-\texttt{subjects} stands for the five subject identifiers, and
-\texttt{compute\_qc()} and \texttt{summarize()} stand for the scientific
-calculations. The same workflow, with fixed values in place of those
-calculations, runs as part of the integration suite.
+The example below is a two-stage quality-control workflow for five
+subjects from the public OpenNeuro dataset ds000228 \citep{ds000228},
+whose participants watched the short film Partly Cloudy. For each subject,
+the first stage creates or reuses a page in a Partly Cloudy QC folder and
+writes the subject's group (child or adult) and mean DVARS, a measure of
+how much a functional MRI scan changes between successive time points
+\citep{power2012dvars}. In the listings, \texttt{subjects} stands for the
+five subject identifiers, and \texttt{compute\_qc()} and
+\texttt{summarize()} stand for the analysis. The same workflow, with fixed
+values in place of the analysis, runs as part of the integration suite.
 
 \medskip
 {\footnotesize\noindent\begin{minipage}{\linewidth}
@@ -249,12 +246,9 @@ for subject in subjects:
 \end{minipage}}
 \medskip
 
-The second stage opens the folder with \texttt{traverse()}, which finds it
-without creating anything. Because the folder holds only the subject pages,
-each child is converted with \texttt{as\_page()}. The stage loads the JSON
-attachment from
-each one, produces a cohort summary and a figure, and writes both to a
-dashboard page:
+The second stage opens the folder with \texttt{traverse()}, loads the JSON
+attachment from each subject page, produces a cohort summary and a figure,
+and writes both to a dashboard page:
 
 \medskip
 {\footnotesize\noindent\begin{minipage}{\linewidth}
