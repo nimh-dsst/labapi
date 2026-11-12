@@ -9,6 +9,10 @@ on:
       command:
         required: true
         type: string
+      runner:
+        required: false
+        type: string
+        default: ubuntu-latest
       append_python_version_arg:
         required: false
         type: boolean
@@ -17,15 +21,24 @@ on:
         required: false
         type: string
         default: '["3.11", "3.12", "3.13", "3.14"]'
+      # JSON list of matrix combinations to drop, e.g. '[{"python-version": "3.14"}]'.
+      matrix_exclude:
+        required: false
+        type: string
+        default: '[]'
 
 jobs:
   check:
     name: ${{ inputs.job_name }} (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ${{ fromJSON(inputs.python_versions) }}
+        exclude: ${{ fromJSON(inputs.matrix_exclude) }}
+    env:
+      # Without this, `uv sync` and `uv run` follow .python-version, not the matrix.
+      UV_PYTHON: ${{ matrix.python-version }}
 
     steps:
       - name: Checkout code
