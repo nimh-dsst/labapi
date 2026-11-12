@@ -120,9 +120,10 @@ jobs:
           # NLM citation-sequence is the numbered Vancouver style JORS asks for.
           curl -fsSL -o vancouver.csl \
             https://raw.githubusercontent.com/citation-style-language/styles/master/nlm-citation-sequence.csl
-          # pandoc misreads two print-only LaTeX details: \small inside the
-          # table, and enumitem options on the description lists. Strip them
-          # from a Word-only copy; the PDF still uses jors.tex unchanged.
+          # pandoc misreads three print-only LaTeX details: \small inside the
+          # table, the table's fixed column widths, and enumitem options on the
+          # description lists. Drop them in a Word-only copy; the PDF still
+          # uses jors.tex unchanged.
           sed -e '/^[[:space:]]*\\small[[:space:]]*$/d' \
               -e 's/\\begin{description}\[[^]]*\]/\\begin{description}/' \
               -e 's/{p{3\.6cm}p{1\.1cm}p{1\.9cm}p{2\.0cm}p{2\.1cm}}/{lllll}/' \
@@ -131,7 +132,7 @@ jobs:
             --metadata reference-section-title=References \
             --default-image-extension=png --resource-path=.:.. -o jors.docx
 
-      - name: Upload JORS PDF
+      - name: Upload JORS manuscript
         uses: actions/upload-artifact@v4
         with:
           name: jors

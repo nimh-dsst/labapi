@@ -185,7 +185,9 @@ Ordered so decisions come first and nothing is written twice.
       `paper/jors/sample/`.
 - [ ] Confirm the operating-system claim. CI runs on `ubuntu-latest` only
       (`.github/workflows/python_check.yml`), so either state Linux as tested
-     ### C. Manuscript
+      and macOS/Windows as supported-but-untested, or add a small OS matrix.
+
+### C. Manuscript
 
 - [x] Write the manuscript in the JORS LaTeX template (`paper/jors/jors.tex`),
       with wording checked against ten local JORS metapapers and four recent
@@ -200,12 +202,6 @@ Ordered so decisions come first and nothing is written twice.
       competing-interests confirmation, AI policy re-read.
 - [ ] Confirm `figures/cohort-dashboard-example.png` meets 150 dpi at print
       size.
-l -o paper.docx
-      ```
-
-      Optionally add this as a third job in `draft-pdf.yml` once it builds
-      cleanly; it is left out of this PR because pandoc was not available to
-      verify it locally.
 - [ ] Co-author review of the full draft.
 - [ ] Draft the cover letter: scope fit, five reviewers, waiver request if
       chosen, and a one-line note that the work was previously considered and
