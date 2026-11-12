@@ -11,15 +11,6 @@ from labapi import Index, Notebook, NotebookDirectory
 from labapi.user import User
 
 
-def _bind_copy_impl(source: Mock, cls: type) -> None:
-    """Route a mocked copy source's ``_copy_to`` to the real implementation.
-
-    The public ``copy_to`` delegates to ``_copy_to``, which ``Mock(spec=...)``
-    would otherwise stub out.
-    """
-    source._copy_to = partial(cls._copy_to, source)
-
-
 class TestNotebookDirectoryUnit:
     """Pure unit tests with all dependencies mocked."""
 
@@ -46,7 +37,8 @@ class TestNotebookDirectoryUnit:
     def test_copy_to_rolls_back_subtree_when_descendant_copy_fails(self):
         """Test NotebookDirectory.copy_to deletes the created subtree on failure."""
         source_dir = Mock(spec=NotebookDirectory)
-        _bind_copy_impl(source_dir, NotebookDirectory)
+        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
+        source_dir._copy_to = partial(NotebookDirectory._copy_to, source_dir)
         source_dir.name = "Source Dir"
         source_dir.is_parent_of.return_value = False
 
@@ -81,7 +73,8 @@ class TestNotebookDirectoryUnit:
     def test_copy_to_warns_when_subtree_rollback_fails(self):
         """Test NotebookDirectory.copy_to warns (but still re-raises) if rollback fails."""
         source_dir = Mock(spec=NotebookDirectory)
-        _bind_copy_impl(source_dir, NotebookDirectory)
+        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
+        source_dir._copy_to = partial(NotebookDirectory._copy_to, source_dir)
         source_dir.name = "Source Dir"
         source_dir.is_parent_of.return_value = False
 
