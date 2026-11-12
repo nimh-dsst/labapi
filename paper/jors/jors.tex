@@ -361,27 +361,26 @@ backups, and the backup feature was developed in coordination with that
 core \citep{labapi_issue_264}. Two applications we
 maintain at NIMH are also built on labapi: muronto records the outputs of
 behavioural neuroscience experiments, and save-my-jupyter deposits Jupyter
-notebook snapshots \citep{muronto,save_my_jupyter}. Both applications are
-used by other NIMH intramural laboratories, beyond the authors' team.
+notebook snapshots \citep{muronto,save_my_jupyter}. Both are used by NIMH
+intramural laboratories outside the authors' team.
 
 Other laboratories could adapt the quality-control example to their own
-outputs. For example, a biochemistry lab could file plate-reader exports
-on the page for each assay, and a core facility could schedule backups of
-the notebooks it looks after.
+outputs; a biochemistry lab, for example, could file plate-reader exports
+on the page for each assay.
 
-The other examples in the repository are meant to be copied and changed.
-One uploads CSV files as formatted tables and fetches them back; others
+The examples in the repository are meant to be copied and changed. One
+uploads CSV files as formatted tables and fetches them back; others
 download a folder, log machine-learning runs, or capture a Jupyter session.
 
-labapi can also be extended. If LabArchives adds an entry type that labapi
-does not know, supporting it takes one subclass of \texttt{Entry} that
-names the type in its \texttt{part\_type} class argument. Defining the
-subclass registers it, and labapi then uses it for entries of that type.
+Supporting a new LabArchives entry type takes one subclass of
+\texttt{Entry} that names the type in its \texttt{part\_type} class
+argument; defining the subclass registers it.
 
 Questions and bug reports go to the GitHub issue tracker. The contributing
 guide explains how to set up a development environment and run both test
-suites, and the corresponding author can also be contacted directly. Releases follow semantic versioning; each
-one goes to PyPI and Zenodo, with its own documentation on GitHub Pages.
+suites, and the corresponding author can also be contacted directly.
+Releases follow semantic versioning; each one goes to PyPI and Zenodo,
+with its own documentation on GitHub Pages.
 
 % Ubiquity Press AI policy (https://ubiquitypress.com/ai-policy): use beyond
 % basic copyediting must be declared, ideally in a Methods section. JORS
