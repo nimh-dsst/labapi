@@ -125,11 +125,11 @@ class TestAttachmentEntryIntegration:
     @pytest.mark.parametrize(
         ("raw_filename", "expected_filename"),
         [
-            ('"../../x"', "x"),
-            (r'"..\\..\\x"', "x"),
-            ('"D:evil"', "evil"),
-            ('"//srv/share/x"', "x"),
-            ('"report.pdf"', "report.pdf"),
+            ("../../x", "x"),
+            (r"..\\..\\x", "x"),
+            ("D:evil", "evil"),
+            ("//srv/share/x", "x"),
+            ("report.pdf", "report.pdf"),
         ],
     )
     def test_attachment_entry_sanitizes_content_disposition_filename(
@@ -145,7 +145,7 @@ class TestAttachmentEntryIntegration:
         mock_response = Mock()
         mock_response.headers = {
             "Content-Type": "application/octet-stream",
-            "Content-Disposition": f"attachment; filename={raw_filename}",
+            "Content-Disposition": f'attachment; filename="{raw_filename}"',
         }
         mock_response.history = []
         mock_response.iter_content.return_value = [b"attachment data"]
