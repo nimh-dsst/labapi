@@ -76,9 +76,7 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
     try:
         if installed_browsers.do_i_have_installed(browser):
             return browser
-    # TODO(BLE001): intentional broad catch — the probe may raise for an
-    # unrecognized name; fall back to detection; narrow if a specific type becomes known.
-    except Exception as exc:  # noqa: BLE001
+    except OSError as exc:
         warnings.warn(
             f"Configured browser probe failed: {exc}. "
             "Falling back to automatic browser detection.",
@@ -87,17 +85,16 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
         )
         return None
 
-    # Fall back to a linear search: installed-browsers may list a browser under
-    # a different name (e.g. Edge as "Microsoft Edge"), so compare normalised
-    # names as autodetection does; "edge" and "msedge" both normalise to "edge".
+    # Fall back to a linear search: installed-browsers may register a browser
+    # under a key that differs from our canonical name (e.g. Edge as "msedge"),
+    # so match on the same substring basis autodetection uses.
     try:
         installed = list(installed_browsers.browsers())
     # TODO(BLE001): intentional broad catch — installed-browsers probe may raise; fall back to an empty list; narrow if a specific type becomes known.
     except Exception:  # noqa: BLE001
         installed = []
-    target = _parse_detectable(browser)
     for entry in installed:
-        if _parse_detectable(entry.get("name")) == target:
+        if _parse_detectable(entry.get("name")) == browser:
             return browser
 
     warnings.warn(
