@@ -266,7 +266,6 @@ class Entries(Sequence["Entry[Any]"]):
             eid = extract_etree(entry_tree, {"entry": {"eid": str}})["eid"]
             entry = cls(eid, data.caption, self._user)
             entry._filename = data.filename or None  # pyright: ignore[reportPrivateUsage]
-            entry._mime_type = data.mime_type or None  # pyright: ignore[reportPrivateUsage]
 
         else:
             if not isinstance(data, str):

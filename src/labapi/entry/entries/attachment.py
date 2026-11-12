@@ -216,7 +216,6 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
 
         self._data = value.caption
         self._filename = value.filename or None
-        self._mime_type = value.mime_type or None
 
         if self._filedata:
             self._filedata.close()
@@ -245,8 +244,9 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
     def mime_type(self) -> str | None:
         """Return the attachment MIME type without downloading the payload.
 
-        The value comes from the page entry listing, or from the type supplied
-        at upload time.
+        The value comes from the page entry listing. LabArchives assigns the
+        type itself on upload, so a newly created entry has ``None`` until the
+        page is reloaded.
 
         :returns: The MIME type, or ``None`` if the listing did not report one.
         """
