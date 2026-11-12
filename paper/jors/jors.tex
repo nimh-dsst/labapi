@@ -87,12 +87,16 @@ laboratory record-keeping; reproducibility; Python
 LabArchives is a commercial electronic lab notebook (ELN) and one of the
 notebooks approved for new research in the Intramural Research Program of
 the US National Institutes of Health (NIH)
-\citep{labarchives,nih_eln_policy}. An output added to a LabArchives page
-sits beside the notes and revision history that document the experiment,
-but getting it there from a pipeline means opening the web interface after
-each run and uploading by hand. The LabArchives web API can automate
-uploads, but it identifies pages by internal tree IDs and returns the
-notebook's contents one folder level at a time \citep{labarchives_api}.
+\citep{labarchives,nih_eln_policy}. It is also used by academic and other
+research organisations outside NIH \citep{labarchives}. A LabArchives
+notebook is a tree of folders and pages, and each page holds a list of
+entries: blocks of rich text, headings or file attachments. An output added
+to a page sits beside the notes and revision history that document the
+experiment, but getting it there from a pipeline means opening the web
+interface after each run and uploading by hand. The LabArchives web API can
+automate uploads, but it identifies each folder and page by an internal
+tree ID rather than by its name, and returns the notebook's contents one
+folder level at a time \citep{labarchives_api}.
 Writing to \texttt{QC/sub-01} therefore requires locating the \texttt{QC}
 folder, locating the page within it, and signing and sending the request
 that adds the entry.
