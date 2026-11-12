@@ -107,14 +107,12 @@ def _read_capped_body(response: Response) -> bytes:
     :param response: The streamed HTTP response to read from.
     :returns: The first bytes of the body, up to the cap.
     """
-    chunks: list[bytes] = []
-    total = 0
+    body = b""
     for chunk in response.iter_content(chunk_size=_STREAMED_ERROR_BODY_CHUNK_SIZE):
-        chunks.append(chunk)
-        total += len(chunk)
-        if total >= _STREAMED_ERROR_BODY_CAP:
+        body += chunk
+        if len(body) >= _STREAMED_ERROR_BODY_CAP:
             break
-    return b"".join(chunks)[:_STREAMED_ERROR_BODY_CAP]
+    return body[:_STREAMED_ERROR_BODY_CAP]
 
 
 class StreamingResponse:
