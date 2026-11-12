@@ -147,7 +147,6 @@ class TestAttachmentEntryIntegration:
             "Content-Type": "application/octet-stream",
             "Content-Disposition": f'attachment; filename="{raw_filename}"',
         }
-        mock_response.history = []
         mock_response.iter_content.return_value = [b"attachment data"]
         client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
 
