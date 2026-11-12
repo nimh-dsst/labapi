@@ -173,7 +173,7 @@ Integration tests are opt-in and require live credentials. See [CONTRIBUTING.md]
 
 ## AI Usage Disclosure
 
-The authors designed `labapi`'s foundational architecture and implemented its core. Generative AI subsequently assisted with development, testing, maintenance, release work, and project documentation. The authors retain final control over the library's scope, behavior, and public interface and take responsibility for the software, reviewing and accepting AI-assisted changes through public pull requests.
+The authors designed `labapi`'s foundational architecture and implemented its core. Generative AI subsequently assisted with development, testing, maintenance, release work, and project documentation. The authors retain final control over the library's scope, behavior, and public interface and take responsibility for the software, reviewing and accepting AI-assisted changes through public pull requests. The tools used were Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Opus 5.5, Sonnet 4.6, Sonnet 5, Fable 5, Fable 5.1, and Fable 5.2) and OpenAI's Codex (GPT-5.4, GPT-5.5, and GPT-5.6 Luna, Sol, and Terra).
 
 ## License
 
