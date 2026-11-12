@@ -194,14 +194,13 @@ class NotebookPage(AbstractTreeNode):
         moved to *API Deleted Items* before the error is re-raised (the public API
         has no hard delete), so the destination no longer contains it.
 
-        :raises RuntimeWarning: Emitted when an individual entry fails to copy and
-            ``strict`` is ``False``, or when the rollback of an aborted copy fails;
-            in the latter case the original error is still raised.
+        Emits :class:`RuntimeWarning` for each skipped entry and if the rollback
+        itself fails; in the latter case the original error is still raised.
         """
         return self._copy_to(destination, rollback=True, strict=strict)
 
     @override
-    def _copy_to(  # noqa: PLR0912
+    def _copy_to(
         self, destination: AbstractTreeContainer, *, rollback: bool, strict: bool
     ) -> NotebookPage:
         new_page = destination.create(
@@ -239,20 +238,9 @@ class NotebookPage(AbstractTreeNode):
                 finally:
                     if isinstance(entry_content, Attachment):
                         entry_content.close()
-        # Broad by design: any error that escapes the per-entry handling aborts the
-        # copy. Only the outermost call rolls back, and a failed rollback must not
-        # mask the original error.
         except Exception:
             if rollback:
-                try:
-                    new_page.delete()
-                except Exception as cleanup_exc:  # noqa: BLE001
-                    warnings.warn(
-                        f"Failed to roll back partially copied page {new_page.id!r} after a "
-                        f"copy failure: {cleanup_exc}. The destination may contain a partial page.",
-                        RuntimeWarning,
-                        stacklevel=3,
-                    )
+                new_page._discard_partial_copy()
             raise
 
         return new_page

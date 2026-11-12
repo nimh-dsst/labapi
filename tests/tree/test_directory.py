@@ -56,6 +56,9 @@ class TestNotebookDirectoryUnit:
         source_dir.children = [good_child, failing_child]
 
         new_dir = Mock(spec=NotebookDirectory)
+        new_dir._discard_partial_copy = partial(
+            NotebookDirectory._discard_partial_copy, new_dir
+        )
         new_dir.id = "new-dir-id"
 
         destination = Mock()
@@ -87,6 +90,9 @@ class TestNotebookDirectoryUnit:
         source_dir.children = [failing_child]
 
         new_dir = Mock(spec=NotebookDirectory)
+        new_dir._discard_partial_copy = partial(
+            NotebookDirectory._discard_partial_copy, new_dir
+        )
         new_dir.id = "new-dir-id"
         new_dir.delete.side_effect = RuntimeError("delete failed")
 

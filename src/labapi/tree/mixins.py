@@ -334,11 +334,24 @@ class AbstractTreeNode(AbstractBaseTreeNode):
 
         :param destination: The target container to copy the node to.
         :param rollback: If ``True``, move the node created here to *API Deleted
-            Items* (via :meth:`delete`) when the copy aborts. Only the outermost call of a recursive copy rolls back, so an
-            aborted copy leaves exactly one node in *API Deleted Items*.
+            Items* (via :meth:`delete`) when the copy aborts. Only the outermost
+            call of a recursive copy rolls back, so an aborted copy leaves
+            exactly one node in *API Deleted Items*.
         :param strict: See :meth:`copy_to`.
         :returns: A new instance of the copied node in the destination.
         """
+
+    def _discard_partial_copy(self) -> None:
+        """Delete this partial copy, warning instead of raising if that fails."""
+        try:
+            self.delete()
+        except Exception as exc:  # noqa: BLE001
+            warnings.warn(
+                f"Failed to roll back partially copied node {self.id!r} after a "
+                f"copy failure: {exc}. The destination may contain a partial copy.",
+                RuntimeWarning,
+                stacklevel=4,
+            )
 
     def move_to(self, destination: AbstractTreeContainer) -> Self:
         """Move this node into ``destination``.

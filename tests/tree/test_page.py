@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from functools import partial
 from io import BytesIO
@@ -22,6 +23,13 @@ def _bind_copy_impl(source: Mock, cls: type) -> None:
     would otherwise stub out.
     """
     source._copy_to = partial(cls._copy_to, source)
+
+
+class _ExplodingEntries:
+    """Entries whose iteration fails, aborting the copy mid-way."""
+
+    def __iter__(self):
+        raise RuntimeError("failed to load entries")
 
 
 class TestNotebookPageUnit:
@@ -232,55 +240,36 @@ class TestNotebookPageUnit:
 
         new_page_entries.create.assert_not_called()
 
-    def test_copy_to_rolls_back_page_when_copy_aborts(self):
-        """Test NotebookPage.copy_to deletes the created page when the copy aborts."""
+    @pytest.mark.parametrize(
+        "delete_error",
+        [None, RuntimeError("delete failed")],
+        ids=["rollback-succeeds", "rollback-fails"],
+    )
+    def test_copy_to_rolls_back_page_when_copy_aborts(self, delete_error):
+        """Test NotebookPage.copy_to deletes the created page when the copy aborts.
+
+        A failed rollback warns, but the original error is still raised.
+        """
         source_page = Mock(spec=NotebookPage)
         _bind_copy_impl(source_page, NotebookPage)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
-
-        class ExplodingEntries:
-            """Entries whose iteration fails, aborting the copy mid-way."""
-
-            def __iter__(self):
-                raise RuntimeError("failed to load entries")
-
-        source_page.entries = ExplodingEntries()
+        source_page.entries = _ExplodingEntries()
 
         new_page = Mock(spec=NotebookPage)
+        new_page._discard_partial_copy = partial(
+            NotebookPage._discard_partial_copy, new_page
+        )
         new_page.id = "new-page-id"
-
-        destination = Mock()
-        destination.create.return_value = new_page
-
-        with pytest.raises(RuntimeError, match="failed to load entries"):
-            NotebookPage.copy_to(source_page, destination)
-
-        # The partially created destination page is rolled back, leaving nothing behind.
-        new_page.delete.assert_called_once_with()
-
-    def test_copy_to_warns_when_rollback_fails(self):
-        """Test NotebookPage.copy_to warns (but still re-raises) if rollback fails."""
-        source_page = Mock(spec=NotebookPage)
-        _bind_copy_impl(source_page, NotebookPage)
-        source_page.name = "Source Page"
-        source_page.id = "source-page-id"
-
-        class ExplodingEntries:
-            def __iter__(self):
-                raise RuntimeError("failed to load entries")
-
-        source_page.entries = ExplodingEntries()
-
-        new_page = Mock(spec=NotebookPage)
-        new_page.id = "new-page-id"
-        new_page.delete.side_effect = RuntimeError("delete failed")
+        new_page.delete.side_effect = delete_error
 
         destination = Mock()
         destination.create.return_value = new_page
 
         with (
-            pytest.warns(RuntimeWarning, match="Failed to roll back"),
+            pytest.warns(RuntimeWarning, match="Failed to roll back")
+            if delete_error
+            else nullcontext(),
             pytest.raises(RuntimeError, match="failed to load entries"),
         ):
             NotebookPage.copy_to(source_page, destination)
