@@ -346,8 +346,6 @@ def test_write_tree_supports_a_long_windows_path(tmp_path):
         ImportError(),
         ApiError("denied", 4547),
         ApiError("failed", 5000),
-        # Corrupt/unreadable backup: these previously escaped instead of
-        # falling back to the live walk.
         RuntimeError("corrupt 7z archive"),
         ValueError("invalid backup database"),
         OSError("backup read failed"),

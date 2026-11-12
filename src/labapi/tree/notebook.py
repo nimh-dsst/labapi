@@ -141,50 +141,32 @@ class Notebook(AbstractTreeContainer):
         """
         _check_destination(destination, overwrite)
         backup_error = None
-        # Set once the backup tree has started writing into ``destination``;
-        # the walk fallback may then replace what this call just wrote.
-        wrote_partial = False
         with TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
 
             if source != "walk":
-                # Isolate the backup attempt in its own subdirectory so a
-                # partially-populated temp tree from a failed backup cannot
-                # collide with the walk fallback's own staging below.
-                backup_tmp = tmp_path / "backup"
-                backup_tmp.mkdir()
-                # A backup can be unavailable (py7zr missing, download
-                # rejected) or unreadable (corrupt archive, invalid database,
-                # malformed row, attachment missing from the archive). In
-                # "auto" mode any such failure degrades to the live walk below;
-                # "backup" mode re-raises unreadable-backup errors as-is and
-                # reports unavailability via the RuntimeError at the end.
+                # "auto" falls back to the walk on any backup failure.
                 try:
-                    tree = _backup_tree(self, backup_tmp)
+                    tree = _backup_tree(self, tmp_path)
                 except (ImportError, ApiError) as error:
                     backup_error = error
-                except Exception as error:
+                except Exception:
                     if source == "backup":
                         raise
-                    backup_error = error
                 else:
                     try:
                         return NotebookExport(_write_tree(tree, destination, overwrite))
-                    except Exception as error:
+                    except Exception:
                         if source == "backup":
                             raise
-                        backup_error = error
-                        wrote_partial = True
+                        overwrite = True
 
             if source != "backup":
+                # Kept apart from whatever a failed backup left in ``tmp_path``.
                 walk_tmp = tmp_path / "walk"
                 walk_tmp.mkdir()
                 return NotebookExport(
-                    _write_tree(
-                        _walk_tree(self, walk_tmp),
-                        destination,
-                        overwrite or wrote_partial,
-                    )
+                    _write_tree(_walk_tree(self, walk_tmp), destination, overwrite)
                 )
 
         raise RuntimeError(
