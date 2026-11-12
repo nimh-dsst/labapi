@@ -387,10 +387,11 @@ the notebooks it looks after.
 The other examples in the repository are meant to be copied and changed.
 One uploads CSV files as formatted tables and fetches them back; others
 download a folder, log machine-learning runs, or capture a Jupyter session.
-If LabArchives adds an entry type that labapi does not know, supporting it
-takes a subclass of \texttt{Entry} that passes the type's name as the
-\texttt{part\_type} class argument; the subclass registers itself for
-dispatch.
+
+labapi can also be extended. If LabArchives adds an entry type that labapi
+does not know, supporting it takes one subclass of \texttt{Entry} that
+names the type in its \texttt{part\_type} class argument. Defining the
+subclass registers it, and labapi then uses it for entries of that type.
 
 Questions and bug reports go to the GitHub issue tracker. The contributing
 guide explains how to set up a development environment and run both test
