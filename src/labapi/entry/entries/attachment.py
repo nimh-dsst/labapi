@@ -40,7 +40,7 @@ def _safe_basename(name: str | None) -> str | None:
         return None
 
     basename = PureWindowsPath(name).name
-    if not basename.strip() or basename in {".", ".."}:
+    if not basename.strip() or basename == "..":
         return None
 
     return basename
