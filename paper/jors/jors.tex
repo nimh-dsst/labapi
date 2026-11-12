@@ -85,7 +85,8 @@ laboratory record-keeping; reproducibility; Python
 \section*{Introduction}
 
 LabArchives is a commercial electronic lab notebook (ELN) and one of the
-notebooks approved for new research in the NIH Intramural Research Program
+notebooks approved for new research in the Intramural Research Program of
+the US National Institutes of Health (NIH)
 \citep{labarchives,nih_eln_policy}. An output added to a LabArchives page
 sits beside the notes and revision history that document the experiment,
 but getting it there from a pipeline means opening the web interface after
@@ -216,8 +217,9 @@ A fuller example is a two-stage quality-control workflow for five subjects
 from the public OpenNeuro dataset ds000228 \citep{ds000228}, whose
 participants watched the short film Partly Cloudy. For each subject, the
 first stage creates or reuses a page in a Partly Cloudy QC folder and
-writes the subject's group (child or adult) and mean DVARS, a
-quality-control measure of how much a functional MRI scan changes between
+writes the subject's group (child or adult) and mean DVARS (the derivative
+of root mean square variance over voxels), a quality-control measure of how
+much a functional magnetic resonance imaging (fMRI) scan changes between
 successive time points \citep{power2012dvars}. In the listings,
 \texttt{subjects} stands for the five subject identifiers, and
 \texttt{compute\_qc()} and \texttt{summarize()} stand for the scientific
@@ -394,8 +396,8 @@ requests, reviewed and revised all AI-assisted text, and take full
 responsibility for the software and this paper. The tools used were
 Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Opus 5.5, Sonnet 4.6,
 Sonnet 5, Fable 5 and Fable 5.1) and OpenAI's Codex (GPT-5.4, GPT-5.5, and
-GPT-5.6 Luna, Sol and Terra). Codex was accessed through the HHS Enterprise
-agreement.
+GPT-5.6 Luna, Sol and Terra). Codex was accessed through the U.S.
+Department of Health and Human Services (HHS) Enterprise agreement.
 
 \section*{Acknowledgements}
 
@@ -403,9 +405,9 @@ The contributions of the NIH authors were made as part of their official
 duties as NIH federal employees, are in compliance with agency policy
 requirements, and are considered Works of the United States Government. The
 findings and conclusions presented in this paper are those of the authors
-and do not necessarily reflect the views of the NIH or the U.S. Department
-of Health and Human Services (HHS). Mention of trade names, commercial
-products or organisations does not imply endorsement by the U.S. Government.
+and do not necessarily reflect the views of the NIH or HHS. Mention of
+trade names, commercial products or organisations does not imply
+endorsement by the U.S. Government.
 
 \section*{Funding statement}
 
