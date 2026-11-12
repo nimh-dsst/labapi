@@ -87,10 +87,9 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
         )
         return None
 
-    # Fall back to a linear search: installed-browsers may register a browser
-    # under a key that differs from our value (e.g. Edge as "Microsoft Edge",
-    # with both "edge" and "msedge" normalising to "edge"), so match on the same
-    # detectable basis autodetection uses.
+    # Fall back to a linear search: installed-browsers may list a browser under
+    # a different name (e.g. Edge as "Microsoft Edge"), so compare normalised
+    # names as autodetection does; "edge" and "msedge" both normalise to "edge".
     try:
         installed = list(installed_browsers.browsers())
     # TODO(BLE001): intentional broad catch — installed-browsers probe may raise; fall back to an empty list; narrow if a specific type becomes known.
