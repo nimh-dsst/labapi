@@ -518,13 +518,14 @@ class TestClientUnit:
         send = Mock(side_effect=raise_requests_connection_error)
         setattr(client.session, session_attr, send)
 
+        # Kept off the call line: Python 3.13+ tracebacks print the whole
+        # multi-line call, which would put these literals in ``rendered``.
+        query = {
+            "login_or_email": "user@example.com",
+            "password": "super-secret-auth-code",
+        }
         with pytest.raises(TransportError) as exc_info:
-            getattr(client, method)(
-                "users/user_access_info",
-                *args,
-                login_or_email="user@example.com",
-                password="super-secret-auth-code",
-            )
+            getattr(client, method)("users/user_access_info", *args, **query)
 
         exc = exc_info.value
         assert str(exc) == (
