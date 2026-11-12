@@ -1242,7 +1242,7 @@ class TestClientUnit:
                 chunks_pulled += 1
                 yield chunk
 
-        response.iter_content.side_effect = lambda *_args, **_kwargs: huge_body()
+        response.iter_content.return_value = huge_body()
         client.session.get = Mock(return_value=response)
 
         with pytest.raises(ApiError, match="API request failed with status code 500"):

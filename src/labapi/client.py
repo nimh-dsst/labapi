@@ -97,30 +97,24 @@ def _normalize_web_url(web_url: str) -> str:
     )
 
 
-def _read_capped_body(response: Response, cap: int, chunk_size: int) -> bytes:
-    """Read up to ``cap`` bytes from a response body via ``iter_content``.
+def _read_capped_body(response: Response) -> bytes:
+    """Read at most ``_STREAMED_ERROR_BODY_CAP`` bytes of a streamed response body.
 
-    Unlike ``response.content``/``response.text``, this does not force the
-    entire body into memory: for a not-yet-consumed streamed response,
-    ``iter_content`` pulls bytes incrementally from the underlying
-    connection, and iteration stops as soon as ``cap`` is reached. (For a
-    response whose body was already fully buffered, ``iter_content`` simply
-    replays the buffered bytes in slices, so this is equally safe to call in
-    that case.)
+    Unlike ``response.content``/``response.text``, this stops pulling from
+    the connection once the cap is reached instead of buffering the whole
+    body.
 
-    :param response: The HTTP response to read from.
-    :param cap: The maximum number of bytes to return.
-    :param chunk_size: The size of each ``iter_content`` read.
-    :returns: Up to ``cap`` bytes read from the response.
+    :param response: The streamed HTTP response to read from.
+    :returns: The first bytes of the body, up to the cap.
     """
     chunks: list[bytes] = []
     total = 0
-    for chunk in response.iter_content(chunk_size=chunk_size):
+    for chunk in response.iter_content(chunk_size=_STREAMED_ERROR_BODY_CHUNK_SIZE):
         chunks.append(chunk)
         total += len(chunk)
-        if total >= cap:
+        if total >= _STREAMED_ERROR_BODY_CAP:
             break
-    return b"".join(chunks)[:cap]
+    return b"".join(chunks)[:_STREAMED_ERROR_BODY_CAP]
 
 
 class StreamingResponse:
@@ -636,15 +630,10 @@ class Client:
         generic message if the body is not parseable XML.
 
         :param response: The HTTP response object from the requests library.
-        :param streamed: Whether ``response`` came from a streamed
-                         (``stream=True``) request. When ``True``, the body
-                         used to build the error is capped at
-                         :data:`_STREAMED_ERROR_BODY_CAP` bytes and read
-                         incrementally, so a large streamed error response is
-                         never fully buffered into memory. Non-streamed
-                         responses use ``response.content``/``response.text``
-                         directly, since ``requests`` has already fully read
-                         those into memory by this point.
+        :param streamed: Whether ``response`` came from a ``stream=True``
+                         request. If so, at most
+                         :data:`_STREAMED_ERROR_BODY_CAP` bytes of the body
+                         are read to build the error.
         :raises AuthenticationError: For API error codes 4506, 4514, 4520, 4533.
         :raises ApiError: For all other non-200 responses.
         """
@@ -652,15 +641,7 @@ class Client:
         if not (200 <= response.status_code < 300):
             error_code: int | None = None
             error_desc: str | None = None
-            body = (
-                _read_capped_body(
-                    response,
-                    _STREAMED_ERROR_BODY_CAP,
-                    _STREAMED_ERROR_BODY_CHUNK_SIZE,
-                )
-                if streamed
-                else response.content
-            )
+            body = _read_capped_body(response) if streamed else response.content
             try:
                 tree = fromstring(body)
                 code_text = tree.findtext(".//error-code")
