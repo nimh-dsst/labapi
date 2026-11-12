@@ -1230,26 +1230,16 @@ class TestClientUnit:
         response.status_code = 500
         response.url = "https://api.test.com/api/attachments/download"
 
-        chunk = b"x" * 8192
-        chunks_pulled = 0
-
-        def huge_body():
-            nonlocal chunks_pulled
-            # Enough chunks to represent a body far larger than any sane
-            # in-memory cap (~780 MiB total). A correct implementation must
-            # stop pulling well before this generator is exhausted.
-            for _ in range(100_000):
-                chunks_pulled += 1
-                yield chunk
-
-        response.iter_content.return_value = huge_body()
+        # A body far larger than any sane in-memory cap (~780 MiB total).
+        huge_body = iter([b"x" * 8192] * 100_000)
+        response.iter_content.return_value = huge_body
         client.session.get = Mock(return_value=response)
 
         with pytest.raises(ApiError, match="API request failed with status code 500"):
             client.stream_api_get("attachments/download", eid="123")
 
         # Only enough chunks to reach the cap were pulled from the stream.
-        assert chunks_pulled < 100
+        assert len(list(huge_body)) > 99_900
         response.close.assert_called_once()
 
     def test_stream_api_get_raises_api_error_from_small_streamed_error_body(self):
