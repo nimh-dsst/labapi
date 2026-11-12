@@ -25,15 +25,9 @@ if TYPE_CHECKING:
 
 
 def _json_default(obj: object) -> object:
-    """Convert values allowed by :data:`~labapi.util.types.JsonData` for ``json.dumps``.
+    """Turn mappings and sequences ``json.dumps`` can't handle into ``dict``/``list``.
 
-    ``json.dumps`` natively handles only ``dict``, ``list``, ``tuple``, ``str``,
-    ``int``, ``float``, ``bool`` and ``None`` (and their subclasses). It calls
-    this hook for anything else: other mappings become ``dict`` and other
-    sequences become ``list``. Bytes-like values are rejected rather than
-    serialized as lists of integers.
-
-    :raises TypeError: If ``obj`` is bytes-like or not a mapping or sequence.
+    Bytes-like and any other values raise :class:`TypeError`.
     """
     if isinstance(obj, (bytes, bytearray, memoryview)):
         raise TypeError(

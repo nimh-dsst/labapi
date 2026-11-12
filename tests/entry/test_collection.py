@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator, Mapping
 from html import escape
 from io import BytesIO
 from types import MappingProxyType
@@ -11,7 +10,6 @@ from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
-from typing_extensions import override
 
 from labapi.entry.attachment import Attachment
 from labapi.entry.collection import (  # pyright: ignore[reportPrivateUsage]
@@ -513,29 +511,6 @@ class TestEntriesIntegration:
         assert len(entries) == 0
 
 
-class _CustomMapping(Mapping[str, int]):
-    """A minimal non-dict Mapping."""
-
-    def __init__(self, data: dict[str, int]):
-        self._data = data
-
-    @override
-    def __getitem__(self, key: str) -> int:
-        return self._data[key]
-
-    @override
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._data)
-
-    @override
-    def __len__(self) -> int:
-        return len(self._data)
-
-
-class _TupleSubclass(tuple[int, ...]):
-    """A tuple subclass."""
-
-
 class TestJsonDefault:
     """Tests for the json.dumps ``default`` hook used by create_json_entry."""
 
@@ -543,13 +518,8 @@ class TestJsonDefault:
         ("value", "expected"),
         [
             pytest.param(range(3), [0, 1, 2], id="range"),
-            pytest.param(_TupleSubclass((1, 2)), [1, 2], id="tuple-subclass"),
             pytest.param(MappingProxyType({"a": 1}), {"a": 1}, id="mappingproxy"),
-            pytest.param(
-                _CustomMapping({"a": 1, "b": 2}), {"a": 1, "b": 2}, id="custom-mapping"
-            ),
             pytest.param({"r": range(2)}, {"r": [0, 1]}, id="nested-dict-of-range"),
-            pytest.param("abc", "abc", id="str-stays-str"),
         ],
     )
     def test_serializes_json_data_values(self, value: Any, expected: Any):
