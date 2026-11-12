@@ -107,9 +107,11 @@ provide official Python clients for their APIs
 official Python client for LabArchives. The public LabArchives clients in
 Table~\ref{tab:comparison} do not combine path navigation, entry handling
 and attachment transfer in a single client. We considered building on
-labarchives-py \citep{mcmero},
-which signs arbitrary API requests, but we would still have had to write
-the notebook model, so we wrote a separate client. The ReDBox research data portal and a Model
+labarchives-py \citep{mcmero}, which signs arbitrary GET requests and
+returns the raw responses. That leaves the caller to choose endpoints,
+parse responses and implement notebook navigation, entry handling and file
+transfer, so we wrote a separate client. The ReDBox research data portal
+and a Model
 Context Protocol server also have LabArchives integrations, but neither
 offers a general Python interface to notebooks
 \citep{redbox_labarchives,labarchives_mcp}.
@@ -119,7 +121,9 @@ offers a general Python interface to notebooks
 	\caption{Public standalone LabArchives clients with implemented API
     helpers, checked 2 November 2026.
     Generic GET calls require the application to select endpoints and
-    handle responses; they are not dedicated entry or attachment helpers.}
+    handle responses; they are not dedicated entry or attachment helpers.
+    Beyond login, labarchives-js provides only image-entry search and
+    attachment-URL helpers.}
 	\label{tab:comparison}
 	\small
 	\begin{tabular}{p{3.6cm}p{1.1cm}p{1.9cm}p{2.0cm}p{2.1cm}}
