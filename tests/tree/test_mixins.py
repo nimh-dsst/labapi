@@ -869,7 +869,6 @@ class TestTreeContainerLookupHelpers:
 
     def test_get_by_name_duplicate_names(self, notebook_tree: Notebook):
         """get_by_name returns every child sharing a name."""
-        folder_a = expect_dir(notebook_tree[Index.Id : "dir-1"])
         duplicate = NotebookDirectory(
             "dir-1-dup",
             "Test Folder A",
@@ -881,7 +880,7 @@ class TestTreeContainerLookupHelpers:
 
         result = notebook_tree.get_by_name("Test Folder A")
 
-        assert {node.id for node in result} == {folder_a.id, "dir-1-dup"}
+        assert {node.id for node in result} == {"dir-1", "dir-1-dup"}
 
     def test_get_by_name_not_found_returns_empty(self, notebook_tree: Notebook):
         """get_by_name returns an empty sequence when no child matches."""
