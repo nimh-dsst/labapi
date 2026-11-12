@@ -46,6 +46,13 @@ details that affect development workflows.
   locked `pillow` (13.0.0) and `filelock` (4.2.1) dependencies are only
   published for Python 3.11+.
 
+### Fixed
+
+- `Entries.create_json_entry()` now serializes every value its `JsonData`
+  type accepts: other sequence and mapping types (such as `range` or
+  `MappingProxyType`) are converted to lists and dicts instead of raising
+  `TypeError`. Bytes-like values are rejected with a clear `TypeError`.
+
 ### Security
 
 - Raised the minimum `cryptography` (to 50.0.0), `lxml` (to 6.1.1), and
