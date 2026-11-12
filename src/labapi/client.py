@@ -636,40 +636,42 @@ class Client:
         :raises ApiError: For all other non-200 responses.
         """
         # NOTE: See https://mynotebook.labarchives.com/share/LabArchives%2520API/NDEuNnwyNy8zMi9UcmVlTm9kZS83NDE1Mjk1NTJ8MTA1LjY= [ELN Error Codes]
-        if not (200 <= response.status_code < 300):
-            error_code: int | None = None
-            error_desc: str | None = None
-            body = _read_capped_body(response) if streamed else response.content
-            try:
-                tree = fromstring(body)
-                code_text = tree.findtext(".//error-code")
-                if code_text is not None:
-                    error_code = int(code_text)
-                    error_desc = tree.findtext(".//error-description")
-            # TODO(BLE001): intentional broad catch — best-effort error-XML parse; fall through to the generic error path on any parse failure; narrow if a specific type becomes known.
-            except Exception:  # noqa: BLE001, S110
-                pass
+        if 200 <= response.status_code < 300:
+            return
 
-            if error_code is not None:
-                message = f"[{error_code}] {error_desc}"
-                if error_code in _AUTH_ERROR_CODES:
-                    raise AuthenticationError(message, error_code)
-                raise ApiError(message, error_code)
+        error_code: int | None = None
+        error_desc: str | None = None
+        body = _read_capped_body(response) if streamed else response.content
+        try:
+            tree = fromstring(body)
+            code_text = tree.findtext(".//error-code")
+            if code_text is not None:
+                error_code = int(code_text)
+                error_desc = tree.findtext(".//error-description")
+        # TODO(BLE001): intentional broad catch — best-effort error-XML parse; fall through to the generic error path on any parse failure; narrow if a specific type becomes known.
+        except Exception:  # noqa: BLE001, S110
+            pass
 
-            parts = urlsplit(response.url)
-            query = dict(parse_qsl(parts.query, keep_blank_values=True))
-            for key in ("akid", "sig", "expires", "password", "login_or_email"):
-                if key in query:
-                    query[key] = "***"
-            clean_url = urlunsplit(parts._replace(query=urlencode(query)))
+        if error_code is not None:
+            message = f"[{error_code}] {error_desc}"
+            if error_code in _AUTH_ERROR_CODES:
+                raise AuthenticationError(message, error_code)
+            raise ApiError(message, error_code)
 
-            body_text = (
-                body.decode("utf-8", errors="replace") if streamed else response.text
-            )
-            raise ApiError(
-                f"API request failed with status code {response.status_code} "
-                f"for URL {clean_url}: {body_text}"
-            )
+        parts = urlsplit(response.url)
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+        for key in ("akid", "sig", "expires", "password", "login_or_email"):
+            if key in query:
+                query[key] = "***"
+        clean_url = urlunsplit(parts._replace(query=urlencode(query)))
+
+        body_text = (
+            body.decode("utf-8", errors="replace") if streamed else response.text
+        )
+        raise ApiError(
+            f"API request failed with status code {response.status_code} "
+            f"for URL {clean_url}: {body_text}"
+        )
 
     def stream_api_get(
         self, api_method_uri: str | Sequence[str], **kwargs: Any
