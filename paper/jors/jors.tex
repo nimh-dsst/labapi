@@ -158,9 +158,9 @@ the folder.
 Notebooks and folders have three navigation methods. \texttt{dir()} and
 \texttt{page()} return the folder or page at a path, creating it and any
 missing parent folders if needed. \texttt{traverse()} follows only paths
-that already exist; because it cannot know in advance whether a path ends
-at a folder or a page, the caller states which it expects with
-\texttt{as\_dir()} or \texttt{as\_page()}. A whole notebook can also be
+that already exist, and the caller says whether the result is a folder or
+a page with \texttt{as\_dir()} or \texttt{as\_page()}. A whole notebook can
+also be
 downloaded, either as the backup LabArchives uses for restoring it
 (\texttt{Notebook.backup()}) or as a plain copy with one file per entry
 (\texttt{Notebook.export()}).
@@ -182,17 +182,16 @@ raises \texttt{PathError} when it is built, before any request is sent.
 Joining, resolving, containment checks and traversal all work on these
 objects.
 
-labapi uses two kinds of credential. The first is an access key ID and
-password, which LabArchives issues to the user's institution; they are
-passed to the \texttt{Client} or read from environment variables or a
-\texttt{.env} file. The second is the researcher's own LabArchives login.
-To log a researcher in, \texttt{default\_authenticate()} opens the
-LabArchives login page in a browser, or prints its address, and listens on
-a local port for the redirect that carries the user's one-time
-authentication code. The access key stays in the
+Requests are signed with an access key ID and password, which LabArchives
+issues to the user's institution; they are passed to the \texttt{Client}
+or read from environment variables or a \texttt{.env} file. Each
+researcher also logs in with their own LabArchives account:
+\texttt{default\_authenticate()} opens the login page in a browser, or
+prints its address, and listens on a local port for the redirect that
+carries the one-time authentication code. The access key stays in the
 \texttt{Client}, separate from the \texttt{User} sessions it creates, so a
-shared service can keep one copy of its institution's access key and still
-open a session for each researcher who logs in.
+shared service can keep one copy of the key and open a session for each
+researcher who logs in.
 
 \texttt{create\_json\_entry()} stores structured results as a JSON
 attachment that code can read back, plus a formatted preview for people
