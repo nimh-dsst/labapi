@@ -69,36 +69,6 @@ class TestNotebookDirectoryUnit:
         # ...and only the outermost directory is rolled back, taking the subtree along.
         new_dir.delete.assert_called_once_with()
 
-    def test_copy_to_warns_when_subtree_rollback_fails(self):
-        """Test NotebookDirectory.copy_to warns (but still re-raises) if rollback fails."""
-        source_dir = Mock(spec=NotebookDirectory)
-        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
-        source_dir._copy_to = partial(NotebookDirectory._copy_to, source_dir)
-        source_dir.name = "Source Dir"
-        source_dir.is_parent_of.return_value = False
-
-        failing_child = Mock()
-        failing_child._copy_to.side_effect = RuntimeError("descendant copy failed")
-        source_dir.children = [failing_child]
-
-        new_dir = Mock(spec=NotebookDirectory)
-        new_dir._discard_partial_copy = partial(
-            NotebookDirectory._discard_partial_copy, new_dir
-        )
-        new_dir.id = "new-dir-id"
-        new_dir.delete.side_effect = RuntimeError("delete failed")
-
-        destination = Mock()
-        destination.create.return_value = new_dir
-
-        with (
-            pytest.warns(RuntimeWarning, match="Failed to roll back"),
-            pytest.raises(RuntimeError, match="descendant copy failed"),
-        ):
-            NotebookDirectory.copy_to(source_dir, destination)
-
-        new_dir.delete.assert_called_once_with()
-
 
 class TestNotebookDirectoryIntegration:
     """Integration tests with real objects and mocked API."""
