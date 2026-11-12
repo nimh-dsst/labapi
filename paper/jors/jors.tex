@@ -160,9 +160,13 @@ LabArchives \texttt{get\_tree\_level} endpoint and caches the result. Edits
 that someone makes in the browser
 during a session are not visible to labapi until \texttt{refresh()} reloads
 the folder.
-\texttt{dir()} and \texttt{page()} return the folder or page at a path,
-creating it and any missing parent folders if needed. \texttt{traverse()}
-follows only paths that already exist. A whole notebook can also be
+
+Notebooks and folders have three navigation methods. \texttt{dir()} and
+\texttt{page()} return the folder or page at a path, creating it and any
+missing parent folders if needed. \texttt{traverse()} follows only paths
+that already exist; because it cannot know in advance whether a path ends
+at a folder or a page, the caller states which it expects with
+\texttt{as\_dir()} or \texttt{as\_page()}. A whole notebook can also be
 downloaded, either as the backup LabArchives uses for restoring it
 (\texttt{Notebook.backup()}) or as a plain copy with one file per entry
 (\texttt{Notebook.export()}).
@@ -249,7 +253,8 @@ for subject in subjects:
 
 The second stage opens the folder with \texttt{traverse()}, which finds it
 without creating anything. Because the folder holds only the subject pages,
-every child can be read as a page. The stage loads the JSON attachment from
+each child is converted with \texttt{as\_page()}. The stage loads the JSON
+attachment from
 each one, produces a cohort summary and a figure, and writes both to a
 dashboard page:
 
