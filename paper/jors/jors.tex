@@ -228,7 +228,7 @@ For a new user, the quickest way to see whether an installation works is
 the JSON synchronisation example, one of five runnable examples in the
 repository (three ship with sample input). It uploads the two files in its
 \texttt{sample\_data} folder to a notebook page; running its download
-command should then give back files identical to the originals.
+command should then give back files holding the same data as the originals.
 
 The example in this paper is separate from those five: a two-stage
 quality-control workflow for five subjects from the public OpenNeuro
@@ -326,8 +326,10 @@ cryptography ($\geq$~50), lxml ($\geq$~6.1.1), requests ($\geq$~2.33) and
 typing-extensions ($\geq$~4.12.2). Optional extras: \texttt{builtin-auth}
 adds selenium ($\geq$~4.39) and installed-browsers ($\geq$~0.1.5) for
 browser-based login, \texttt{dotenv} adds python-dotenv ($\geq$~1.2.1) for
-loading credentials from a \texttt{.env} file, and \texttt{export} adds
-py7zr ($\geq$~1.1.3) for unpacking notebook backups.
+loading credentials from a \texttt{.env} file, \texttt{export} adds
+py7zr ($\geq$~1.1.3) for unpacking notebook backups, and
+\texttt{truststore} adds truststore ($\geq$~0.10.5) for using the operating
+system's certificate store.
 
 \section*{List of contributors}
 
@@ -389,9 +391,8 @@ takes a subclass of \texttt{Entry} that passes the type's name as the
 dispatch.
 
 Questions and bug reports go to the GitHub issue tracker. The contributing
-guide explains how to set up a development environment, run both test
-suites and open a pull request, and the corresponding author can also be
-contacted directly. Releases follow semantic versioning; each
+guide explains how to set up a development environment and run both test
+suites, and the corresponding author can also be contacted directly. Releases follow semantic versioning; each
 one goes to PyPI and Zenodo, with its own documentation on GitHub Pages.
 
 % Ubiquity Press AI policy (https://ubiquitypress.com/ai-policy): use beyond
