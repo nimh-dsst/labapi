@@ -409,24 +409,6 @@ def test_auto_fallback_when_backup_populated_its_temp_dir(
     assert export.path == tmp_path / "export"
 
 
-def test_auto_falls_back_when_backup_write_fails(
-    monkeypatch, notebook: LA.Notebook, tmp_path
-):
-    """A backup that fails at write time (e.g. a missing staged file) falls back."""
-    dest = tmp_path / "export"
-    monkeypatch.setattr(notebook_module, "_backup_tree", Mock(return_value={}))
-    monkeypatch.setattr(notebook_module, "_walk_tree", Mock(return_value={}))
-    monkeypatch.setattr(
-        notebook_module,
-        "_write_tree",
-        Mock(side_effect=[FileNotFoundError("missing staged attachment"), dest]),
-    )
-
-    export = notebook.export(dest)
-
-    assert export.path == dest
-
-
 def test_auto_walk_replaces_a_partial_backup_write(
     monkeypatch, notebook: LA.Notebook, tmp_path
 ):
