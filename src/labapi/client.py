@@ -13,6 +13,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
+from itertools import islice
 from operator import itemgetter
 from secrets import token_urlsafe
 from socketserver import TCPServer
@@ -95,24 +96,6 @@ def _normalize_web_url(web_url: str) -> str:
             "",
         )
     )
-
-
-def _read_capped_body(response: Response) -> bytes:
-    """Read at most ``_STREAMED_ERROR_BODY_CAP`` bytes of a streamed response body.
-
-    Unlike ``response.content``/``response.text``, this stops pulling from
-    the connection once the cap is reached instead of buffering the whole
-    body.
-
-    :param response: The streamed HTTP response to read from.
-    :returns: The first bytes of the body, up to the cap.
-    """
-    body = b""
-    for chunk in response.iter_content(chunk_size=_STREAMED_ERROR_BODY_CHUNK_SIZE):
-        body += chunk
-        if len(body) >= _STREAMED_ERROR_BODY_CAP:
-            break
-    return body[:_STREAMED_ERROR_BODY_CAP]
 
 
 class StreamingResponse:
@@ -639,9 +622,13 @@ class Client:
         if 200 <= response.status_code < 300:
             return
 
+        # A streamed body is read only up to the cap, never buffered whole.
+        chunks = response.iter_content(chunk_size=_STREAMED_ERROR_BODY_CHUNK_SIZE)
+        max_chunks = _STREAMED_ERROR_BODY_CAP // _STREAMED_ERROR_BODY_CHUNK_SIZE
+        body = b"".join(islice(chunks, max_chunks)) if streamed else response.content
+
         error_code: int | None = None
         error_desc: str | None = None
-        body = _read_capped_body(response) if streamed else response.content
         try:
             tree = fromstring(body)
             code_text = tree.findtext(".//error-code")
