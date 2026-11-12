@@ -136,15 +136,10 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
         ``is-default`` flag. This accessor scans the collection and returns that
         notebook.
 
-        :returns: The default :class:`~labapi.tree.notebook.Notebook`, or
-                  ``None`` if no notebook is marked as default. If more than one
-                  notebook is somehow marked default, the first in collection
-                  order is returned.
+        :returns: The default :class:`~labapi.tree.notebook.Notebook` (the first
+                  one, if several are marked), or ``None`` if none is marked.
         """
-        for notebook in self._notebooks:
-            if notebook.is_default:
-                return notebook
-        return None
+        return next((nb for nb in self._notebooks if nb.is_default), None)
 
     @override
     def __iter__(self) -> Iterator[str]:

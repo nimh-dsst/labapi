@@ -429,23 +429,10 @@ class AbstractTreeContainer(
 
     @property
     def children_by_id(self) -> dict[str, AbstractBaseTreeNode]:
-        """Return a point-in-time snapshot mapping child ID to child node.
+        """Return a snapshot ``dict`` mapping each child's ID to the child node.
 
-        The returned ``dict`` is a fresh, standalone snapshot: keys are child
-        IDs and values are the corresponding
-        :class:`~labapi.tree.mixins.AbstractBaseTreeNode` objects. Because child
-        IDs are unique within a container, no entries are lost to collisions
-        (unlike name-keyed views).
-
-        The snapshot is decoupled from the container: mutating the returned
-        ``dict`` does not affect the container, and later container changes
-        (for example, after :meth:`refresh`, or creating/moving children) are
-        not reflected in a snapshot taken earlier. Call this property again to
-        obtain an updated snapshot.
-
-        :returns: A new ``dict`` mapping each child's ID to its node.
+        Later changes to the container are not reflected in the snapshot.
         """
-        self._ensure_populated()
         return {node.id: node for node in self.children}
 
     def _ensure_populated(self) -> None:

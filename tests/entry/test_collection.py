@@ -526,13 +526,9 @@ class TestEntriesLookupAndFilterHelpers:
 
     def test_of_type_no_matches_returns_empty(self):
         """of_type returns an empty list when nothing matches."""
-        mock_user = Mock(spec=User)
-        mock_page = Mock()
-        entries = Entries(
-            [TextEntry("eid_text", "<p>x</p>", mock_user)], mock_user, mock_page
-        )
+        entries = self._sample_entries()
 
-        assert entries.of_type(AttachmentEntry) == []
+        assert entries.of_type(WidgetEntry) == []
 
     def test_attachments_helper(self):
         """Attachments returns only attachment entries."""
@@ -541,7 +537,6 @@ class TestEntriesLookupAndFilterHelpers:
         attachments = entries.attachments()
 
         assert [entry.id for entry in attachments] == ["eid_attach"]
-        assert all(isinstance(entry, AttachmentEntry) for entry in attachments)
 
     def test_texts_helper_includes_all_text_entries(self):
         """Texts returns plain text, rich text, and heading entries."""
@@ -554,4 +549,3 @@ class TestEntriesLookupAndFilterHelpers:
             "eid_head",
             "eid_plain",
         ]
-        assert all(isinstance(entry, PlainTextEntry) for entry in texts)

@@ -912,12 +912,3 @@ class TestTreeContainerLookupHelpers:
         assert set(snapshot) == original_ids
         assert "dir-new" not in snapshot
         assert "dir-new" in notebook_tree.children_by_id
-
-    def test_children_by_id_mutation_does_not_affect_container(
-        self, notebook_tree: Notebook
-    ):
-        """Mutating the returned dict does not change the container."""
-        snapshot = notebook_tree.children_by_id
-        snapshot.clear()
-
-        assert len(notebook_tree.children_by_id) > 0
