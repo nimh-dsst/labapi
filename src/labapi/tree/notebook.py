@@ -128,8 +128,8 @@ class Notebook(AbstractTreeContainer):
             live API tree; ``"backup"`` downloads and unpacks the native backup
             archive (requires the notebook owner's sign-in and the optional
             ``py7zr`` dependency: ``pip install 'labapi[export]'``); ``"auto"``
-            uses the backup archive when it can be produced and read, and falls
-            back to the walk if the backup is unavailable or unreadable.
+            uses the backup archive and falls back to the walk if the backup
+            is unavailable or unreadable.
         :param overwrite: When ``destination`` exists and is not empty, raise
             unless ``overwrite`` is ``True``. This is checked before anything
             is downloaded; an existing export is only replaced once the new
