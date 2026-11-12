@@ -154,9 +154,10 @@ labapi parses with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
 interface (Figure~\ref{fig:model}). labapi calls folders directories, as in
-\texttt{NotebookDirectory} and \texttt{dir()}. Folder contents are fetched
-on first access; at that point one \texttt{get\_tree\_level} call loads
-them, and the result is cached. Edits that someone makes in the browser
+\texttt{NotebookDirectory} and \texttt{dir()}. The first time a folder's
+contents are read, labapi fetches them with a single request to the
+LabArchives \texttt{get\_tree\_level} endpoint and caches the result. Edits
+that someone makes in the browser
 during a session are not visible to labapi until \texttt{refresh()} reloads
 the folder.
 \texttt{dir()} and \texttt{page()} return the folder or page at a path,
