@@ -498,7 +498,6 @@ class TestNotebookPageIntegration:
             "Content-Type": "text/plain",
             "Content-Disposition": 'attachment; filename="header.txt"',
         }
-        mock_response.history = []
         mock_response.iter_content.return_value = [b"content"]
         client.stream_api_get = Mock(return_value=StreamingResponse(mock_response))
 
