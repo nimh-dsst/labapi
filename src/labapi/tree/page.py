@@ -194,8 +194,8 @@ class NotebookPage(AbstractTreeNode):
         moved to *API Deleted Items* before the error is re-raised (the public API
         has no hard delete), so the destination no longer contains it.
 
-        Emits :class:`RuntimeWarning` for each skipped entry and if the rollback
-        itself fails; in the latter case the original error is still raised.
+        Emits :class:`RuntimeWarning` if the rollback itself fails; the original
+        error is still raised.
         """
         return self._copy_to(destination, rollback=True, strict=strict)
 
