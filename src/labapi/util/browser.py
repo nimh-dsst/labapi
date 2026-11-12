@@ -98,7 +98,7 @@ def _find_chosen_browser(browser: _ChoosableBrowser | None) -> _ChoosableBrowser
         installed = []
     target = _parse_detectable(browser)
     for entry in installed:
-        if target and _parse_detectable(entry.get("name")) == target:
+        if _parse_detectable(entry.get("name")) == target:
             return browser
 
     warnings.warn(

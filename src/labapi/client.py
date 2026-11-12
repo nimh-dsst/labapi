@@ -104,7 +104,7 @@ class StreamingResponse:
 
     def __getattr__(self, name: str) -> Any:
         """Proxy response attributes (e.g., ``headers`` / ``status_code``)."""
-        if name == "_response" or "_response" not in self.__dict__:
+        if "_response" not in self.__dict__:
             raise AttributeError(name)
         return getattr(self._response, name)
 
