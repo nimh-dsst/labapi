@@ -3,14 +3,12 @@
 Accessing Items with Index
 ==========================
 
-Use ``Index`` when you want explicit, deterministic lookup behavior for
-notebooks, directories, and pages.
+Use ``Index`` to look up notebooks, directories, and pages by ID, or to get
+every item with a given name.
 
 .. warning::
-   Name-based lookup is ambiguous when duplicate names exist.
-   ``coll["name"]`` returns the first match and can silently select the wrong
-   item. For deterministic access in integration code, use
-   ``coll[Index.Id: "..."]``.
+   ``coll["name"]`` returns the first match when names are duplicated. Use
+   ``coll[Index.Id: "..."]`` to select one item by ID.
 
 Supported Collection Types
 --------------------------
@@ -32,21 +30,20 @@ Supported Collection Types
 Basic Access by Name
 --------------------
 
-By default, a string key looks up the first item with that name:
+A string key looks up by name:
 
 .. code-block:: python
 
    notebook = user.notebooks["My Research Notebook"]
    experiments = notebook["Experiments"]
 
-If you need duplicate-preserving results, call ``all_keys()``, ``all_items()``,
+To include duplicates, call ``all_keys()``, ``all_items()``,
 or ``all_values()`` instead of ``keys()``, ``items()``, or ``values()``.
 
 Explicit Indexing with ``Index``
 --------------------------------
 
-Use :class:`~labapi.util.types.Index` to choose ID lookup or name lookup
-explicitly.
+Slice with :class:`~labapi.util.types.Index` to look up by ID or by name.
 
 Access by ID
 ~~~~~~~~~~~~
@@ -86,4 +83,4 @@ Related Pages
 
 - :ref:`paths` for path traversal and duplicate-name caveats.
 - :ref:`limitations` for the broader capability summary.
-- :ref:`integration_design` for ID-first integration guidance.
+- :ref:`integration_design` for advice on storing IDs in integrations.

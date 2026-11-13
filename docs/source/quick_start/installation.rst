@@ -14,7 +14,7 @@ Supports Python 3.11 and newer.
 Choose an Install Profile
 -------------------------
 
-Choose the install target that includes the helpers you need:
+Pick the extras you need:
 
 .. list-table::
    :header-rows: 1
@@ -28,12 +28,10 @@ Choose the install target that includes the helpers you need:
        for local examples.
    * - Minimal
      - ``labapi``
-     - You already manage environment variables or pass credentials directly,
-       and you do not need optional helpers.
+     - You set environment variables or pass credentials yourself.
    * - Minimal + ``.env`` loading
      - ``labapi[dotenv]``
-     - You want :class:`~labapi.client.Client` to read a local ``.env`` file,
-       but you do not need browser helpers.
+     - You want :class:`~labapi.client.Client` to read a local ``.env`` file.
    * - Export native backups
      - ``labapi[export]``
      - You want :meth:`~labapi.tree.notebook.Notebook.export` to read native
@@ -99,8 +97,7 @@ If you installed ``dotenv``, create a local ``.env`` file:
    ACCESS_KEYID="your_access_key"
    ACCESS_PWD="your_access_password"
 
-If you did not install ``dotenv``, set those values directly in your shell
-before running your code:
+Without ``dotenv``, set the same variables in your shell:
 
 .. tab-set::
 

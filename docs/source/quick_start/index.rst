@@ -3,9 +3,6 @@
 Quick Start
 ===========
 
-Start with installation and authentication, then create, navigate, upload,
-copy, and delete notebook content.
-
 .. toctree::
    :maxdepth: 1
 
@@ -31,6 +28,6 @@ Recommended Reading Order
 Related Pages
 -------------
 
-- :ref:`guide` for behavior notes outside the quick start.
+- :ref:`guide` for how each part of the library behaves.
 - :ref:`examples` for runnable end-to-end scripts.
 - :ref:`faq` for browser and certificate troubleshooting.

@@ -6,24 +6,16 @@ CSV Table Upload/Download
 This example uploads a CSV file as a LabArchives rich-text HTML table and
 downloads table entries back to CSV.
 
-When to Use It
---------------
-
-Use it to publish CSV results in notebook pages and retrieve table entries for
-downstream analysis.
-
 Requirements
 ------------
 
-This example assumes the recommended local interactive profile,
-``labapi[dotenv,builtin-auth]``. See :ref:`installation`.
-
-It also requires ``beautifulsoup4`` for HTML table parsing during download.
+Install ``labapi[dotenv,builtin-auth]`` (see :ref:`installation`) and
+``beautifulsoup4``, which parses HTML tables during download.
 
 Configuration
 -------------
 
-For local interactive use, create a ``.env`` file in the repository root:
+Create a ``.env`` file in the repository root:
 
 .. code-block:: toml
 
@@ -39,20 +31,6 @@ How It Works
 
 ``examples/csv_table/csv_table.py`` defines typed upload/download options,
 converts CSV rows to HTML table markup, and parses table entries back to CSV.
-
-Upload Flow
-~~~~~~~~~~~
-
-- Read CSV data from disk.
-- Convert it to HTML table markup.
-- Upload the HTML as a rich-text entry.
-
-Download Flow
-~~~~~~~~~~~~~
-
-- Find a text entry containing an HTML table.
-- Parse the table back into structured data.
-- Write the result to a CSV file.
 
 Common Commands
 ---------------
@@ -139,25 +117,11 @@ Notes and Limitations
 ---------------------
 
 - Tables are rendered with LabArchives' default styling and no inline CSS.
-- For simple tables, rows and columns are preserved when converting CSV to
-  HTML and back; leading and trailing whitespace inside cells is stripped on
-  download.
-- Multiple table entries on one page are supported; by default, download
-  selects the newest text entry containing a table.
-- Empty cells in CSV files are preserved in the HTML table.
+- Leading and trailing whitespace inside cells is stripped on download.
+- By default, download selects the newest text entry containing a table.
 - Save non-ASCII CSV files as UTF-8.
-- Complex nested tables are not supported.
+- Nested tables are not supported.
 - Only the first table is extracted if an entry contains multiple tables.
-
-Ways to Extend It
------------------
-
-1. Export multiple tables from one page to separate CSV files.
-2. Handle ``colspan`` and ``rowspan`` attributes.
-3. Validate CSV structure before upload.
-4. Read from and write to XLSX files.
-5. Generate charts from CSV data and upload them as images.
-6. Support HTML table captions.
 
 Source Code
 -----------

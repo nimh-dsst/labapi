@@ -4,8 +4,7 @@ Copying Pages and Directories
 =============================
 
 Use :meth:`~labapi.tree.mixins.AbstractTreeNode.copy_to` to duplicate pages and
-directories within or across notebooks. The examples assume you already have
-the source node and destination container.
+directories within or across notebooks.
 
 Copy a Page
 -----------
@@ -16,8 +15,7 @@ Copy a Page
    destination = notebook.traverse("Archive")
    copied_page = source_page.copy_to(destination)
 
-This creates a new page in the destination directory with the same name and
-its supported entries.
+The copy has the same name. Entries that ``copy_to()`` cannot copy are skipped.
 
 Copy Across Notebooks
 ---------------------
@@ -31,7 +29,7 @@ Copy Across Notebooks
 Copy a Directory
 ----------------
 
-Directories are copied recursively, including their pages and subdirectories:
+Directories are copied with all their pages and subdirectories:
 
 .. code-block:: python
 
@@ -41,8 +39,6 @@ Directories are copied recursively, including their pages and subdirectories:
 
 Return Value
 ------------
-
-``copy_to()`` returns the newly created copy:
 
 .. code-block:: python
 
@@ -55,23 +51,28 @@ Limitations
 -----------
 
 .. warning::
-   LabArchives can rename attachment files during copy operations. The file
-   data is preserved, but the copied filename may differ from the original.
+   LabArchives can rename attachment files when copying. The file contents are
+   unchanged.
 
 .. warning::
    Only text, plain-text, header, and attachment entries are fully supported.
    Other entry types, including widgets, may be skipped after a
    ``RuntimeWarning``.
 
+Pass ``strict=True`` to raise the entry's error instead of skipping it:
+
+.. code-block:: python
+
+   copied_page = source_page.copy_to(destination, strict=True)
+
+If a copy fails, the page or directory it created is moved to
+``API Deleted Items`` before the error is raised.
+
 Best Practices
 --------------
 
-- Test copying with a disposable page or directory first.
-- Verify the copied entry count, then open representative copied attachments
-  and compare filenames and content.
-- If filenames matter, re-read copied attachments and confirm their names.
-
-Example verification:
+After copying, compare the entry counts and check the copied attachments'
+filenames and contents:
 
 .. code-block:: python
 
@@ -87,9 +88,8 @@ Alternatives
 Move Instead of Copying
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-If you want to relocate content instead of duplicating it, use
-:meth:`~labapi.tree.mixins.AbstractTreeNode.move_to` (moves are only possible
-within the same notebook):
+:meth:`~labapi.tree.mixins.AbstractTreeNode.move_to` moves a node within the
+same notebook:
 
 .. code-block:: python
 
@@ -98,8 +98,8 @@ within the same notebook):
 Recreate Content Programmatically
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When copy fidelity matters, create a new page and recreate only the entry
-types you need:
+To control exactly what is copied, create a new page and add the entries
+yourself:
 
 .. code-block:: python
 
