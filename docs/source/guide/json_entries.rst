@@ -38,6 +38,11 @@ For example:
    print(f"Created attachment entry (ID: {attachment_entry.id})")
    print(f"Created text preview (ID: {text_entry.id})")
 
+Any sequence or mapping is accepted, such as ``tuple``, ``range``, or
+``MappingProxyType``, and is stored as a JSON array or object. ``bytes``,
+``bytearray``, and ``memoryview`` values raise :class:`TypeError`; decode them
+to ``str`` first.
+
 Related Pages
 -------------
 
