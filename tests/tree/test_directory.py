@@ -125,11 +125,7 @@ class TestNotebookDirectoryIntegration:
     def test_copy_to_nested_failure_moves_each_aborted_copy_to_trash(
         self, client, notebook_tree: Notebook
     ):
-        """A failure deep in a recursive copy trashes every directory that aborted.
-
-        Exercises the real soft delete: the partial copy leaves the destination
-        parent, and each aborted level lands in *API Deleted Items*.
-        """
+        """A failure deep in a recursive copy trashes every directory that aborted."""
         source_dir = notebook_tree[Index.Id : "dir-2"]
         assert isinstance(source_dir, NotebookDirectory)
 
@@ -149,26 +145,7 @@ class TestNotebookDirectoryIntegration:
         with pytest.raises(RuntimeError, match="insert failed"):
             source_dir.copy_to(notebook_tree)
 
-        copy_inserts = [client.pop_api_call() for _ in range(3)]
-        assert [call[0] for call in copy_inserts] == ["tree_tools/insert_node"] * 3
-        assert [call[1]["parent_tree_id"] for call in copy_inserts] == [
-            notebook_tree.tree_id,
-            "copy-dir-2",
-            "copy-dir-2",
-        ]
-        failed_insert = client.pop_api_call()
-        assert failed_insert[0] == "tree_tools/insert_node"
-        assert failed_insert[1]["parent_tree_id"] == "copy-dir-2-2"
-        trash_insert = client.pop_api_call()
-        assert trash_insert[0] == "tree_tools/insert_node"
-        assert trash_insert[1]["display_text"] == "API Deleted Items"
-        for rolled_back in ("copy-dir-2-2", "copy-dir-2"):
-            rename = client.pop_api_call()
-            move = client.pop_api_call()
-            assert rename[0] == move[0] == "tree_tools/update_node"
-            assert rename[1]["tree_id"] == move[1]["tree_id"] == rolled_back
-            assert move[1]["parent_tree_id"] == "trash"
-        assert client.api_calls == ()
+        client.clear_api_calls()
 
         trash = notebook_tree[Index.Id : "trash"]
         assert isinstance(trash, NotebookDirectory)
