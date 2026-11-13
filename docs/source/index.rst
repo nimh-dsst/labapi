@@ -3,7 +3,7 @@ LabArchives API Client
 
 ``labapi`` is a Python client for the LabArchives API. It gives you an
 object-oriented way to authenticate, browse notebook trees, and create or
-update entries from scripts, tools, and integrations.
+update entries.
 
 .. toctree::
    :maxdepth: 2
@@ -46,7 +46,7 @@ Start Here
       :link: reference/index
       :link-type: doc
 
-      Look up class, method, and module reference pages.
+      Look up classes, methods, and modules.
 
 Reference Tools
 ---------------

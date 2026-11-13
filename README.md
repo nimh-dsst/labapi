@@ -7,12 +7,9 @@ A high-level Python interface to LabArchives notebooks.
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19599400.svg)](https://doi.org/10.5281/zenodo.19599400)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 
-`labapi` allows you to work with the LabArchives API through familiar lab
-notebook concepts. It represents notebooks, folders, pages, and entries as
-Python objects. It provides easy, path-based navigation and unified access to
-LabArchives attachments, as well as convenience methods for common higher-level
-operations like searching notebook entries and getting or creating pages and
-folders by path.
+`labapi` represents LabArchives notebooks, folders, pages, and entries as
+Python objects. You can navigate by path, work with attachments, search
+notebook entries, and get or create pages and folders by path.
 
 The library handles authentication, request signing, XML response parsing,
 search-result pagination, and entry-type decoding.
@@ -21,9 +18,9 @@ search-result pagination, and entry-type decoding.
 
 ## Start Here
 
-- New to `labapi`? Follow the [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html) to install `labapi`, authenticate, and create your first LabArchives entry.
-- Already using `labapi`? Jump to the [Quick Start](https://nimh-dsst.github.io/labapi/latest/quick_start/index.html), [User Guide](https://nimh-dsst.github.io/labapi/latest/guide/index.html), [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html), or [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html).
-- Working on the package itself? Start with [CONTRIBUTING.md](https://github.com/nimh-dsst/labapi/blob/main/CONTRIBUTING.md).
+- If you are new to `labapi`, follow the [First Success Tutorial](https://nimh-dsst.github.io/labapi/latest/quick_start/tutorial.html).
+- If you already use `labapi`, go to the [Quick Start](https://nimh-dsst.github.io/labapi/latest/quick_start/index.html), [User Guide](https://nimh-dsst.github.io/labapi/latest/guide/index.html), [Examples](https://nimh-dsst.github.io/labapi/latest/examples/index.html), or [FAQ](https://nimh-dsst.github.io/labapi/latest/faq.html).
+- To work on the package itself, start with [CONTRIBUTING.md](https://github.com/nimh-dsst/labapi/blob/main/CONTRIBUTING.md).
 
 ## Install
 
@@ -84,8 +81,6 @@ $env:API_URL="https://api.labarchives.com"
 $env:ACCESS_KEYID="your_access_key_id"
 $env:ACCESS_PWD="your_access_password"
 ```
-
-`.env` files are only auto-loaded when `python-dotenv` is installed, such as with `labapi[dotenv]`.
 
 ## Quick Start
 
