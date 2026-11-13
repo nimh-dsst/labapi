@@ -1403,13 +1403,18 @@ class TestClientUnit:
         response.status_code = 404
         response.url = "https://api.test.com/api/attachments/download"
         response.headers = {}
-        response.text = "Not Found"
+        response.iter_content.return_value = [b"Not Found"]
         client.session.get = Mock(return_value=response)
 
-        with pytest.raises(ApiError, match="API request failed with status code 404"):
+        with pytest.raises(
+            ApiError, match="API request failed with status code 404"
+        ) as exc_info:
             client.stream_api_get("attachments/download", eid="123")
 
-        response.iter_content.assert_not_called()
+        # The body is counted, never echoed.
+        assert "Not Found" not in str(exc_info.value)
+        assert "9 bytes" in str(exc_info.value)
+        response.iter_content.assert_called_once()
         response.close.assert_called_once()
 
     def test_stream_api_post_raises_api_error_and_closes_response(self):
@@ -1419,15 +1424,56 @@ class TestClientUnit:
         response.status_code = 500
         response.url = "https://api.test.com/api/attachments/upload"
         response.headers = {}
-        response.text = "Internal Server Error"
+        response.iter_content.return_value = [b"Internal Server Error"]
         client.session.post = Mock(return_value=response)
 
-        with pytest.raises(ApiError, match="API request failed with status code 500"):
+        with pytest.raises(
+            ApiError, match="API request failed with status code 500"
+        ) as exc_info:
             client.stream_api_post(
                 "attachments/upload", {"entry_data": "test"}, eid="1"
             )
 
-        response.iter_content.assert_not_called()
+        assert "Internal Server Error" not in str(exc_info.value)
+        assert "21 bytes" in str(exc_info.value)
+        response.iter_content.assert_called_once()
+        response.close.assert_called_once()
+
+    def test_stream_api_get_caps_large_streamed_error_body(self):
+        """Test a large streamed error body is capped rather than fully buffered."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        response = MagicMock(spec=Response)
+        response.status_code = 500
+        response.url = "https://api.test.com/api/attachments/download"
+        response.headers = {}
+
+        # A body far larger than any sane in-memory cap (~780 MiB total).
+        huge_body = iter([b"x" * 8192] * 100_000)
+        response.iter_content.return_value = huge_body
+        client.session.get = Mock(return_value=response)
+
+        with pytest.raises(ApiError, match="API request failed with status code 500"):
+            client.stream_api_get("attachments/download", eid="123")
+
+        # Only enough chunks to reach the cap were pulled from the stream.
+        assert len(list(huge_body)) > 99_900
+        response.close.assert_called_once()
+
+    def test_stream_api_get_raises_api_error_from_small_streamed_error_body(self):
+        """Test a normal small streamed error body still yields a precise ApiError."""
+        client = Client("https://api.test.com", "test_akid", "test_password")
+        response = MagicMock(spec=Response)
+        response.status_code = 500
+        response.url = "https://api.test.com/api/attachments/download"
+        response.iter_content.return_value = [
+            b"<error><error-code>4999</error-code>",
+            b"<error-description>Unknown Error</error-description></error>",
+        ]
+        client.session.get = Mock(return_value=response)
+
+        with pytest.raises(ApiError, match=r"\[4999\] Unknown Error"):
+            client.stream_api_get("attachments/download", eid="123")
+
         response.close.assert_called_once()
 
     def test_stream_api_post_returns_streaming_response(self):

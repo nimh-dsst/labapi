@@ -13,6 +13,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler
+from itertools import islice
 from operator import itemgetter
 from secrets import token_urlsafe
 from socketserver import TCPServer
@@ -57,6 +58,13 @@ _DEFAULT_AUTH_CALLBACK_TIMEOUT = 300.0
 # A legitimate browser redirect sends its request essentially immediately, so
 # this can be small without risking the normal flow.
 _AUTH_CALLBACK_CONNECTION_TIMEOUT = 5.0
+
+# Caps how much of a *streamed* error response body is read into memory when
+# building an ApiError message, so a large error payload can't defeat the
+# streaming API's resource guarantee. Non-streamed responses are unaffected:
+# `requests` has already fully buffered those by the time we see them.
+_STREAMED_ERROR_BODY_CAP = 64 * 1024  # 64 KiB
+_STREAMED_ERROR_BODY_CHUNK_SIZE = 8192
 
 _WEB_UI_HOSTS = {
     "api.labarchives.com": "mynotebook.labarchives.com",
@@ -612,7 +620,7 @@ class Client:
         return User(uid, user_email, notebooks, self)
 
     @staticmethod
-    def _handle_request_status(response: Response) -> None:
+    def _handle_request_status(response: Response, *, streamed: bool = False) -> None:
         """Raise an error for an unsuccessful HTTP response.
 
         Attempts to parse the LabArchives ``<error>`` XML element from the response
@@ -620,41 +628,52 @@ class Client:
         generic message if the body is not parseable XML.
 
         :param response: The HTTP response object from the requests library.
+        :param streamed: Whether ``response`` came from a ``stream=True``
+                         request. If so, at most
+                         :data:`_STREAMED_ERROR_BODY_CAP` bytes of the body
+                         are read to build the error.
         :raises AuthenticationError: For API error codes 4506, 4514, 4520, 4533.
         :raises ApiError: For all other non-200 responses.
         """
         # NOTE: See https://mynotebook.labarchives.com/share/LabArchives%2520API/NDEuNnwyNy8zMi9UcmVlTm9kZS83NDE1Mjk1NTJ8MTA1LjY= [ELN Error Codes]
-        if not (200 <= response.status_code < 300):
-            # Never include the raw body: it may echo the signed URL.
-            prefix = (
-                f"API request failed with status code {response.status_code} "
-                f"for {urlsplit(response.url).path}"
-            )
-            body = b""
-            error_code: int | None = None
-            error_desc: str | None = None
-            try:
-                body = response.content
-                tree = fromstring(body)
-                code_text = tree.findtext(".//error-code")
-                if code_text is not None:
-                    error_code = int(code_text)
-                    error_desc = tree.findtext(".//error-description")
-            # TODO(BLE001): intentional broad catch — best-effort error-XML parse; fall through to the generic error path on any parse failure; narrow if a specific type becomes known.
-            except Exception:  # noqa: BLE001, S110
-                pass
+        if 200 <= response.status_code < 300:
+            return
 
-            if error_code is not None:
-                message = f"{prefix}: [{error_code}] {error_desc}"
-                if error_code in _AUTH_ERROR_CODES:
-                    raise AuthenticationError(message, error_code)
-                raise ApiError(message, error_code)
-
-            content_type = response.headers.get("Content-Type") or "no Content-Type"
-            raise ApiError(
-                f"{prefix}: no LabArchives error in response "
-                f"({content_type}, {len(body)} bytes)"
+        # Never include the raw body: it may echo the signed URL.
+        prefix = (
+            f"API request failed with status code {response.status_code} "
+            f"for {urlsplit(response.url).path}"
+        )
+        body = b""
+        error_code: int | None = None
+        error_desc: str | None = None
+        try:
+            # A streamed body is read only up to the cap, never buffered whole.
+            chunks = response.iter_content(chunk_size=_STREAMED_ERROR_BODY_CHUNK_SIZE)
+            max_chunks = _STREAMED_ERROR_BODY_CAP // _STREAMED_ERROR_BODY_CHUNK_SIZE
+            body = (
+                b"".join(islice(chunks, max_chunks)) if streamed else response.content
             )
+            tree = fromstring(body)
+            code_text = tree.findtext(".//error-code")
+            if code_text is not None:
+                error_code = int(code_text)
+                error_desc = tree.findtext(".//error-description")
+        # TODO(BLE001): intentional broad catch — best-effort error-XML parse; fall through to the generic error path on any parse failure; narrow if a specific type becomes known.
+        except Exception:  # noqa: BLE001, S110
+            pass
+
+        if error_code is not None:
+            message = f"{prefix}: [{error_code}] {error_desc}"
+            if error_code in _AUTH_ERROR_CODES:
+                raise AuthenticationError(message, error_code)
+            raise ApiError(message, error_code)
+
+        content_type = response.headers.get("Content-Type") or "no Content-Type"
+        raise ApiError(
+            f"{prefix}: no LabArchives error in response "
+            f"({content_type}, {len(body)} bytes)"
+        )
 
     def _send(self, send: Callable[..., Response], url: str, **kwargs: Any) -> Response:
         """Call ``send(url, **kwargs)``, raising :class:`TransportError` on failure.
@@ -691,7 +710,7 @@ class Client:
         url = self.construct_url(api_method_uri, query=kwargs)
         request = self._send(self.session.get, url, stream=True, timeout=self.timeout)
         try:
-            Client._handle_request_status(request)
+            Client._handle_request_status(request, streamed=True)
         except Exception:
             request.close()
             raise
@@ -727,7 +746,7 @@ class Client:
             self.session.post, url, data=body, stream=True, timeout=self.timeout
         )
         try:
-            Client._handle_request_status(request)
+            Client._handle_request_status(request, streamed=True)
         except Exception:
             request.close()
             raise
