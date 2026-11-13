@@ -315,10 +315,14 @@ class AbstractTreeNode(AbstractBaseTreeNode):
         self._invalidate_path()
 
     @abstractmethod
-    def copy_to(self, destination: AbstractTreeContainer) -> Self:
+    def copy_to(
+        self, destination: AbstractTreeContainer, *, strict: bool = False
+    ) -> Self:
         """Copy this node into ``destination``.
 
         :param destination: The target container to copy the node to.
+        :param strict: If ``True``, any entry that fails to copy aborts the whole
+            copy instead of being warned about and skipped.
         :returns: A new instance of the copied node in the destination.
         """
 

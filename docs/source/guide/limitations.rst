@@ -60,7 +60,8 @@ Re-fetch children from the refreshed parent object instead of reusing old refere
 * LabArchives may rename attachments during copy.
 * Widget, unknown, and unimplemented entries may be skipped during page copy.
 * When an entry cannot be recreated, ``copy_to()`` emits a ``RuntimeWarning`` and skips that
-  entry; the copied page may be incomplete.
+  entry; the copied page may be incomplete. Pass ``strict=True`` to abort the copy instead.
+* When a copy fails, the page or directory it created is moved to *API Deleted Items*.
 * Copying a directory into itself or into one of its descendants raises :class:`ValueError`.
 
 ``enumerate_all()`` can return partial results on larger trees

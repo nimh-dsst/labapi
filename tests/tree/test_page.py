@@ -9,9 +9,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from labapi import Index, Notebook, NotebookPage
+from labapi import Index, Notebook, NotebookDirectory, NotebookPage
 from labapi.entry import Attachment, AttachmentEntry, Entries, UnknownEntry, WidgetEntry
 from labapi.user import User
+
+
+class _ExplodingEntries:
+    """Entries whose iteration fails, aborting the copy mid-way."""
+
+    def __iter__(self):
+        raise RuntimeError("failed to load entries")
 
 
 class TestNotebookPageUnit:
@@ -216,6 +223,21 @@ class TestNotebookPageUnit:
             NotebookPage.copy_to(source_page, destination)
 
         new_page_entries.create.assert_not_called()
+
+    def test_copy_to_rolls_back_page_when_copy_aborts(self):
+        """Test NotebookPage.copy_to deletes the created page when the copy aborts."""
+        source_page = Mock(spec=NotebookPage)
+        source_page.name = "Source Page"
+        source_page.entries = _ExplodingEntries()
+
+        new_page = Mock(spec=NotebookPage)
+        destination = Mock()
+        destination.create.return_value = new_page
+
+        with pytest.raises(RuntimeError, match="failed to load entries"):
+            NotebookPage.copy_to(source_page, destination)
+
+        new_page.delete.assert_called_once_with()
 
 
 class TestNotebookPageIntegration:
@@ -522,3 +544,33 @@ class TestNotebookPageIntegration:
         api_call = client.pop_api_call()
         assert api_call[0] == "tree_tools/get_entries_for_page"
         client.clear_api_calls()
+
+    def test_copy_to_strict_entry_failure_aborts_and_moves_copy_to_trash(
+        self, client, notebook_tree: Notebook
+    ):
+        """With strict=True, an entry failure aborts the copy and trashes the new page."""
+        source_page = notebook_tree[Index.Id : "page-1"]
+        destination = notebook_tree[Index.Id : "dir-1"]
+        assert isinstance(source_page, NotebookPage)
+        assert isinstance(destination, NotebookDirectory)
+
+        client.api_response = client.tree_node_response("page-copy")
+        client.api_response = client.entries_response(
+            client.entry_xml("entry_1", part_type="text entry", entry_data="<p>A</p>"),
+            include_response=False,
+        )
+        client.api_response = client.entries_response()  # new page's entries
+        client.api_response = RuntimeError("add failed")
+        # Rollback: create API Deleted Items, rename the copy, move it there.
+        client.api_response = client.tree_node_response("trash")
+        client.api_response = client.xml("success")
+        client.api_response = client.xml("success")
+
+        with pytest.raises(RuntimeError, match="add failed"):
+            source_page.copy_to(destination, strict=True)
+        client.clear_api_calls()
+
+        trash = notebook_tree[Index.Id : "trash"]
+        assert isinstance(trash, NotebookDirectory)
+        assert [child.id for child in trash.children] == ["page-copy"]
+        assert "page-copy" not in [child.id for child in destination.children]
