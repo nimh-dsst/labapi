@@ -59,6 +59,9 @@ details that affect development workflows.
   `labapi` now requires Python 3.11 or newer. The security fixes for the
   locked `pillow` (13.0.0) and `filelock` (4.2.9) dependencies are only
   published for Python 3.11+.
+- Support for Python 3.11.0 through 3.11.4. `labapi` now requires Python
+  3.11.5 or newer, because the security fixes for the locked `soupsieve`
+  (4.1) are only published for 3.11.5+.
 
 ### Fixed
 
