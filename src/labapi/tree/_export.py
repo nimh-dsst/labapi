@@ -69,7 +69,9 @@ def _backup_tree(notebook: Notebook, tmpdir: Path) -> dict:
     entries = tmpdir / "entries"
     entries.mkdir()
 
-    with sqlite3.connect(backup / "db.sqlite3") as database:
+    # ``with connection`` only commits; ``closing`` releases the file, which
+    # Windows needs before the working folder can be deleted.
+    with closing(sqlite3.connect(backup / "db.sqlite3")) as database:
         database.row_factory = sqlite3.Row
 
         def walk(parent_id: int) -> dict:

@@ -111,6 +111,9 @@ def test_backup_tree_reads_sqlite_and_attachments(tmp_path):
     }
     assert (exported / "1_Folder" / "2_Empty page").is_dir()
     assert (exported / "2_Empty").is_dir()
+    # export() deletes its working folder on exit, and Windows cannot delete
+    # the database while a connection to it is still open.
+    shutil.rmtree(work)
 
 
 def test_backup_tree_generates_name_for_null_attach_file_name(tmp_path):
