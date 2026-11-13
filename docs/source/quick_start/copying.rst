@@ -59,6 +59,15 @@ Limitations
    Other entry types, including widgets, may be skipped after a
    ``RuntimeWarning``.
 
+Pass ``strict=True`` to raise the entry's error instead of skipping it:
+
+.. code-block:: python
+
+   copied_page = source_page.copy_to(destination, strict=True)
+
+If a copy fails, the page or directory it created is moved to
+``API Deleted Items`` before the error is raised.
+
 Best Practices
 --------------
 
