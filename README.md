@@ -29,7 +29,7 @@ search-result pagination, and entry-type decoding.
 
 Requirements:
 
-- Python 3.11+
+- Python 3.11.5+
 - `uv` (recommended) or `pip`
 
 Recommended install for local use:
