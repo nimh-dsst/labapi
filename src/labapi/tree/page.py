@@ -197,12 +197,6 @@ class NotebookPage(AbstractTreeNode):
         Emits :class:`RuntimeWarning` if the rollback itself fails; the original
         error is still raised.
         """
-        return self._copy_to(destination, rollback=True, strict=strict)
-
-    @override
-    def _copy_to(
-        self, destination: AbstractTreeContainer, *, rollback: bool, strict: bool
-    ) -> NotebookPage:
         new_page = destination.create(
             NotebookPage, self.name, if_exists=InsertBehavior.Ignore
         )
@@ -233,14 +227,13 @@ class NotebookPage(AbstractTreeNode):
                         f"Failed to copy entry {entry.id!r} ({entry.content_type!r}) from page "
                         f"{self.id!r} to page {new_page.id!r}: {exc}. This entry was skipped.",
                         RuntimeWarning,
-                        stacklevel=3,
+                        stacklevel=2,
                     )
                 finally:
                     if isinstance(entry_content, Attachment):
                         entry_content.close()
         except Exception:
-            if rollback:
-                new_page._discard_partial_copy()
+            new_page._discard_partial_copy()
             raise
 
         return new_page

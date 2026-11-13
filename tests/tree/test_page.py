@@ -49,8 +49,6 @@ class TestNotebookPageUnit:
     def test_copy_to_copies_attachment_and_closes_attachment(self):
         """Test NotebookPage.copy_to uploads attachments and closes local handles."""
         source_page = Mock(spec=NotebookPage)
-        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
-        source_page._copy_to = partial(NotebookPage._copy_to, source_page)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -87,8 +85,6 @@ class TestNotebookPageUnit:
     def test_copy_to_warns_and_continues_when_attachment_copy_fails(self):
         """Test NotebookPage.copy_to warns and skips entries that fail to copy."""
         source_page = Mock(spec=NotebookPage)
-        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
-        source_page._copy_to = partial(NotebookPage._copy_to, source_page)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -126,8 +122,6 @@ class TestNotebookPageUnit:
     def test_copy_to_warns_and_continues_when_entry_create_raises(self):
         """Test NotebookPage.copy_to catches per-entry create failures and continues."""
         source_page = Mock(spec=NotebookPage)
-        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
-        source_page._copy_to = partial(NotebookPage._copy_to, source_page)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -168,8 +162,6 @@ class TestNotebookPageUnit:
     def test_copy_to_warns_and_continues_when_attachment_fetch_fails(self):
         """Test NotebookPage.copy_to warns and continues when reading attachment content fails."""
         source_page = Mock(spec=NotebookPage)
-        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
-        source_page._copy_to = partial(NotebookPage._copy_to, source_page)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -212,8 +204,6 @@ class TestNotebookPageUnit:
         that exception is still caught and reported as a per-entry warning.
         """
         source_page = Mock(spec=NotebookPage)
-        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
-        source_page._copy_to = partial(NotebookPage._copy_to, source_page)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
 
@@ -247,8 +237,6 @@ class TestNotebookPageUnit:
         A failed rollback warns, but the original error is still raised.
         """
         source_page = Mock(spec=NotebookPage)
-        # copy_to delegates to _copy_to, which Mock(spec=...) would stub out.
-        source_page._copy_to = partial(NotebookPage._copy_to, source_page)
         source_page.name = "Source Page"
         source_page.id = "source-page-id"
         source_page.entries = _ExplodingEntries()

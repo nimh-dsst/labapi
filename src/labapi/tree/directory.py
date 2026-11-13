@@ -37,9 +37,8 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
         Failure handling: if the copy aborts (a descendant fails to copy, or, with
         ``strict=True``, any entry fails), the directory created here is moved to
         *API Deleted Items* before the error is re-raised (the public API has no
-        hard delete), taking every descendant already copied into it along. The
-        destination no longer contains the partial copy, and *API Deleted Items*
-        gains exactly one directory.
+        hard delete), taking every descendant already copied into it along, so
+        the destination no longer contains the partial copy.
 
         :param destination: The target container to copy the directory to.
         :param strict: If ``True``, any entry that fails to copy aborts the whole
@@ -50,12 +49,6 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
         Emits :class:`RuntimeWarning` if the rollback itself fails; the original
         error is still raised.
         """
-        return self._copy_to(destination, rollback=True, strict=strict)
-
-    @override
-    def _copy_to(
-        self, destination: AbstractTreeContainer, *, rollback: bool, strict: bool
-    ) -> NotebookDirectory:
         if self.is_parent_of(destination) or self is destination:
             raise ValueError(
                 "Cannot copy a directory into itself or one of its descendants"
@@ -67,12 +60,9 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
 
         try:
             for child in self.children:
-                # Children never roll back themselves: rolling back new_dir below
-                # moves the whole partial subtree to API Deleted Items as one node.
-                child._copy_to(new_dir, rollback=False, strict=strict)
+                child.copy_to(new_dir, strict=strict)
         except Exception:
-            if rollback:
-                new_dir._discard_partial_copy()
+            new_dir._discard_partial_copy()
             raise
 
         return new_dir
