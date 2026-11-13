@@ -144,17 +144,9 @@ Attachment entries (:class:`~labapi.entry.entries.attachment.AttachmentEntry`) r
    data = attachment.read()
 
 .. warning::
-   ``attachment.filename`` is the name LabArchives reports, and ``labapi`` does
-   not check it. Whoever uploaded the file chose that name, so it may contain
-   path separators or ``..``. Before saving a download under its own name, keep
-   only the last component:
-
-   .. code-block:: python
-
-      from pathlib import Path, PureWindowsPath
-
-      name = PureWindowsPath(attachment.filename).name  # splits on / and \
-      (Path("downloads") / name).write_bytes(attachment.read())
+   ``attachment.filename`` comes from LabArchives unchecked and may contain
+   path separators. Use ``pathlib.PureWindowsPath(attachment.filename).name``
+   before saving a file under it.
 
 Widget Entries
 ~~~~~~~~~~~~~~

@@ -221,12 +221,9 @@ class Attachment:
         """Return the attachment filename.
 
         .. warning::
-           For a downloaded attachment, ``labapi`` passes on the name that
-           LabArchives reports without checking it. Whoever uploaded the file
-           chose that name, so it may contain path separators or ``..``. Do
-           not join it to a directory as it is; take its last component first
-           with ``pathlib.PureWindowsPath(attachment.filename).name``, which
-           splits on both forward and back slashes.
+           The name comes from LabArchives unchecked and may contain path
+           separators. Use ``pathlib.PureWindowsPath(filename).name`` before
+           saving a file under it.
 
         :returns: The filename.
         """
