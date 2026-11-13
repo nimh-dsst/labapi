@@ -41,7 +41,7 @@ Getting Started
 
 All published examples assume:
 
-- Python 3.11+.
+- Python 3.11.5+.
 - The recommended local interactive profile:
   ``labapi[dotenv,builtin-auth]``.
 - Run the ``uv run --project ...`` commands below from the repository root.
