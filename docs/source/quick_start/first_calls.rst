@@ -3,9 +3,7 @@
 Your First Entry
 ================
 
-This page shows the credential and authentication patterns used throughout the
-docs. It assumes you already installed a suitable profile from
-:ref:`installation`.
+Install ``labapi`` first; see :ref:`installation`.
 
 .. _obtaining_api_keys:
 
@@ -14,9 +12,8 @@ Obtain API Keys
 
 Every request to the LabArchives API is signed with an Access Key ID
 (``akid``) and Access Password issued by LabArchives. These identify your
-application; the sign-in flows further down this page additionally
-authenticate individual users. There is no self-service portal for API keys —
-they are issued on request:
+application; signing in (below) identifies the user. LabArchives issues API
+keys only on request:
 
 - If your institution has a LabArchives enterprise license, ask your
   institution's LabArchives site administrator (or your LabArchives Enterprise
@@ -25,19 +22,14 @@ they are issued on request:
 - Otherwise, contact LabArchives support at
   `support@labarchives.com <mailto:support@labarchives.com>`_.
 
-When issuing the keys, LabArchives will confirm the API base URL for
-your region (for example, ``https://api.labarchives.com`` for US-hosted
-accounts — the default used throughout these docs).
-
-Treat the Access Password like any other secret: keep it out of version
-control and supply it via a ``.env`` file or environment variables as shown
-below.
+LabArchives also tells you the API base URL for your region. These docs use
+``https://api.labarchives.com``, the URL for US-hosted accounts.
 
 Create a Client
 ---------------
 
-Start by instantiating a :class:`~labapi.client.Client`. You can provide the
-API URL, Access Key ID, and Access Password in several ways:
+:class:`~labapi.client.Client` takes the API URL, Access Key ID, and Access
+Password from a ``.env`` file, environment variables, or constructor arguments:
 
 .. tab-set::
 
@@ -61,8 +53,7 @@ API URL, Access Key ID, and Access Password in several ways:
          client = Client()
 
       .. note::
-         Automatic loading from ``.env`` requires the ``dotenv`` extra. See
-         :ref:`installation` for install profiles and package-manager commands.
+         Loading ``.env`` requires the ``dotenv`` extra; see :ref:`installation`.
 
    .. tab-item:: Environment Variables
       :sync: env-vars
@@ -124,9 +115,8 @@ Sign In
 Local Interactive Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For local interactive use, call
-:meth:`~labapi.client.Client.default_authenticate`, which lets users running on
-the same machine sign in through a browser.
+Call :meth:`~labapi.client.Client.default_authenticate` to sign in through a
+browser on the same machine.
 
 .. code-block:: python
 
@@ -136,15 +126,8 @@ the same machine sign in through a browser.
        user = client.default_authenticate()
 
 .. note::
-   Use ``labapi[dotenv,builtin-auth]`` for ``.env`` loading and automatic
-   browser launch. If automatic browser launch is
-   unavailable, ``labapi`` falls back to printing a URL so you can finish the
-   login manually.
-
-.. tip::
-   For server, CI, and other headless environments, see :ref:`auth` and use
-   :meth:`~labapi.client.Client.generate_auth_url` plus
-   :meth:`~labapi.client.Client.login` instead.
+   With the ``builtin-auth`` extra, ``labapi`` opens the browser for you. If it
+   cannot, it prints a URL for you to open yourself.
 
 External App Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -171,17 +154,13 @@ use an External App authentication code:
 Service and Non-Interactive Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For backend systems, scheduled jobs, and CI pipelines, do not depend on a
-local browser session.
-
-Recommended flow:
+Backend systems, scheduled jobs, and CI pipelines cannot open a local browser.
+Use this flow instead:
 
 1. In your web or service layer, redirect users to
    ``client.generate_auth_url(callback_url)``.
 2. Capture ``email`` and ``auth_code`` from the callback request.
 3. Exchange those values via :meth:`~labapi.client.Client.login`.
-4. Store any resulting credentials or secrets using your platform's secret
-   manager.
 
 For the complete flow, see :ref:`auth`.
 
@@ -204,8 +183,7 @@ name or iterate over them:
 Write Entries
 -------------
 
-After you have a notebook, navigate to a page and create entries. Choose the
-entry class by the output you want in LabArchives:
+The entry class decides how LabArchives shows the content:
 
 - :class:`~labapi.entry.entries.text.TextEntry` renders HTML formatting.
 - :class:`~labapi.entry.entries.text.PlainTextEntry` preserves text

@@ -3,14 +3,12 @@
 Navigating the Tree
 ===================
 
-Once you have a :class:`~labapi.tree.notebook.Notebook` object, you can move
-through its directories and pages in several ways. The examples below assume
-you already have a ``notebook`` object from :ref:`first_calls`.
+The examples below use a :class:`~labapi.tree.notebook.Notebook` named
+``notebook``, obtained as in :ref:`first_calls`.
 
 .. warning::
-   Duplicate-name and first-match behavior are documented in
-   :ref:`index_access`. Review that page before relying on name-based lookup in
-   automation code.
+   Several nodes can share a name. See :ref:`index_access` for how lookup by
+   name handles that.
 
 Traversing the Tree with Paths
 ------------------------------
@@ -28,20 +26,17 @@ slash-separated path string.
 Fluent Navigation with ``dir()`` and ``page()``
 -----------------------------------------------
 
-To create or retrieve nodes while chaining calls, use
 :meth:`~labapi.tree.mixins.AbstractTreeContainer.dir` and
-:meth:`~labapi.tree.mixins.AbstractTreeContainer.page`.
-
-These methods return the existing node if it is present, or create it if it is
-missing.
+:meth:`~labapi.tree.mixins.AbstractTreeContainer.page` return the named node,
+creating it if it is missing, so calls can be chained.
 
 .. code-block:: python
 
    page = notebook.dir("Experiments").dir("Project A").page("Results")
    page = notebook.dir("Experiments/Project A").page("Results")
 
-See :meth:`~labapi.tree.mixins.AbstractTreeContainer.create` to set
-duplicate-handling and parent-creation behavior.
+To control what happens when the node already exists or a parent is missing,
+use :meth:`~labapi.tree.mixins.AbstractTreeContainer.create`.
 
 Accessing Children by Name
 --------------------------
@@ -54,7 +49,7 @@ Use dictionary-style indexing to get the first child with a matching name:
    project_a = experiments["Project A"]
 
 .. note::
-   For deterministic lookup in integration code, prefer ID-based access with
+   To be sure of getting one specific node, look it up by ID with
    :attr:`~labapi.util.types.Index.Id`.
 
 Accessing Children by ID or Name
@@ -84,9 +79,9 @@ Access by Name
 Enumerating Children
 --------------------
 
-``labapi`` provides enumeration helpers on
 :class:`~labapi.tree.notebook.Notebook` and
-:class:`~labapi.tree.directory.NotebookDirectory`.
+:class:`~labapi.tree.directory.NotebookDirectory` have methods that list their
+children.
 
 List All Children
 ~~~~~~~~~~~~~~~~~
