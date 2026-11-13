@@ -143,6 +143,11 @@ Attachment entries (:class:`~labapi.entry.entries.attachment.AttachmentEntry`) r
    # Read the file data
    data = attachment.read()
 
+.. warning::
+   ``attachment.filename`` comes from LabArchives unchecked and may contain
+   path separators. Use ``pathlib.PureWindowsPath(attachment.filename).name``
+   before saving a file under it.
+
 Widget Entries
 ~~~~~~~~~~~~~~
 
