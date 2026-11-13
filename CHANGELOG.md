@@ -17,6 +17,9 @@ details that affect development workflows.
   operating system's trust store via `truststore`, for networks behind a
   TLS-inspecting proxy whose root CA is installed only in the OS store. It
   requires the new `labapi[truststore]` extra.
+- `NotebookPage.copy_to()` and `NotebookDirectory.copy_to()` accept
+  `strict=True`, which makes an entry that fails to copy abort the copy instead
+  of being warned about and skipped.
 
 ### Deprecated
 
@@ -47,6 +50,8 @@ details that affect development workflows.
   response body. They carry the status code, the endpoint path, and
   LabArchives' error code and description; for a non-XML body, its
   `Content-Type` and size instead.
+- When `copy_to()` fails partway, the page or directory it created is moved to
+  *API Deleted Items* instead of being left in the destination.
 
 ### Removed
 

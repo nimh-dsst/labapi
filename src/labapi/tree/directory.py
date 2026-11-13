@@ -25,12 +25,18 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
     """
 
     @override
-    def copy_to(self, destination: AbstractTreeContainer) -> NotebookDirectory:
+    def copy_to(
+        self, destination: AbstractTreeContainer, *, strict: bool = False
+    ) -> NotebookDirectory:
         """Copy this directory and its contents into ``destination``.
 
         This operation recursively copies all child directories and pages.
+        If the copy fails, the new directory and everything already copied into
+        it are moved to *API Deleted Items* before the error is re-raised.
 
         :param destination: The target container to copy the directory to.
+        :param strict: If ``True``, an entry that fails to copy aborts the copy
+            instead of being warned about and skipped.
         :returns: A new instance of the copied directory in the destination.
         """
         if self.is_parent_of(destination) or self is destination:
@@ -42,8 +48,12 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
             NotebookDirectory, self.name, if_exists=InsertBehavior.Ignore
         )
 
-        for child in self.children:
-            child.copy_to(new_dir)
+        try:
+            for child in self.children:
+                child.copy_to(new_dir, strict=strict)
+        except Exception:
+            new_dir.delete()
+            raise
 
         return new_dir
 
