@@ -107,6 +107,7 @@ class NotebookPage(AbstractTreeNode):
                         "entry-data": str,
                         "caption": str,
                         "attach-file-name": str,
+                        "attach-content-type": str,
                         "created-at": to_datetime,
                         "updated-at": to_datetime,
                         "version": int,
@@ -133,6 +134,9 @@ class NotebookPage(AbstractTreeNode):
 
                 if isinstance(entry_obj, AttachmentEntry):
                     entry_obj._filename = entry_optional.get("attach-file-name") or None  # pyright: ignore[reportPrivateUsage]
+                    entry_obj._mime_type = (  # pyright: ignore[reportPrivateUsage]
+                        entry_optional.get("attach-content-type") or None
+                    )
 
                 if isinstance(entry_obj, WidgetEntry):
                     pass

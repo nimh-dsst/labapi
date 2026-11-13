@@ -24,6 +24,35 @@ A :class:`~labapi.tree.page.NotebookPage` exposes ``entries``, an :class:`~labap
    # Access an entry by index
    first_entry = page.entries[0]
 
+   # Access an entry by its ID
+   entry = page.entries.get_by_id("12345")
+
+:meth:`~labapi.entry.collection.Entries.get_by_id` raises :class:`KeyError`
+if no entry on the page has that ID.
+
+Filtering Entries by Type
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:meth:`~labapi.entry.collection.Entries.of_type` returns the entries that are
+instances of a class, in page order:
+
+.. code-block:: python
+
+   from labapi import HeaderEntry
+
+   headings = page.entries.of_type(HeaderEntry)
+
+Two shortcuts cover the common cases:
+
+- :meth:`~labapi.entry.collection.Entries.attachments` returns every
+  attachment entry.
+- :meth:`~labapi.entry.collection.Entries.texts` returns every entry with
+  string content: plain text, rich text, and headings, because
+  :class:`~labapi.entry.entries.text.TextEntry` and
+  :class:`~labapi.entry.entries.text.HeaderEntry` both subclass
+  :class:`~labapi.entry.entries.text.PlainTextEntry`. Use ``of_type`` with a
+  specific class for a narrower filter.
+
 Entry Metadata
 --------------
 
@@ -142,6 +171,17 @@ Attachment entries (:class:`~labapi.entry.entries.attachment.AttachmentEntry`) r
    
    # Read the file data
    data = attachment.read()
+
+To check an attachment's name or type without downloading it, use the entry's
+own :attr:`~labapi.entry.entries.attachment.AttachmentEntry.filename` and
+:attr:`~labapi.entry.entries.attachment.AttachmentEntry.mime_type`. They come
+from the page listing and are ``None`` when the listing leaves them out:
+
+.. code-block:: python
+
+   for entry in page.entries.attachments():
+       if entry.mime_type == "text/csv":
+           print(entry.filename)
 
 .. warning::
    ``attachment.filename`` comes from LabArchives unchecked and may contain

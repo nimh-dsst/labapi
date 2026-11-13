@@ -228,3 +228,26 @@ class AttachmentEntry(Entry[Attachment], part_type="Attachment"):
         :returns: The caption string.
         """
         return self._data
+
+    @property
+    def filename(self) -> str | None:
+        """Return the attachment filename without downloading the payload.
+
+        The value comes from the page entry listing, or from the name supplied
+        at upload time.
+
+        :returns: The filename, or ``None`` if the listing did not report one.
+        """
+        return self._filename
+
+    @property
+    def mime_type(self) -> str | None:
+        """Return the attachment MIME type without downloading the payload.
+
+        The value comes from the page entry listing. LabArchives assigns the
+        type itself on upload, so a newly created entry has ``None`` until the
+        page is reloaded.
+
+        :returns: The MIME type, or ``None`` if the listing did not report one.
+        """
+        return self._mime_type

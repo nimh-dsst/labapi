@@ -60,7 +60,7 @@ Use dictionary-style indexing to get the first child with a matching name:
 Accessing Children by ID or Name
 --------------------------------
 
-Use :class:`~labapi.util.types.Index` when you need to choose ID or name
+Use ``get_by_id()`` or ``get_by_name()`` when you need to choose ID or name
 lookup explicitly.
 
 Access by ID
@@ -68,18 +68,17 @@ Access by ID
 
 .. code-block:: python
 
-   from labapi import Index
-
-   page = notebook[Index.Id:"123.45"]
+   page = notebook.get_by_id("123.45")  # KeyError if no child has this ID
 
 Access by Name
 ~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   from labapi import Index
+   results_pages = notebook.get_by_name("Results")  # list; may be empty
 
-   results_pages = notebook[Index.Name:"Results"]
+See :ref:`index_access` for the equivalent ``Index`` syntax and the
+``children_by_id`` snapshot.
 
 Enumerating Children
 --------------------
