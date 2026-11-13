@@ -13,6 +13,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler
+from itertools import islice
 from operator import itemgetter
 from secrets import token_urlsafe
 from socketserver import TCPServer
@@ -56,6 +57,13 @@ _DEFAULT_AUTH_CALLBACK_TIMEOUT = 300.0
 # A legitimate browser redirect sends its request essentially immediately, so
 # this can be small without risking the normal flow.
 _AUTH_CALLBACK_CONNECTION_TIMEOUT = 5.0
+
+# Caps how much of a *streamed* error response body is read into memory when
+# building an ApiError message, so a large error payload can't defeat the
+# streaming API's resource guarantee. Non-streamed responses are unaffected:
+# `requests` has already fully buffered those by the time we see them.
+_STREAMED_ERROR_BODY_CAP = 64 * 1024  # 64 KiB
+_STREAMED_ERROR_BODY_CHUNK_SIZE = 8192
 
 _WEB_UI_HOSTS = {
     "api.labarchives.com": "mynotebook.labarchives.com",
@@ -595,7 +603,7 @@ class Client:
         return User(uid, user_email, notebooks, self)
 
     @staticmethod
-    def _handle_request_status(response: Response) -> None:
+    def _handle_request_status(response: Response, *, streamed: bool = False) -> None:
         """Raise an error for an unsuccessful HTTP response.
 
         Attempts to parse the LabArchives ``<error>`` XML element from the response
@@ -603,40 +611,54 @@ class Client:
         generic message if the body is not parseable XML.
 
         :param response: The HTTP response object from the requests library.
+        :param streamed: Whether ``response`` came from a ``stream=True``
+                         request. If so, at most
+                         :data:`_STREAMED_ERROR_BODY_CAP` bytes of the body
+                         are read to build the error.
         :raises AuthenticationError: For API error codes 4506, 4514, 4520, 4533.
         :raises ApiError: For all other non-200 responses.
         """
         # NOTE: See https://mynotebook.labarchives.com/share/LabArchives%2520API/NDEuNnwyNy8zMi9UcmVlTm9kZS83NDE1Mjk1NTJ8MTA1LjY= [ELN Error Codes]
-        if not (200 <= response.status_code < 300):
-            error_code: int | None = None
-            error_desc: str | None = None
-            try:
-                tree = fromstring(response.content)
-                code_text = tree.findtext(".//error-code")
-                if code_text is not None:
-                    error_code = int(code_text)
-                    error_desc = tree.findtext(".//error-description")
-            # TODO(BLE001): intentional broad catch — best-effort error-XML parse; fall through to the generic error path on any parse failure; narrow if a specific type becomes known.
-            except Exception:  # noqa: BLE001, S110
-                pass
+        if 200 <= response.status_code < 300:
+            return
 
-            if error_code is not None:
-                message = f"[{error_code}] {error_desc}"
-                if error_code in _AUTH_ERROR_CODES:
-                    raise AuthenticationError(message, error_code)
-                raise ApiError(message, error_code)
+        # A streamed body is read only up to the cap, never buffered whole.
+        chunks = response.iter_content(chunk_size=_STREAMED_ERROR_BODY_CHUNK_SIZE)
+        max_chunks = _STREAMED_ERROR_BODY_CAP // _STREAMED_ERROR_BODY_CHUNK_SIZE
+        body = b"".join(islice(chunks, max_chunks)) if streamed else response.content
 
-            parts = urlsplit(response.url)
-            query = dict(parse_qsl(parts.query, keep_blank_values=True))
-            for key in ("akid", "sig", "expires", "password", "login_or_email"):
-                if key in query:
-                    query[key] = "***"
-            clean_url = urlunsplit(parts._replace(query=urlencode(query)))
+        error_code: int | None = None
+        error_desc: str | None = None
+        try:
+            tree = fromstring(body)
+            code_text = tree.findtext(".//error-code")
+            if code_text is not None:
+                error_code = int(code_text)
+                error_desc = tree.findtext(".//error-description")
+        # TODO(BLE001): intentional broad catch — best-effort error-XML parse; fall through to the generic error path on any parse failure; narrow if a specific type becomes known.
+        except Exception:  # noqa: BLE001, S110
+            pass
 
-            raise ApiError(
-                f"API request failed with status code {response.status_code} "
-                f"for URL {clean_url}: {response.text}"
-            )
+        if error_code is not None:
+            message = f"[{error_code}] {error_desc}"
+            if error_code in _AUTH_ERROR_CODES:
+                raise AuthenticationError(message, error_code)
+            raise ApiError(message, error_code)
+
+        parts = urlsplit(response.url)
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+        for key in ("akid", "sig", "expires", "password", "login_or_email"):
+            if key in query:
+                query[key] = "***"
+        clean_url = urlunsplit(parts._replace(query=urlencode(query)))
+
+        body_text = (
+            body.decode("utf-8", errors="replace") if streamed else response.text
+        )
+        raise ApiError(
+            f"API request failed with status code {response.status_code} "
+            f"for URL {clean_url}: {body_text}"
+        )
 
     def stream_api_get(
         self, api_method_uri: str | Sequence[str], **kwargs: Any
@@ -663,7 +685,7 @@ class Client:
             timeout=self.timeout,
         )
         try:
-            Client._handle_request_status(request)
+            Client._handle_request_status(request, streamed=True)
         except Exception:
             request.close()
             raise
@@ -700,7 +722,7 @@ class Client:
             timeout=self.timeout,
         )
         try:
-            Client._handle_request_status(request)
+            Client._handle_request_status(request, streamed=True)
         except Exception:
             request.close()
             raise

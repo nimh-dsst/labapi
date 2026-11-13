@@ -56,8 +56,15 @@ details that affect development workflows.
 
 - Support for Python 3.10, which reached end of life in October 2026.
   `labapi` now requires Python 3.11 or newer. The security fixes for the
-  locked `pillow` (13.0.0) and `filelock` (4.2.1) dependencies are only
+  locked `pillow` (13.0.0) and `filelock` (4.2.9) dependencies are only
   published for Python 3.11+.
+
+### Fixed
+
+- `Entries.create_json_entry()` now serializes every value its `JsonData`
+  type accepts: other sequence and mapping types (such as `range` or
+  `MappingProxyType`) are converted to lists and dicts instead of raising
+  `TypeError`. Bytes-like values are rejected with a clear `TypeError`.
 
 ### Security
 

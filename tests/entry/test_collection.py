@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import json
+from html import escape
 from io import BytesIO
+from types import MappingProxyType
 from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
 
 from labapi.entry.attachment import Attachment
-from labapi.entry.collection import Entries
+from labapi.entry.collection import (  # pyright: ignore[reportPrivateUsage]
+    Entries,
+    _json_default,
+)
 from labapi.entry.entries import (
     AttachmentEntry,
     HeaderEntry,
@@ -472,6 +478,74 @@ class TestEntriesIntegration:
             "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; metrics"
             in text_call[1]["entry_data"]
         )
+
+    def test_entries_create_json_entry_converts_other_sequences_and_mappings(
+        self, client, user: User, mock_page
+    ):
+        """Test create_json_entry serializes non-builtin Sequence/Mapping values."""
+        entries = Entries([], user, mock_page)
+
+        client.api_response = client.entries_response(
+            client.entry_xml("json_attachment_eid")
+        )
+        client.api_response = client.entries_response(client.entry_xml("json_text_eid"))
+
+        data = MappingProxyType({"readings": range(3)})
+        _, text_entry = entries.create_json_entry(data, filename="data.json")
+
+        assert escape(json.dumps({"readings": [0, 1, 2]}, indent=4)) in (
+            text_entry.content
+        )
+        client.clear_api_calls()
+
+    def test_entries_create_json_entry_rejects_bytes_before_upload(
+        self, client, user: User, mock_page
+    ):
+        """Test create_json_entry rejects bytes values without calling the API."""
+        entries = Entries([], user, mock_page)
+
+        with pytest.raises(TypeError, match="bytes is not JSON serializable"):
+            entries.create_json_entry({"payload": b"abc"}, filename="data.json")
+
+        assert client.api_calls == ()
+        assert len(entries) == 0
+
+
+class TestJsonDefault:
+    """Tests for the json.dumps ``default`` hook used by create_json_entry."""
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            pytest.param(range(3), [0, 1, 2], id="range"),
+            pytest.param(MappingProxyType({"a": 1}), {"a": 1}, id="mappingproxy"),
+            pytest.param({"r": range(2)}, {"r": [0, 1]}, id="nested-dict-of-range"),
+        ],
+    )
+    def test_serializes_json_data_values(self, value: Any, expected: Any):
+        """Test JsonData-accepted values serialize as their list/dict equivalent."""
+        assert json.loads(json.dumps(value, default=_json_default)) == expected
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param(b"abc", id="bytes"),
+            pytest.param(bytearray(b"abc"), id="bytearray"),
+            pytest.param(memoryview(b"abc"), id="memoryview"),
+            pytest.param({"nested": b"abc"}, id="nested-bytes"),
+        ],
+    )
+    def test_rejects_bytes_like(self, value: Any):
+        """Test bytes-like values raise TypeError instead of becoming int lists."""
+        with pytest.raises(TypeError, match="not JSON serializable; decode it"):
+            json.dumps(value, default=_json_default)
+
+    def test_rejects_non_sequence_values(self):
+        """Test values that are neither Sequence nor Mapping still raise TypeError."""
+        with pytest.raises(
+            TypeError, match="Object of type set is not JSON serializable"
+        ):
+            json.dumps({1, 2}, default=_json_default)
 
 
 class TestEntriesLookupAndFilterHelpers:
