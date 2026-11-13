@@ -104,19 +104,20 @@ Or check without making changes:
 Type Checking
 ~~~~~~~~~~~~~
 
-``labapi`` uses `Pyright <https://github.com/microsoft/pyright>`_ for static
-type checking.
+``labapi`` uses `Pyright <https://github.com/microsoft/pyright>`_ and
+`ty <https://docs.astral.sh/ty/>`_ for static type checking. CI runs both.
 
 .. code-block:: bash
 
-   uv run pyright
+   uv run --all-extras pyright
+   uv run --all-extras ty check
 
 Continuous Integration
 ~~~~~~~~~~~~~~~~~~~~~~
 
 GitHub Actions runs these as separate workflows under ``.github/workflows``:
 
-- unit tests
+- unit tests (Linux, macOS, and Windows)
 - lint
 - format
 - typecheck

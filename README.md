@@ -55,6 +55,8 @@ Extras:
 
 - `dotenv` loads `API_URL`, `ACCESS_KEYID`, and `ACCESS_PWD` from a local `.env` file.
 - `builtin-auth` enables `default_authenticate()` to open the LabArchives login flow in a local browser.
+- `export` lets `Notebook.export()` read native LabArchives backup archives.
+- `truststore` lets `Client(ssl_host_bundle=True)` verify TLS certificates against the operating system's trust store.
 
 ## Configure Credentials
 

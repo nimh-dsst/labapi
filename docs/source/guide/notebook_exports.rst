@@ -30,7 +30,7 @@ the LabArchives web UI and retry with the owner's credentials.
 Export a Directory Tree
 -----------------------
 
-Export the notebook's top-level directories and pages to a local destination:
+Export the whole notebook to a local destination:
 
 .. code-block:: python
 

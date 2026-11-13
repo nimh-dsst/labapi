@@ -72,7 +72,8 @@ entry, and client modules:
 * :class:`~labapi.util.path.NotebookPath` path normalization/resolution
 * typed index markers (``Index.Id``/``Index.Name``)
 * XML extraction and conversion helpers
-* constants such as known part types
+* environment and browser-detection helpers (``getenv``,
+  ``detect_default_browser``)
 
 Cache model and invariants
 --------------------------
@@ -159,7 +160,7 @@ then mutates both local parents:
 
 * removes the node from old parent ``_children``
 * switches ``_parent``
-* appends to destination ``_children``
+* appends to destination ``_children`` if the destination is already populated
 * invalidates cached paths for the moved node and any loaded descendants
 
 Delete Operations
