@@ -9,7 +9,7 @@ from __future__ import annotations
 import ssl
 import warnings
 from base64 import b64encode
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler
@@ -25,11 +25,12 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from cryptography.hazmat.primitives.hashes import SHA512
 from cryptography.hazmat.primitives.hmac import HMAC
 from lxml.etree import Element, fromstring
-from requests import Response, Session
+from requests import RequestException, Response, Session
 from requests.adapters import HTTPAdapter
+from requests.exceptions import StreamConsumedError
 from typing_extensions import override
 
-from .exceptions import ApiError, AuthenticationError
+from .exceptions import ApiError, AuthenticationError, TransportError
 from .user import User
 from .util import NotebookInit, detect_default_browser, extract_etree, getenv, to_bool
 
@@ -117,11 +118,27 @@ class StreamingResponse:
         return getattr(self._response, name)
 
     def __iter__(self) -> Iterator[bytes]:
-        """Iterate over response bytes in 1MiB chunks."""
+        """Iterate over response bytes in 1MiB chunks.
+
+        :raises TransportError: If the connection breaks while streaming.
+        """
+        failure = None
         try:
             yield from self._response.iter_content(1024 * 1024)
+        except StreamConsumedError:
+            # A caller error (iterating twice), not a transport failure;
+            # its message carries no URL.
+            raise
+        except RequestException as exc:
+            failure = type(exc).__name__
         finally:
             self.close()
+        if failure:
+            # Raised outside ``except`` so the original error, whose message
+            # holds the signed URL, is not chained.
+            raise TransportError(
+                f"{failure} while streaming {urlsplit(self._response.url).path}"
+            )
 
     @property
     def response(self) -> Response:
@@ -625,14 +642,21 @@ class Client:
         if 200 <= response.status_code < 300:
             return
 
-        # A streamed body is read only up to the cap, never buffered whole.
-        chunks = response.iter_content(chunk_size=_STREAMED_ERROR_BODY_CHUNK_SIZE)
-        max_chunks = _STREAMED_ERROR_BODY_CAP // _STREAMED_ERROR_BODY_CHUNK_SIZE
-        body = b"".join(islice(chunks, max_chunks)) if streamed else response.content
-
+        # Never include the raw body: it may echo the signed URL.
+        prefix = (
+            f"API request failed with status code {response.status_code} "
+            f"for {urlsplit(response.url).path}"
+        )
+        body = b""
         error_code: int | None = None
         error_desc: str | None = None
         try:
+            # A streamed body is read only up to the cap, never buffered whole.
+            chunks = response.iter_content(chunk_size=_STREAMED_ERROR_BODY_CHUNK_SIZE)
+            max_chunks = _STREAMED_ERROR_BODY_CAP // _STREAMED_ERROR_BODY_CHUNK_SIZE
+            body = (
+                b"".join(islice(chunks, max_chunks)) if streamed else response.content
+            )
             tree = fromstring(body)
             code_text = tree.findtext(".//error-code")
             if code_text is not None:
@@ -643,25 +667,28 @@ class Client:
             pass
 
         if error_code is not None:
-            message = f"[{error_code}] {error_desc}"
+            message = f"{prefix}: [{error_code}] {error_desc}"
             if error_code in _AUTH_ERROR_CODES:
                 raise AuthenticationError(message, error_code)
             raise ApiError(message, error_code)
 
-        parts = urlsplit(response.url)
-        query = dict(parse_qsl(parts.query, keep_blank_values=True))
-        for key in ("akid", "sig", "expires", "password", "login_or_email"):
-            if key in query:
-                query[key] = "***"
-        clean_url = urlunsplit(parts._replace(query=urlencode(query)))
-
-        body_text = (
-            body.decode("utf-8", errors="replace") if streamed else response.text
-        )
+        content_type = response.headers.get("Content-Type") or "no Content-Type"
         raise ApiError(
-            f"API request failed with status code {response.status_code} "
-            f"for URL {clean_url}: {body_text}"
+            f"{prefix}: no LabArchives error in response "
+            f"({content_type}, {len(body)} bytes)"
         )
+
+    def _send(self, send: Callable[..., Response], url: str, **kwargs: Any) -> Response:
+        """Call ``send(url, **kwargs)``, raising :class:`TransportError` on failure.
+
+        The query string holds signed credentials, so only the path is used, and
+        the error is raised outside ``except`` so nothing is chained.
+        """
+        try:
+            return send(url, **kwargs)
+        except RequestException as exc:
+            failure = type(exc).__name__
+        raise TransportError(f"{failure} during request to {urlsplit(url).path}")
 
     def stream_api_get(
         self, api_method_uri: str | Sequence[str], **kwargs: Any
@@ -680,13 +707,11 @@ class Client:
         :raises AuthenticationError: If LabArchives rejects the request due to
                                      invalid or expired credentials.
         :raises ApiError: If LabArchives returns any other non-success response.
+        :raises TransportError: If no HTTP response was received.
         """
         self._ensure_open()
-        request = self.session.get(
-            self.construct_url(api_method_uri, query=kwargs),
-            stream=True,
-            timeout=self.timeout,
-        )
+        url = self.construct_url(api_method_uri, query=kwargs)
+        request = self._send(self.session.get, url, stream=True, timeout=self.timeout)
         try:
             Client._handle_request_status(request, streamed=True)
         except Exception:
@@ -716,13 +741,12 @@ class Client:
         :raises AuthenticationError: If LabArchives rejects the request due to
                                      invalid or expired credentials.
         :raises ApiError: If LabArchives returns any other non-success response.
+        :raises TransportError: If no HTTP response was received.
         """
         self._ensure_open()
-        request = self.session.post(
-            self.construct_url(api_method_uri, query=kwargs),
-            data=body,
-            stream=True,
-            timeout=self.timeout,
+        url = self.construct_url(api_method_uri, query=kwargs)
+        request = self._send(
+            self.session.post, url, data=body, stream=True, timeout=self.timeout
         )
         try:
             Client._handle_request_status(request, streamed=True)
@@ -749,11 +773,11 @@ class Client:
         :raises AuthenticationError: If LabArchives rejects the request due to
                                      invalid or expired credentials.
         :raises ApiError: If LabArchives returns any other non-success response.
+        :raises TransportError: If no HTTP response was received.
         """
         self._ensure_open()
-        request = self.session.get(
-            self.construct_url(api_method_uri, query=kwargs), timeout=self.timeout
-        )
+        url = self.construct_url(api_method_uri, query=kwargs)
+        request = self._send(self.session.get, url, timeout=self.timeout)
         Client._handle_request_status(request)
 
         return request
@@ -779,13 +803,11 @@ class Client:
         :raises AuthenticationError: If LabArchives rejects the request due to
                                      invalid or expired credentials.
         :raises ApiError: If LabArchives returns any other non-success response.
+        :raises TransportError: If no HTTP response was received.
         """
         self._ensure_open()
-        request = self.session.post(
-            self.construct_url(api_method_uri, query=kwargs),
-            data=body,
-            timeout=self.timeout,
-        )
+        url = self.construct_url(api_method_uri, query=kwargs)
+        request = self._send(self.session.post, url, data=body, timeout=self.timeout)
         Client._handle_request_status(request)
 
         return request
@@ -804,6 +826,7 @@ class Client:
         :raises AuthenticationError: If LabArchives rejects the request due to
                                      invalid or expired credentials.
         :raises ApiError: If LabArchives returns any other non-success response.
+        :raises TransportError: If no HTTP response was received.
 
         Invalid XML propagates ``lxml.etree.XMLSyntaxError``.
         """
@@ -830,6 +853,7 @@ class Client:
         :raises AuthenticationError: If LabArchives rejects the request due to
                                      invalid or expired credentials.
         :raises ApiError: If LabArchives returns any other non-success response.
+        :raises TransportError: If no HTTP response was received.
 
         Invalid XML propagates ``lxml.etree.XMLSyntaxError``.
         """
