@@ -45,9 +45,6 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
             copy (and triggers the rollback above) instead of being warned about
             and skipped.
         :returns: A new instance of the copied directory in the destination.
-
-        Emits :class:`RuntimeWarning` if the rollback itself fails; the original
-        error is still raised.
         """
         if self.is_parent_of(destination) or self is destination:
             raise ValueError(
@@ -62,7 +59,7 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
             for child in self.children:
                 child.copy_to(new_dir, strict=strict)
         except Exception:
-            new_dir._discard_partial_copy()
+            new_dir.delete()
             raise
 
         return new_dir

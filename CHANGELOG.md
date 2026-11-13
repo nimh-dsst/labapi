@@ -44,8 +44,7 @@ details that affect development workflows.
   and dotenv code paths are type-checked.
 - When `copy_to()` aborts partway, the page or directory it created is moved to
   *API Deleted Items* (the public API has no hard delete), so the destination
-  no longer holds a partial copy. If that rollback fails, a `RuntimeWarning` is
-  emitted and the original error is still raised.
+  no longer holds a partial copy.
 
 ### Removed
 

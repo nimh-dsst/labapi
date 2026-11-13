@@ -193,9 +193,6 @@ class NotebookPage(AbstractTreeNode):
         loaded, or, with ``strict=True``, any entry fails), the page created here is
         moved to *API Deleted Items* before the error is re-raised (the public API
         has no hard delete), so the destination no longer contains it.
-
-        Emits :class:`RuntimeWarning` if the rollback itself fails; the original
-        error is still raised.
         """
         new_page = destination.create(
             NotebookPage, self.name, if_exists=InsertBehavior.Ignore
@@ -233,7 +230,7 @@ class NotebookPage(AbstractTreeNode):
                     if isinstance(entry_content, Attachment):
                         entry_content.close()
         except Exception:
-            new_page._discard_partial_copy()
+            new_page.delete()
             raise
 
         return new_page

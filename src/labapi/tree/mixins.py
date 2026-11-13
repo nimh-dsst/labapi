@@ -326,18 +326,6 @@ class AbstractTreeNode(AbstractBaseTreeNode):
         :returns: A new instance of the copied node in the destination.
         """
 
-    def _discard_partial_copy(self) -> None:
-        """Delete this partial copy, warning instead of raising if that fails."""
-        try:
-            self.delete()
-        except Exception as exc:  # noqa: BLE001
-            warnings.warn(
-                f"Failed to roll back partially copied node {self.id!r} after a "
-                f"copy failure: {exc}. The destination may contain a partial copy.",
-                RuntimeWarning,
-                stacklevel=3,
-            )
-
     def move_to(self, destination: AbstractTreeContainer) -> Self:
         """Move this node into ``destination``.
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import partial
 from unittest.mock import Mock
 
 import pytest
@@ -46,10 +45,6 @@ class TestNotebookDirectoryUnit:
         source_dir.children = [good_child, failing_child]
 
         new_dir = Mock(spec=NotebookDirectory)
-        new_dir._discard_partial_copy = partial(
-            NotebookDirectory._discard_partial_copy, new_dir
-        )
-
         destination = Mock()
         destination.create.return_value = new_dir
 
@@ -179,31 +174,3 @@ class TestNotebookDirectoryIntegration:
         assert isinstance(trash, NotebookDirectory)
         assert [child.id for child in trash.children] == ["copy-dir-2-2", "copy-dir-2"]
         assert "copy-dir-2" not in [child.id for child in notebook_tree.children]
-
-    def test_copy_to_rollback_failure_warns_and_reraises_original(
-        self, client, notebook_tree: Notebook
-    ):
-        """A failed rollback warns without masking the error that aborted the copy."""
-        source_dir = notebook_tree[Index.Id : "dir-1"]
-        assert isinstance(source_dir, NotebookDirectory)
-
-        client.api_response = client.tree_node_response("copy-dir-1")
-        # Copying the first child page fails...
-        client.api_response = RuntimeError("insert failed")
-        # ...and so does creating API Deleted Items for the rollback.
-        client.api_response = RuntimeError("trash unavailable")
-
-        with (
-            pytest.warns(
-                RuntimeWarning, match="Failed to roll back.*trash unavailable"
-            ),
-            pytest.raises(RuntimeError, match="insert failed"),
-        ):
-            source_dir.copy_to(notebook_tree)
-
-        for _ in range(3):
-            assert client.pop_api_call()[0] == "tree_tools/insert_node"
-        assert client.api_calls == ()
-
-        # The rollback failed, so the partial copy is still in the destination.
-        assert "copy-dir-1" in [child.id for child in notebook_tree.children]

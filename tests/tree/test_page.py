@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from contextlib import nullcontext
 from datetime import UTC, datetime
-from functools import partial
 from io import BytesIO
 from unittest.mock import Mock
 
@@ -226,37 +224,17 @@ class TestNotebookPageUnit:
 
         new_page_entries.create.assert_not_called()
 
-    @pytest.mark.parametrize(
-        "delete_error",
-        [None, RuntimeError("delete failed")],
-        ids=["rollback-succeeds", "rollback-fails"],
-    )
-    def test_copy_to_rolls_back_page_when_copy_aborts(self, delete_error):
-        """Test NotebookPage.copy_to deletes the created page when the copy aborts.
-
-        A failed rollback warns, but the original error is still raised.
-        """
+    def test_copy_to_rolls_back_page_when_copy_aborts(self):
+        """Test NotebookPage.copy_to deletes the created page when the copy aborts."""
         source_page = Mock(spec=NotebookPage)
         source_page.name = "Source Page"
-        source_page.id = "source-page-id"
         source_page.entries = _ExplodingEntries()
 
         new_page = Mock(spec=NotebookPage)
-        new_page._discard_partial_copy = partial(
-            NotebookPage._discard_partial_copy, new_page
-        )
-        new_page.id = "new-page-id"
-        new_page.delete.side_effect = delete_error
-
         destination = Mock()
         destination.create.return_value = new_page
 
-        with (
-            pytest.warns(RuntimeWarning, match="Failed to roll back")
-            if delete_error
-            else nullcontext(),
-            pytest.raises(RuntimeError, match="failed to load entries"),
-        ):
+        with pytest.raises(RuntimeError, match="failed to load entries"):
             NotebookPage.copy_to(source_page, destination)
 
         new_page.delete.assert_called_once_with()
