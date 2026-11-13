@@ -41,6 +41,12 @@ request and add your user ID (``uid``).
    xml_response = user.api_get("notebooks/notebook_info", nbid="12345.6")
    print(xml_response.tag)
 
+A non-2xx response raises :class:`~labapi.exceptions.AuthenticationError` or
+:class:`~labapi.exceptions.ApiError`, and a request that gets no response
+raises :class:`~labapi.exceptions.TransportError`; see :ref:`exceptions`. The
+error message has the status code, the endpoint path, and the LabArchives
+error code and description, but not the query string or the response body.
+
 Parsing XML Responses
 ---------------------
 
@@ -91,8 +97,9 @@ Raw and Streaming Responses
 
 .. note::
    Every request times out after the ``timeout`` given to
-   :class:`~labapi.client.Client`, in seconds (default 60). Raise it for long
-   streaming downloads:
+   :class:`~labapi.client.Client`, in seconds (default 60), and then raises
+   :class:`~labapi.exceptions.TransportError`. Raise it for long streaming
+   downloads:
 
    .. code-block:: python
 

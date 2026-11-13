@@ -17,7 +17,8 @@ one.
    export LA_AUTH_BROWSER=edge
    export LA_AUTH_BROWSER=terminal
 
-Supported values are ``chrome``, ``firefox``, ``edge``, and ``terminal``;
+Supported values are ``chrome``, ``firefox``, ``edge`` (or ``msedge``), and
+``terminal``;
 ``terminal`` prints the URL instead of opening a browser.
 
 Example:
@@ -109,8 +110,9 @@ What Should I Check When Authentication Fails?
 2. If the browser does not open, set ``LA_AUTH_BROWSER=terminal`` for manual
    authentication, or install the ``builtin-auth`` extra for browser
    launching.
-3. If you see certificate errors, use the guidance above to trust your CA
-   bundle.
+3. A certificate failure raises :class:`~labapi.exceptions.TransportError`
+   with a message starting ``SSLError during request to``. Use the guidance
+   above to trust your CA bundle.
 4. If you use :meth:`~labapi.client.Client.generate_auth_url`, make sure the
    redirect URL exactly matches the callback URL your app handles.
 
