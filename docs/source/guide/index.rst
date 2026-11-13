@@ -4,9 +4,8 @@ User Guide
 ==========
 
 The guide explains the behavior behind the quick-start examples and highlights
-the known caveats. Start with the core usage pages,
-then move into the design notes if you are extending or contributing to
-``labapi``.
+the known caveats. The design notes are for people extending or contributing
+to ``labapi``.
 
 .. toctree::
    :maxdepth: 1
@@ -35,5 +34,5 @@ Related Pages
 -------------
 
 - :ref:`quick_start` for onboarding and common write operations.
-- :ref:`examples` for runnable end-to-end workflows.
+- :ref:`examples` for complete scripts.
 - :ref:`faq` for troubleshooting local authentication and certificates.

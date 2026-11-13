@@ -9,18 +9,13 @@ and add a rich-text preview to the same page.
 How JSON Entries Are Stored
 ---------------------------
 
-When you create a JSON entry with ``labapi``, the library creates two related
-entries:
-
-- A JSON attachment that stores the JSON-serialized data.
-- A rich-text preview entry that shows a formatted, human-readable version in
-  the notebook page.
+Creating a JSON entry creates two entries: an attachment holding the JSON, and
+a rich-text entry showing a formatted copy on the page.
 
 Create a JSON Entry
 -------------------
 
-Use :meth:`~labapi.entry.collection.Entries.create_json_entry` on
-``page.entries``:
+For example:
 
 .. code-block:: python
 

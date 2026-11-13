@@ -3,8 +3,8 @@
 Working with Paths
 ==================
 
-Use slash-separated path strings to navigate, reference, and create notebook tree nodes; paths
-avoid long chains of indexing when structures are deeply nested.
+A slash-separated path string names a node in the notebook tree, so you can reach or create a
+deeply nested node in one call.
 
 .. seealso::
    :ref:`index_access` for duplicate-name and first-match lookup behavior.
@@ -51,15 +51,15 @@ and accepts a slash-separated path string.
     page = notebook.traverse("Experiments/2024/Results")
 
 .. note::
-   If duplicate sibling names appear in a path segment, ``traverse()``
-   selects the first match for that segment. For deterministic selection,
-   index from the parent container with ``Index.Id`` (see :ref:`index_access`).
+   When siblings share a name, ``traverse()`` takes the first match.
+   ``container[Index.Name: "Results"]`` lists all of them, and ``Index.Id``
+   selects one (see :ref:`index_access`).
 
 Absolute vs Relative Paths
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Paths starting with ``/`` are **absolute** - they are resolved from the notebook root regardless
-of where you call ``traverse``.
+A path starting with ``/`` is absolute: it is resolved from the notebook root, whichever node
+you call ``traverse`` on.
 
 .. code-block:: python
 
@@ -82,9 +82,9 @@ Use ``..`` to navigate to the parent container.
 Escaping Path Separators
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Use a backslash to keep ``/`` as part of a path segment instead of treating it
-as a separator. This escaping is supported by all methods that accept path
-strings, including ``traverse()``, ``create()``, ``dir()``, and ``page()``.
+Put a backslash before a ``/`` that belongs to a name. Every method that takes
+a path string accepts this, including ``traverse()``, ``create()``, ``dir()``,
+and ``page()``.
 
 .. code-block:: python
 
@@ -118,11 +118,6 @@ segment string:
 
     print(NotebookPath.unescape(r"Results\/Final")) # "Results/Final"
 
-.. note::
-   To list children with the same name, call
-   ``container[Index.Name: "Results"]``; then use ``Index.Id`` to select one
-   match (see :ref:`index_access`).
-
 .. warning::
    Nodes with the literal name ``".."`` cannot be accessed via ``traverse``,
    as ``..`` is reserved for parent navigation.
@@ -130,8 +125,7 @@ segment string:
 Enumerating Descendants
 -----------------------
 
-The enumeration methods return relative path strings for descendants through the requested depth,
-which lets you list or search tree paths without traversing each path separately.
+The enumeration methods return the relative paths of descendants down to a given depth.
 
 .. code-block:: python
 
@@ -145,8 +139,8 @@ which lets you list or search tree paths without traversing each path separately
     # Only pages
     notebook.enumerate_pages(depth=2)
 
-``depth`` defaults to ``1`` (immediate children only). Increase ``depth`` to include more
-levels; each directory visited adds one API request.
+``depth`` defaults to ``1``, the immediate children. Each directory visited costs one API
+request.
 
 .. code-block:: python
 
@@ -166,9 +160,8 @@ Creating Nodes with Paths
 -------------------------
 
 The :meth:`~labapi.tree.mixins.AbstractTreeContainer.create` method accepts a path string (or
-:class:`~labapi.util.path.NotebookPath`) as the ``name`` argument. When a multi-segment path is
-provided, you must pass ``parents=True`` to allow intermediate directories to be created
-automatically.
+:class:`~labapi.util.path.NotebookPath`) as the ``name`` argument. A path with more than one
+segment requires ``parents=True``, which creates any missing intermediate directories.
 
 .. code-block:: python
 
@@ -186,15 +179,13 @@ See :ref:`creating_pages` for details on the ``if_exists`` parameter and other c
 Convenience Methods: ``dir()`` and ``page()``
 ----------------------------------------------
 
-For common "ensure this path exists" workflows, use the convenience methods
 :meth:`~labapi.tree.mixins.AbstractTreeContainer.dir` and
-:meth:`~labapi.tree.mixins.AbstractTreeContainer.page`.
+:meth:`~labapi.tree.mixins.AbstractTreeContainer.page` return the directory or
+page at a path, creating it and any missing parents first if needed.
 
-These methods are shorthand for :meth:`~labapi.tree.mixins.AbstractTreeContainer.create`
-with:
-
-* ``parents=True`` (create missing intermediate directories), and
-* ``if_exists=InsertBehavior.Retain`` (return an existing matching node instead of raising).
+They are shorthand for :meth:`~labapi.tree.mixins.AbstractTreeContainer.create`
+with ``parents=True`` and ``if_exists=InsertBehavior.Retain``, which returns an
+existing matching node where ``create`` would otherwise raise.
 
 .. code-block:: python
 
@@ -220,17 +211,13 @@ with:
 When to Use Them
 ~~~~~~~~~~~~~~~~
 
-Use ``dir()`` and ``page()`` when missing directories or pages should be
-created and existing matches should be returned.
-
 .. code-block:: python
 
     # Safe to run multiple times; existing nodes are returned.
     notebook.dir("Experiments/2024").page("Results")
     notebook.page("Experiments/2024/Raw Data")
 
-For read-only navigation, use ``traverse()``. Use ``dir()`` or ``page()``
-only when creating a missing node is acceptable.
+To navigate without creating anything, use ``traverse()``.
 
 .. code-block:: python
 

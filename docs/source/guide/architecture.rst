@@ -3,16 +3,13 @@
 Contributor Architecture Guide
 ==============================
 
-This guide documents the current internal architecture of ``labapi`` for
-contributors working on tree, entry, and client internals.
-
-The intent is to describe **current behavior and invariants**, including places
-where the design is intentionally incomplete.
+This page describes how the tree, entry, and client internals of ``labapi``
+currently behave, including where the design is intentionally incomplete.
 
 Subsystem Map
 -------------
 
-At a high level, runtime flow goes through these layers:
+A call passes through these layers:
 
 1. :class:`~labapi.client.Client`
 2. :class:`~labapi.user.User`
@@ -29,9 +26,9 @@ At a high level, runtime flow goes through these layers:
 Client and User Boundary
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-:class:`~labapi.client.Client` is responsible for connection/auth concerns and
-request signing. Its URL construction/signing helpers append the AKID, expiry,
-and HMAC-SHA512 signature to requests.
+:class:`~labapi.client.Client` handles the connection, authentication, and
+request signing. It appends the AKID, expiry, and HMAC-SHA512 signature to
+each request URL.
 
 :class:`~labapi.user.User` wraps an authenticated session and provides
 :meth:`~labapi.user.User.api_get`/:meth:`~labapi.user.User.api_post` that always
@@ -93,10 +90,6 @@ first access:
 * :meth:`~labapi.tree.mixins.AbstractTreeContainer.refresh` clears
   ``_children`` and resets ``_populated=False``.
 
-.. note::
-   While ``_populated`` is true, read APIs for that container use local
-   ``_children`` without another tree-level API call.
-
 Page Entries Cache (``_entries``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -108,10 +101,6 @@ Page Entries Cache (``_entries``)
 * :meth:`~labapi.tree.page.NotebookPage.refresh` resets ``_entries`` back to
   ``None``.
 
-.. note::
-   Repeated ``page.entries`` access returns the same
-   :class:`~labapi.entry.collection.Entries` object until refresh.
-
 Path Cache (``_has_path``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -122,24 +111,14 @@ Every tree node memoizes its :class:`~labapi.util.path.NotebookPath`:
 * rename and move operations clear the
   cached path for the current node and any loaded descendants.
 
-.. note::
-   Cached paths are stable until the node or one of its loaded ancestors is
-   renamed or moved.
-
 Path Stability and Traversal Expectations
 -----------------------------------------
 
-:class:`~labapi.util.path.NotebookPath` canonicalizes path-like input and
-supports:
+:class:`~labapi.util.path.NotebookPath` normalizes path input. A path can be
+absolute or relative, joined to another with ``/``, resolved against a parent
+path, and made relative with
+:meth:`~labapi.util.path.NotebookPath.relative_to`.
 
-* absolute and relative forms
-* composition with ``/``
-* resolution with parent anchors
-* relative conversion via
-  :meth:`~labapi.util.path.NotebookPath.relative_to`
-
-Tree traversal uses path resolution semantics from
-:class:`~labapi.util.path.NotebookPath`.
 :meth:`~labapi.tree.mixins.AbstractBaseTreeNode.traverse` resolves relative
 paths against ``self.path`` and then walks segments from ``self.root``.
 
@@ -186,16 +165,15 @@ then mutates both local parents:
 Delete Operations
 ~~~~~~~~~~~~~~~~~
 
-:meth:`~labapi.tree.mixins.AbstractTreeNode.delete` is implemented as
-move-to-trash semantics:
+:meth:`~labapi.tree.mixins.AbstractTreeNode.delete` moves the node to a trash
+folder:
 
 * ensure/create an ``API Deleted Items`` directory under notebook root
 * rename node to include deletion timestamp
 * call :meth:`~labapi.tree.mixins.AbstractTreeNode.move_to` with the trash
   folder as destination
 
-This means local state continues to reference the same Python object, but under
-its new parent and new name.
+The Python object stays the same, with its new parent and new name.
 
 When to Call Refresh
 ~~~~~~~~~~~~~~~~~~~~
@@ -205,12 +183,8 @@ Use :meth:`~labapi.tree.mixins.AbstractTreeContainer.refresh` (or
 changes made by another user, the web UI, or another API session, or when you
 need to force a re-fetch.
 
-Current behavior is intentionally shallow:
-
-* container ``refresh()`` clears child caches, but pre-existing child objects
-  held elsewhere are not automatically reconciled
-* page ``refresh()`` clears the page's entries cache, but existing entry
-  instances are not invalidated in place
+By design, ``refresh()`` only clears the container's child cache or the page's
+entries cache. Child and entry objects you already hold are not updated.
 
 Other Entry Types
 -----------------
@@ -243,8 +217,6 @@ Before changing tree/entry/client internals:
 4. If you add or change entry types, confirm
    entry registration plus
    :meth:`~labapi.entry.entries.base.Entry.from_part_type` dispatch behavior.
-5. Update this page (and related guide pages) when module boundaries or
-   invariants change.
 
 Related Pages
 -------------

@@ -3,10 +3,9 @@
 Making Arbitrary API Calls
 ==========================
 
-Use this page when you need a LabArchives endpoint that does not yet have a
-high-level wrapper in ``labapi``. The examples below assume you already have an
-authenticated ``user`` object; see :ref:`first_calls` or :ref:`auth` if you
-need to establish a session first.
+The methods on this page call LabArchives endpoints that ``labapi`` does not
+wrap. The examples assume an authenticated ``user`` object; see
+:ref:`first_calls` or :ref:`auth` to get one.
 
 Choose a Call Path
 ------------------
@@ -33,11 +32,9 @@ Choose a Call Path
 Use the User Object
 -------------------
 
-For XML endpoints that need the current user ID, call
-:meth:`~labapi.user.User.api_get` or
-:meth:`~labapi.user.User.api_post` on :class:`~labapi.user.User`. These
-methods automatically include your User ID (``uid``) and handle request
-signing.
+For XML endpoints, :meth:`~labapi.user.User.api_get` and
+:meth:`~labapi.user.User.api_post` on :class:`~labapi.user.User` sign the
+request and add your user ID (``uid``).
 
 .. code-block:: python
 
@@ -47,9 +44,8 @@ signing.
 Parsing XML Responses
 ---------------------
 
-For XML API responses, ``labapi`` uses ``lxml`` for parsing.
-You can work with the returned element directly or use
-:func:`~labapi.util.extract.extract_etree` for structured extraction.
+XML responses are returned as ``lxml`` elements. Use the element directly, or
+pull fields out of it with :func:`~labapi.util.extract.extract_etree`.
 
 Using ``extract_etree``
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -73,9 +69,9 @@ Using ``extract_etree``
    print(f"Is Student: {data['is-student']}")
 
 By default a missing element, or a value a mapper rejects, raises
-:class:`~labapi.exceptions.ExtractionError`. For responses where fields are
-genuinely optional, pass ``raise_missing=False`` to omit them from the result
-instead, and read them with :meth:`dict.get`:
+:class:`~labapi.exceptions.ExtractionError`. If a field is optional, pass
+``raise_missing=False`` to leave it out of the result, and read it with
+:meth:`dict.get`:
 
 .. code-block:: python
 
@@ -87,21 +83,16 @@ instead, and read them with :meth:`dict.get`:
 
    filename = data.get("attach-file-name")
 
-Optional extraction omits a missing element silently. A value that is present
-but that the mapper rejects is also omitted, but raises a
-:class:`RuntimeWarning` first, since a value the API did send and that will not
-parse is an anomaly rather than a routine absence.
+With ``raise_missing=False``, a value that is present but that the mapper
+rejects is also omitted, with a :class:`RuntimeWarning`.
 
 Raw and Streaming Responses
 ---------------------------
 
-When you need response metadata, raw bytes, or streaming, use the lower-level
-:class:`~labapi.client.Client` methods directly.
-
 .. note::
-   Every request a client makes is bounded by the ``timeout`` given to
-   :class:`~labapi.client.Client`, in seconds, defaulting to 60. Long
-   streaming downloads are the usual reason to raise it:
+   Every request times out after the ``timeout`` given to
+   :class:`~labapi.client.Client`, in seconds (default 60). Raise it for long
+   streaming downloads:
 
    .. code-block:: python
 
@@ -144,8 +135,8 @@ Constructing Signed URLs
 ------------------------
 
 Use :meth:`~labapi.client.Client.construct_url` when code outside ``labapi``
-needs to make the signed request, such as a browser download or a
-service-to-service handoff.
+needs to make the signed request, such as a browser download or another
+service.
 
 .. code-block:: python
 
@@ -161,6 +152,6 @@ service-to-service handoff.
 Related Pages
 -------------
 
-- :ref:`auth` for the authentication flows that produce a ``user`` object.
-- :ref:`first_calls` for the setup pattern used in the snippets above.
+- :ref:`auth`
+- :ref:`first_calls`
 - :ref:`reference` for the generated client and user API signatures.

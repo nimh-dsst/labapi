@@ -3,8 +3,7 @@
 Exception Types
 ===============
 
-``labapi`` exports its public exception classes at the package top level so
-callers can reliably catch failures by category.
+The public exception classes can be imported from ``labapi``.
 
 Public Exception Hierarchy
 --------------------------
@@ -23,11 +22,11 @@ All custom exceptions inherit from
        |-- PathError
        `-- TraversalError
 
-``ExtractionError`` (which also inherits from :class:`ValueError`) and its
-subclass ``TreeChildParseError`` also exist but are not exported at the
-package top level; import them from ``labapi.exceptions``.
+``ExtractionError``, which also inherits from :class:`ValueError`, and its
+subclass ``TreeChildParseError`` are not exported from ``labapi``; import them
+from ``labapi.exceptions``.
 
-Import and catch these from ``labapi``:
+For example:
 
 .. code-block:: python
 
@@ -64,4 +63,4 @@ Related Pages
 
 - :ref:`paths` for traversal rules and parent-navigation behavior.
 - :ref:`creating_pages` for duplicate-create behavior in practice.
-- :ref:`limitations` for limitations not represented as exception types.
+- :ref:`limitations` for known limitations.

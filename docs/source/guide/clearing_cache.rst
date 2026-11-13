@@ -3,9 +3,8 @@
 Clearing Cache
 ==============
 
-The LabArchives API client caches child-node lists and page-entry collections so repeated reads
-do not issue API calls. Call ``refresh()`` before reading changes made outside the current
-session.
+``labapi`` caches each container's children and each page's entries, so repeated reads make no
+API calls.
 
 Refreshing Tree and Entry Caches
 --------------------------------
@@ -16,8 +15,6 @@ property access fetches them again.
 
 Refreshing a Page
 ~~~~~~~~~~~~~~~~~
-
-When you refresh a page, the cached entries are cleared:
 
 .. code-block:: python
 
@@ -36,8 +33,6 @@ When you refresh a page, the cached entries are cleared:
 Refreshing a Directory or Notebook
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For directories and notebooks, ``refresh()`` clears cached children:
-
 .. code-block:: python
 
     # Get a directory
@@ -55,14 +50,11 @@ For directories and notebooks, ``refresh()`` clears cached children:
 When Local Mutations Do Not Need Refresh
 ----------------------------------------
 
-Create, rename, move, and delete operations update the in-memory tree after the API call succeeds, so ``refresh()`` is not needed to see that operation's local result.
+Create, rename, move, and delete update the in-memory tree once the API call succeeds, so you do not need ``refresh()`` afterwards.
 
-This includes:
-
-* ``create()`` appending a new page or directory to the parent container
-* ``node.name = "..."`` updating the current object's name in memory after the API call
-* ``move_to()`` updating the node's parent and both containers' child lists
-* ``delete()`` renaming and moving the current node into ``API Deleted Items``
+``create()`` appends the new page or directory to its parent, and ``node.name = "..."`` renames
+the object in memory. ``move_to()`` updates the node's parent and both containers' child lists,
+and ``delete()`` renames the node and moves it into ``API Deleted Items``.
 
 .. code-block:: python
 
@@ -107,12 +99,8 @@ Limitations
 -----------
 
 .. warning::
-    ``refresh()`` does not update existing child-object references:
-
-    **Stale object references**: Existing references to child pages, directories, or entries are
-    not replaced by ``refresh()`` and can keep stale cached data.
-
-    **Example: stale entry reference**
+    ``refresh()`` does not update child pages, directories, or entries that you already hold,
+    so they can keep stale data:
 
     .. code-block:: python
 
@@ -141,28 +129,18 @@ Limitations
 What Gets Cached
 ----------------
 
-The following data is cached and will be cleared by ``refresh()``:
-
-**For notebooks and directories:**
-
-* List of child pages and subdirectories
-* Child count
-
-**For pages:**
-
-* List of entries on the page
-* Entry content and metadata
+On a notebook or directory, ``refresh()`` clears the list of child pages and subdirectories
+and the child count. On a page, it clears the list of entries and their content and metadata.
 
 **Not cleared by refresh():**
 
-* User authentication state
 * The :class:`~labapi.user.User` ``notebooks`` collection, which is built once at
-  login and is not affected by tree or page ``refresh()``
+  login
 
 Related Pages
 -------------
 
-* :ref:`paths` for mutation and traversal workflows where stale caches are common.
-* :ref:`navigating` for descendant enumeration examples that interact with cached tree state.
-* :doc:`/examples/json_sync` for synchronization workflows that may require periodic refreshes.
+* :ref:`paths`
+* :ref:`navigating`
+* :doc:`/examples/json_sync`
 * :ref:`limitations`
