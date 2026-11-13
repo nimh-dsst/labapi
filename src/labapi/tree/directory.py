@@ -31,19 +31,12 @@ class NotebookDirectory(AbstractTreeContainer, AbstractTreeNode):
         """Copy this directory and its contents into ``destination``.
 
         This operation recursively copies all child directories and pages.
-        Per-entry failures inside copied pages are handled as described in
-        :meth:`NotebookPage.copy_to <labapi.tree.page.NotebookPage.copy_to>`.
-
-        Failure handling: if the copy aborts (a descendant fails to copy, or, with
-        ``strict=True``, any entry fails), the directory created here is moved to
-        *API Deleted Items* before the error is re-raised (the public API has no
-        hard delete), taking every descendant already copied into it along, so
-        the destination no longer contains the partial copy.
+        If the copy fails, the new directory and everything already copied into
+        it are moved to *API Deleted Items* before the error is re-raised.
 
         :param destination: The target container to copy the directory to.
-        :param strict: If ``True``, any entry that fails to copy aborts the whole
-            copy (and triggers the rollback above) instead of being warned about
-            and skipped.
+        :param strict: If ``True``, an entry that fails to copy aborts the copy
+            instead of being warned about and skipped.
         :returns: A new instance of the copied directory in the destination.
         """
         if self.is_parent_of(destination) or self is destination:

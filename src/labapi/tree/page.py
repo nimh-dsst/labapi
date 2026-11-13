@@ -171,28 +171,24 @@ class NotebookPage(AbstractTreeNode):
            - Some entry types may fail to copy and will cause errors
 
         :param destination: The target container to copy the page to.
-        :param strict: If ``True``, any entry that fails to copy aborts the whole
-            copy (and triggers the rollback below) instead of being warned about
-            and skipped.
+        :param strict: If ``True``, an entry that fails to copy aborts the copy
+            instead of being warned about and skipped.
         :returns: A new instance of the copied page in the destination.
 
         Attachment handling during copy:
 
         - attachment payloads are copied by reading and re-uploading the attachment content,
         - attachment resources opened during copy are always released,
-        - by default, any per-entry copy failure is reported via warning and that entry is skipped.
+        - any per-entry copy failure is reported via warning and that entry is skipped.
 
         .. note::
-           By default (``strict=False``), a per-entry copy failure emits a
-           :class:`RuntimeWarning` (it is *not* raised as an exception) and the
-           entry is skipped, so a partial copy does not abort. To detect skipped
-           entries, capture warnings with ``warnings.catch_warnings(record=True)``,
-           or pass ``strict=True`` to turn such failures into an aborted copy.
+           A per-entry copy failure emits a :class:`RuntimeWarning` (it is
+           *not* raised as an exception) and the entry is skipped, so a partial
+           copy does not abort. To detect skipped entries, capture warnings with
+           ``warnings.catch_warnings(record=True)``, or pass ``strict=True``.
 
-        Failure handling: if the copy aborts (e.g. the source entries cannot be
-        loaded, or, with ``strict=True``, any entry fails), the page created here is
-        moved to *API Deleted Items* before the error is re-raised (the public API
-        has no hard delete), so the destination no longer contains it.
+        If the copy fails, the new page is moved to *API Deleted Items* before
+        the error is re-raised.
         """
         new_page = destination.create(
             NotebookPage, self.name, if_exists=InsertBehavior.Ignore
@@ -214,9 +210,7 @@ class NotebookPage(AbstractTreeNode):
                             "content to copy"
                         )
                     new_page.entries.create(cast(Any, entry.__class__), entry_content)
-                # Intentionally broad: by default copy_to skips an entry it cannot copy
-                # and warns, so one failure does not abort the whole copy; strict=True
-                # re-raises instead. Narrow if a specific type becomes known.
+                # TODO(BLE001): intentional broad catch — copy_to skips an entry it cannot copy and warns; one failure must not abort the whole copy; narrow if a specific type becomes known.
                 except Exception as exc:
                     if strict:
                         raise
