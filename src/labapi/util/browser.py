@@ -48,7 +48,7 @@ def _get_env_browser() -> _ChoosableBrowser | None:
 
     warnings.warn(
         f"Unrecognized LA_AUTH_BROWSER value {browser!r}; "
-        "supported values are chrome, firefox, edge, or terminal. "
+        "supported values are chrome, firefox, edge, msedge, or terminal. "
         "Falling back to automatic browser detection.",
         stacklevel=2,
     )

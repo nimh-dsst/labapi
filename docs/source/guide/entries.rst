@@ -183,6 +183,11 @@ from the page listing and are ``None`` when the listing leaves them out:
        if entry.mime_type == "text/csv":
            print(entry.filename)
 
+.. warning::
+   ``attachment.filename`` comes from LabArchives unchecked and may contain
+   path separators. Use ``pathlib.PureWindowsPath(attachment.filename).name``
+   before saving a file under it.
+
 Widget Entries
 ~~~~~~~~~~~~~~
 

@@ -220,6 +220,11 @@ class Attachment:
     def filename(self) -> str:
         """Return the attachment filename.
 
+        .. warning::
+           The name comes from LabArchives unchecked and may contain path
+           separators. Use ``pathlib.PureWindowsPath(filename).name`` before
+           saving a file under it.
+
         :returns: The filename.
         """
         return self._filename

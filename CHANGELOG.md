@@ -30,6 +30,9 @@ details that affect development workflows.
   attachment's name and type from the page listing, without downloading it.
 - `user.notebooks.default` returns the notebook marked as the user's default,
   or `None`.
+- `NotebookPage.copy_to()` and `NotebookDirectory.copy_to()` accept
+  `strict=True`, which makes an entry that fails to copy abort the copy instead
+  of being warned about and skipped.
 
 ### Deprecated
 
@@ -51,6 +54,8 @@ details that affect development workflows.
   unchanged.
 - The type-check CI job now installs the optional extras so the built-in-auth
   and dotenv code paths are type-checked.
+- When `copy_to()` fails partway, the page or directory it created is moved to
+  *API Deleted Items* instead of being left in the destination.
 
 ### Removed
 
