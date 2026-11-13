@@ -238,12 +238,10 @@ def _walk_tree(notebook: Notebook, tmpdir: Path) -> dict:
     return walk(notebook)
 
 
-def _check_destination(destination: str | PathLike[str], overwrite: bool) -> Path:
-    """Return the filesystem path of ``destination``; never modify it.
-
-    :raises FileExistsError: If ``destination`` exists but is not a directory,
-        or is a non-empty directory and ``overwrite`` is ``False``.
-    """
+def _write_tree(
+    tree: dict, destination: str | PathLike[str], overwrite: bool = False
+) -> Path:
+    """Copy an export tree to ``destination``."""
     destination = Path(destination)
     filesystem_destination = destination
     if os.name == "nt" and not str(destination).startswith("\\\\?\\"):
@@ -254,23 +252,10 @@ def _check_destination(destination: str | PathLike[str], overwrite: bool) -> Pat
             raise FileExistsError(
                 f"Export destination is not a directory: {destination}"
             )
-        if not overwrite and any(filesystem_destination.iterdir()):
-            raise FileExistsError(f"Export destination is not empty: {destination}")
-    return filesystem_destination
-
-
-def _write_tree(
-    tree: dict, destination: str | PathLike[str], overwrite: bool = False
-) -> Path:
-    """Copy an export tree to ``destination``.
-
-    A non-empty ``destination`` is removed first when ``overwrite`` is
-    ``True``; see :func:`_check_destination` for when it raises instead.
-    """
-    destination = Path(destination)
-    filesystem_destination = _check_destination(destination, overwrite)
-    if overwrite and filesystem_destination.exists():
-        shutil.rmtree(filesystem_destination)
+        if any(filesystem_destination.iterdir()):
+            if not overwrite:
+                raise FileExistsError(f"Export destination is not empty: {destination}")
+            shutil.rmtree(filesystem_destination)
 
     filesystem_destination.mkdir(parents=True, exist_ok=True)
 

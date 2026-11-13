@@ -17,7 +17,7 @@ from typing_extensions import override
 
 from labapi.exceptions import ApiError
 
-from ._export import _backup_tree, _check_destination, _walk_tree, _write_tree
+from ._export import _backup_tree, _walk_tree, _write_tree
 from .mixins import AbstractTreeContainer, HasNameMixin
 from .search import EntrySearch
 
@@ -131,15 +131,10 @@ class Notebook(AbstractTreeContainer):
             uses the backup archive and falls back to the walk if the backup
             is unavailable or unreadable.
         :param overwrite: When ``destination`` exists and is not empty, raise
-            unless ``overwrite`` is ``True``. This is checked before anything
-            is downloaded; an existing export is only replaced once the new
-            one starts being written.
+            unless ``overwrite`` is ``True``.
         :returns: A completed :class:`NotebookExport`. Its ``path`` is the
             export directory.
-        :raises FileExistsError: If ``destination`` is not a directory, or is
-            not empty and ``overwrite`` is ``False``.
         """
-        _check_destination(destination, overwrite)
         backup_error = None
         with TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -154,12 +149,7 @@ class Notebook(AbstractTreeContainer):
                     if source == "backup":
                         raise
                 else:
-                    try:
-                        return NotebookExport(_write_tree(tree, destination, overwrite))
-                    except Exception:
-                        if source == "backup":
-                            raise
-                        overwrite = True
+                    return NotebookExport(_write_tree(tree, destination, overwrite))
 
             if source != "backup":
                 # Kept apart from whatever a failed backup left in ``tmp_path``.

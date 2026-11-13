@@ -412,61 +412,12 @@ def test_auto_fallback_when_backup_populated_its_temp_dir(
     assert export.path == tmp_path / "export"
 
 
-def test_auto_walk_replaces_a_partial_backup_write(
+def test_backup_source_reraises_an_unreadable_backup(
     monkeypatch, notebook: LA.Notebook, tmp_path
 ):
-    """The walk fallback may overwrite files the failed backup write left."""
-    staged = tmp_path / "staged"
-    staged.mkdir()
-    (staged / "backup.txt").write_text("backup", encoding="utf-8")
-    (staged / "walk.txt").write_text("walk", encoding="utf-8")
-    dest = tmp_path / "export"
-    backup_tree = {"backup.txt": staged / "backup.txt", "gone.txt": staged / "gone"}
-    walk_tree = Mock(return_value={"walk.txt": staged / "walk.txt"})
-    monkeypatch.setattr(notebook_module, "_backup_tree", Mock(return_value=backup_tree))
-    monkeypatch.setattr(notebook_module, "_walk_tree", walk_tree)
-
-    export = notebook.export(dest)
-
-    walk_tree.assert_called_once()
-    assert export.path == dest
-    assert sorted(path.name for path in dest.iterdir()) == ["walk.txt"]
-
-
-@pytest.mark.parametrize("source", ["auto", "backup"])
-def test_non_empty_destination_fails_before_export(
-    monkeypatch, notebook: LA.Notebook, tmp_path, source
-):
-    """A non-empty destination is rejected before any backup or walk runs."""
-    dest = tmp_path / "export"
-    dest.mkdir()
-    (dest / "old.txt").write_text("old", encoding="utf-8")
-    backup_tree = Mock(return_value={})
-    walk_tree = Mock(return_value={})
-    monkeypatch.setattr(notebook_module, "_backup_tree", backup_tree)
-    monkeypatch.setattr(notebook_module, "_walk_tree", walk_tree)
-
-    with pytest.raises(FileExistsError, match="not empty"):
-        notebook.export(dest, source=source)
-
-    backup_tree.assert_not_called()
-    walk_tree.assert_not_called()
-    assert (dest / "old.txt").read_text(encoding="utf-8") == "old"
-
-
-@pytest.mark.parametrize(
-    "fail_at", ["read", "write"], ids=["unreadable-backup", "failed-write"]
-)
-def test_backup_source_reraises_unexpected_errors(
-    monkeypatch, notebook: LA.Notebook, tmp_path, fail_at
-):
-    """Explicit backup exports surface non-availability errors unchanged."""
+    """Explicit backup exports surface an unreadable backup's error unchanged."""
     error = ValueError("invalid backup database")
-    if fail_at == "read":
-        monkeypatch.setattr(notebook_module, "_backup_tree", Mock(side_effect=error))
-    else:
-        monkeypatch.setattr(notebook_module, "_backup_tree", Mock(return_value={}))
-        monkeypatch.setattr(notebook_module, "_write_tree", Mock(side_effect=error))
+    monkeypatch.setattr(notebook_module, "_backup_tree", Mock(side_effect=error))
     walk_tree = Mock(return_value={})
     monkeypatch.setattr(notebook_module, "_walk_tree", walk_tree)
 
