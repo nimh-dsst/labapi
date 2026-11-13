@@ -220,6 +220,14 @@ class Attachment:
     def filename(self) -> str:
         """Return the attachment filename.
 
+        .. warning::
+           For a downloaded attachment, ``labapi`` passes on the name that
+           LabArchives reports without checking it. Whoever uploaded the file
+           chose that name, so it may contain path separators or ``..``. Do
+           not join it to a directory as it is; take its last component first
+           with ``pathlib.PureWindowsPath(attachment.filename).name``, which
+           splits on both forward and back slashes.
+
         :returns: The filename.
         """
         return self._filename
