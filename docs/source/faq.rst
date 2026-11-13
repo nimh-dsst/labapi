@@ -6,9 +6,9 @@ Frequently Asked Questions
 How Do I Choose Which Browser ``default_authenticate()`` Opens?
 ---------------------------------------------------------------
 
-When you use :meth:`~labapi.client.Client.default_authenticate`, ``labapi``
-tries to open a compatible local browser automatically. Set the
-``LA_AUTH_BROWSER`` environment variable if you want to override that choice.
+:meth:`~labapi.client.Client.default_authenticate` tries to open a supported
+local browser. Set the ``LA_AUTH_BROWSER`` environment variable to choose which
+one.
 
 .. code-block:: bash
 
@@ -18,8 +18,7 @@ tries to open a compatible local browser automatically. Set the
    export LA_AUTH_BROWSER=terminal
 
 Supported values are ``chrome``, ``firefox``, ``edge``, and ``terminal``;
-``terminal`` prints the URL for manual copy/paste instead of opening a
-browser.
+``terminal`` prints the URL instead of opening a browser.
 
 Example:
 
@@ -47,9 +46,8 @@ Corporate and institutional networks often inspect HTTPS traffic with a proxy
 that re-signs certificates using a private root CA installed only in the
 operating system's trust store. Pass ``ssl_host_bundle=True`` to verify
 certificates against that store (the Windows certificate store, the macOS
-Keychain, or the Linux system CA bundle). This is the recommended option in
-that situation, because certificates are still fully verified. It requires
-the ``truststore`` extra:
+Keychain, or the Linux system CA bundle). Certificates are still fully
+verified, so prefer this option. It requires the ``truststore`` extra:
 
 .. code-block:: bash
 
@@ -76,15 +74,14 @@ release. Until then, ``strict_cert=False`` still relaxes strict X.509
 validation of the default certificate bundle.
 
 .. warning::
-   Relaxing strict X.509 validation (``strict_cert=False``) can expose you
-   to man-in-the-middle attacks. Do not use this for normal production API
-   traffic or on networks you do not control.
+   ``strict_cert=False`` can expose you to man-in-the-middle attacks. Do not
+   use it in production or on networks you do not control.
 
 How Do I Trust a Custom CA Bundle Instead?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If your environment uses a private Certificate Authority, prefer adding that
-CA to a trusted bundle instead of relaxing strict certificate validation.
+If your network uses a private certificate authority, add that CA to a trusted
+bundle.
 
 Find the active ``certifi`` bundle with:
 
@@ -107,8 +104,6 @@ Then either append your CA certificate to that bundle or point
 
 What Should I Check When Authentication Fails?
 ----------------------------------------------
-
-When the authentication flow fails or stalls, check these common causes:
 
 1. Verify that ``ACCESS_KEYID`` and ``ACCESS_PWD`` are set correctly.
 2. If the browser does not open, set ``LA_AUTH_BROWSER=terminal`` for manual
