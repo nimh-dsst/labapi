@@ -3,9 +3,8 @@
 Example Applications
 ====================
 
-These examples show complete scripts for JSON sync, folder export, and CSV
-table conversion. Start with :ref:`installation` if you still need to set up
-the recommended local interactive profile.
+Each example is a complete script. See :ref:`installation` to install
+``labapi[dotenv,builtin-auth]``.
 
 .. toctree::
    :maxdepth: 1
@@ -48,7 +47,7 @@ All published examples assume:
 - Use page paths relative to the notebook root, together with
   ``--notebook "My Notebook"``.
 
-Use these sample commands as starting points:
+For example:
 
 .. code-block:: bash
 
@@ -60,8 +59,7 @@ Additional Local Examples
 -------------------------
 
 The repository also includes ``examples/model_logging`` and
-``examples/notebook_logging``. They are maintained in the repository but are
-not covered by these Sphinx example pages.
+``examples/notebook_logging``, which have no page in these docs.
 
 Related Pages
 -------------

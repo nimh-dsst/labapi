@@ -5,8 +5,7 @@ Notebook Backups and Exports
 
 Use :meth:`~labapi.tree.notebook.Notebook.backup` to save the native
 LabArchives response, or :meth:`~labapi.tree.notebook.Notebook.export` to
-write a readable directory tree. The examples below assume you already have a
-``notebook`` object.
+write a readable directory tree.
 
 Download a Native Backup
 ------------------------
@@ -17,22 +16,21 @@ Write LabArchives' native backup archive to a local file:
 
    notebook.backup("my_notebook.7z")
 
-To omit attachment payloads from the archive, pass
+To leave attachments out of the archive, pass
 ``include_attachments=False``:
 
 .. code-block:: python
 
    notebook.backup("metadata_only.7z", include_attachments=False)
 
-LabArchives only permits the notebook owner's authenticated account to request
-a native backup. Error code ``4547`` means the currently authenticated account
-is not the owner; check ``Notebook Settings > Users`` in the LabArchives web UI
-and retry with the owner's credentials.
+Only the notebook owner can request a native backup. Error code ``4547`` means
+you are not authenticated as the owner; check ``Notebook Settings > Users`` in
+the LabArchives web UI and retry with the owner's credentials.
 
 Export a Directory Tree
 -----------------------
 
-Export the notebook's top-level directories and pages to a local destination:
+Export the whole notebook to a local destination:
 
 .. code-block:: python
 
@@ -70,10 +68,9 @@ install the ``export`` extra:
    pip install "labapi[export]"
 
 Use ``source="backup"`` to require the native archive, or ``source="walk"``
-to bypass it and read the live tree directly. A live walk can take a long time
-for large notebooks: LabArchives requires many API requests to enumerate and
-download page content and attachment files, so duration grows with notebook
-size.
+to bypass it and read the live tree directly. A live walk is slow for large
+notebooks, because it takes many API requests to list and download pages and
+attachments.
 
 Related Pages
 -------------

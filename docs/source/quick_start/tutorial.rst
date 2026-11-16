@@ -3,7 +3,7 @@
 First Success Tutorial
 ======================
 
-These steps create one visible text entry in LabArchives.
+This tutorial creates one text entry in LabArchives.
 
 Install ``labapi``
 ------------------
@@ -36,8 +36,6 @@ Create a ``.env`` file in your project folder:
    API_URL="https://api.labarchives.com"
    ACCESS_KEYID="your_access_key"
    ACCESS_PWD="your_access_password"
-
-Replace the values with your own LabArchives API credentials.
 
 Run a Minimal Script
 --------------------
@@ -72,12 +70,8 @@ Then run it:
 Confirm the Result
 ------------------
 
-After the script finishes:
-
-- The selected notebook contains a new page named
-  ``API tutorial - <timestamp>``.
-- Opening that page shows one text entry with the message
-  ``Hello from labapi!``.
+The notebook now has a page named ``API tutorial - <timestamp>`` with one
+text entry, ``Hello from labapi!``.
 
 Related Pages
 -------------

@@ -3,18 +3,13 @@
 Creating Pages and Entries
 ==========================
 
-This page covers how to create directories and pages, then add entries to a
-page. The examples assume you already have a ``notebook`` object from
-:ref:`first_calls`.
+The examples use a ``notebook`` object from :ref:`first_calls`.
 
 Notebook Structure
 ------------------
 
-LabArchives organizes content hierarchically:
-
-- **Notebooks** contain directories and pages.
-- **Directories** contain other directories and pages.
-- **Pages** contain entries arranged from top to bottom.
+A notebook contains directories and pages, a directory contains other
+directories and pages, and a page contains entries arranged from top to bottom.
 
 Create Directories and Pages
 ----------------------------
@@ -30,9 +25,6 @@ Use :meth:`~labapi.tree.mixins.AbstractTreeContainer.create` to add new
    my_folder = notebook.create(NotebookDirectory, "Experiments")
    experiment_page = my_folder.create(NotebookPage, "Experiment 1")
    subfolder = my_folder.create(NotebookDirectory, "2024 Results")
-
-.. note::
-   Tree mutation methods update local cached objects immediately.
 
 Handle Existing Nodes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -83,15 +75,15 @@ Entry Types
      - Rich text with HTML formatting.
    * - :class:`~labapi.entry.entries.text.PlainTextEntry`
      - ``str``
-     - Unformatted plain text.
+     - Plain text.
    * - :class:`~labapi.entry.entries.attachment.AttachmentEntry`
      - ``Attachment``
-     - File uploads such as images, documents, and data files.
+     - An uploaded file.
 
 Inspect What You Created
 ------------------------
 
-Access entries through the page's ``entries`` collection:
+``page.entries`` can be iterated and indexed:
 
 .. code-block:: python
 

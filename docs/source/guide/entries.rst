@@ -31,7 +31,7 @@ Every entry carries its LabArchives identifier and part type:
 :attr:`~labapi.entry.entries.base.Entry.id` and
 :attr:`~labapi.entry.entries.base.Entry.content_type`.
 
-Entries also expose read-only lifecycle metadata:
+Entries also have three read-only fields:
 :attr:`~labapi.entry.entries.base.Entry.created_at` and
 :attr:`~labapi.entry.entries.base.Entry.updated_at` are
 :class:`~datetime.datetime` objects parsed from the API's ISO-8601 timestamps,
@@ -45,12 +45,11 @@ and :attr:`~labapi.entry.entries.base.Entry.version` is an integer.
    print(f"Version {entry.version}, last updated {entry.updated_at}")
 
 .. note::
-   Lifecycle metadata is best effort. ``labapi`` populates it for entries
-   loaded from a page and for search results alike, and a field a response
-   leaves out is ``None`` rather than an error. It is not populated for an
-   entry you have just made with
-   :meth:`~labapi.entry.collection.Entries.create`; reload the page to pick
-   it up.
+   These fields are set on entries loaded from a page and on search results.
+   A field the response leaves out is ``None``. They are not set on an entry
+   you have just made with
+   :meth:`~labapi.entry.collection.Entries.create`; reload the page to get
+   them.
 
 Attachment entries add a :attr:`~labapi.entry.entries.attachment.AttachmentEntry.caption`,
 and the :class:`~labapi.entry.attachment.Attachment` returned by their
@@ -62,10 +61,9 @@ Searching Entries
 -----------------
 
 Use :meth:`~labapi.tree.notebook.Notebook.search` to search entries in a
-notebook. It returns an :class:`~labapi.tree.search.EntrySearch`, a lazy,
-iterable sequence of result pages — no API request is made until you iterate
-it or fetch a specific page. Each page contains the same entry classes used by
-``page.entries``.
+notebook. It returns an :class:`~labapi.tree.search.EntrySearch`, an iterable
+of result pages. No API request is made until you iterate it or fetch a page.
+Each page contains the same entry classes used by ``page.entries``.
 
 .. code-block:: python
 
@@ -79,13 +77,9 @@ it or fetch a specific page. Each page contains the same entry classes used by
                    "Rattus norvegicus",
                )
 
-Iteration fetches consecutive pages until every match has been returned, and
-yields nothing when there are no matches.
-
-Each result page is an :class:`~labapi.tree.search.EntrySearchPage` that
-carries the matched entries along with result metadata. You can also fetch a
-single page on demand with :meth:`~labapi.tree.search.EntrySearch.page`
-instead of iterating:
+Each result page is an :class:`~labapi.tree.search.EntrySearchPage`, which
+holds the matched entries and the result counts. To fetch one page without
+iterating, call :meth:`~labapi.tree.search.EntrySearch.page`:
 
 .. code-block:: python
 
@@ -100,22 +94,19 @@ negative or out-of-range page numbers, and
 :meth:`~labapi.tree.notebook.Notebook.search` raises :class:`ValueError` if
 ``page_size`` is not positive.
 
-The search request itself is read-only. Returned entries use the same
-``content`` accessors and setters as entries loaded from ``page.entries``.
-
 Entry Types
 -----------
 
-LabArchives supports several entry types. In ``labapi``, each type is represented by a class inheriting from :class:`~labapi.entry.entries.base.Entry`.
+Each entry type is a subclass of :class:`~labapi.entry.entries.base.Entry`.
 
 Text-based Entries
 ~~~~~~~~~~~~~~~~~~
 
 Text-based entries store their content as strings.
 
-* **Rich Text Entry** (:class:`~labapi.entry.entries.text.TextEntry`): Used for formatted text, typically HTML. Content type: ``"text entry"``. See `MDN HTML documentation <https://developer.mozilla.org/en-US/docs/Web/HTML>`_ for HTML syntax.
-* **Plain Text Entry** (:class:`~labapi.entry.entries.text.PlainTextEntry`): Used for unformatted, raw text. Content type: ``"plain text entry"``.
-* **Header Entry** (:class:`~labapi.entry.entries.text.HeaderEntry`): Used for headings or titles within a page. Content type: ``"heading"``.
+* **Rich Text Entry** (:class:`~labapi.entry.entries.text.TextEntry`): Formatted text, typically HTML. Content type: ``"text entry"``.
+* **Plain Text Entry** (:class:`~labapi.entry.entries.text.PlainTextEntry`): Unformatted text. Content type: ``"plain text entry"``.
+* **Header Entry** (:class:`~labapi.entry.entries.text.HeaderEntry`): A heading within a page. Content type: ``"heading"``.
 
 .. code-block:: python
 
@@ -129,7 +120,7 @@ Text-based entries store their content as strings.
 Attachment Entries
 ~~~~~~~~~~~~~~~~~~
 
-Attachment entries (:class:`~labapi.entry.entries.attachment.AttachmentEntry`) represent file attachments. Their content is an :class:`~labapi.entry.attachment.Attachment` object.
+The content of an :class:`~labapi.entry.entries.attachment.AttachmentEntry` is an :class:`~labapi.entry.attachment.Attachment` object.
 
 .. code-block:: python
 
@@ -156,12 +147,11 @@ Widget entries (:class:`~labapi.entry.entries.widget.WidgetEntry`) embed interac
 .. note::
    Widget entries are currently read-only in ``labapi``.
 
-If LabArchives returns an entry type that ``labapi`` does not model,
-:attr:`~labapi.tree.page.NotebookPage.entries` wraps unrecognized part types as
-:class:`~labapi.entry.entries.unknown.UnknownEntry` and
-recognized-but-unimplemented types as
-:class:`~labapi.entry.entries.unknown.UnimplementedEntry`, each with a warning,
-instead of silently dropping them.
+:attr:`~labapi.tree.page.NotebookPage.entries` wraps part types it does not
+recognize as :class:`~labapi.entry.entries.unknown.UnknownEntry` and types it
+recognizes but does not implement as
+:class:`~labapi.entry.entries.unknown.UnimplementedEntry`, and emits a warning
+for each.
 
 Creating New Entries
 --------------------
@@ -213,7 +203,7 @@ random-access binary file object.
 Working with JSON Data
 ----------------------
 
-A common pattern is to store structured data as a JSON attachment with a formatted preview in a companion text entry. :meth:`~labapi.entry.collection.Entries.create_json_entry` creates both in one call.
+:meth:`~labapi.entry.collection.Entries.create_json_entry` stores data as a JSON attachment and adds a text entry with a formatted preview of it.
 
 .. code-block:: python
 
@@ -247,6 +237,6 @@ Related Pages
 -------------
 
 * :ref:`writing_rich_text` for practical HTML-rich text snippets.
-* :ref:`creating_pages` for page creation workflows before entry insertion.
-* :doc:`/examples/csv_table` for CSV-to-HTML entry conversion patterns.
+* :ref:`creating_pages` for creating pages.
+* :doc:`/examples/csv_table` for turning a CSV file into an HTML table entry.
 * :ref:`limitations` for current entry-type caveats.

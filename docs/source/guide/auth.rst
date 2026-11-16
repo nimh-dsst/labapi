@@ -4,20 +4,17 @@
 Authentication
 ==============
 
-Authentication is handled by LabArchives. ``labapi`` works with two input patterns:
+LabArchives handles authentication. ``labapi`` accepts credentials obtained in two ways:
 
 - callback-based authentication, where LabArchives redirects back with
   ``email`` and ``auth_code``
 - manually copied External App credentials from the LabArchives UI
 
-Use :meth:`~labapi.client.Client.login` for either pattern. Prefer
-callback-based authentication for user sign-ins, especially when SSO is
-required.
+Pass either to :meth:`~labapi.client.Client.login`. Prefer callback-based
+authentication for user sign-ins, especially when SSO is required.
 
 Choosing an Auth Pattern
 ------------------------
-
-Use the flow that matches where your code runs:
 
 .. list-table::
    :header-rows: 1
@@ -30,7 +27,7 @@ Use the flow that matches where your code runs:
      - No callback wiring or manual credential copying; handles the browser round-trip automatically.
    * - Headless hosts (containers, CI workers, cron jobs, orchestrators)
      - :meth:`~labapi.client.Client.generate_auth_url` + callback handler + :meth:`~labapi.client.Client.login`
-     - Avoids dependence on a local browser session.
+     - Needs no local browser.
    * - One-off/manual testing without callback wiring
      - :meth:`~labapi.client.Client.login` with External App credentials
      - Credentials are copied from the LabArchives UI; no browser or callback listener needed.
@@ -44,9 +41,9 @@ LabArchives login URL, starts a temporary local callback server, and logs in
 after LabArchives redirects back.
 
 .. note:: 
-    When the :ref:`optional-deps` are installed, this method can open a
-    compatible local browser automatically. Without ``builtin-auth``, it still
-    works in terminal/manual mode by printing the authentication URL.
+    With the :ref:`optional-deps` (``builtin-auth``) installed, this method
+    opens the URL in a compatible local browser. Without them, it prints the
+    URL.
 
 .. code-block:: python
 
@@ -59,22 +56,18 @@ after LabArchives redirects back.
 Server-Based Authentication
 ---------------------------
 
-For web apps and service integrations, call
-:meth:`~labapi.client.Client.generate_auth_url` with your callback URL.
-LabArchives redirects to that callback with ``email`` and ``auth_code``, and
-your server passes those values to :meth:`~labapi.client.Client.login`.
-
-The flow:
+For web apps and service integrations, use
+:meth:`~labapi.client.Client.generate_auth_url` with a callback URL:
 
 1. Your app exposes a callback URL (for example ``https://my-service.example.org/labarchives/callback``).
 2. Your app sends users to ``client.generate_auth_url(callback_url)``.
 3. LabArchives redirects back to your callback URL with ``email`` and ``auth_code`` query parameters.
 4. Your callback handler exchanges those values via :meth:`~labapi.client.Client.login`.
-5. Your service stores only what it needs for subsequent calls, following your organization's secret-management policy.
 
 .. note::
-   ``labapi`` currently does not provide a separate client-credentials style service principal flow.
-   Service integrations should use callback-based login for user context. Use External App authentication only when the job can manage a short-lived External App auth code.
+   ``labapi`` has no service-account login. Service integrations should use
+   callback-based login, and External App authentication only when the job can
+   manage a short-lived External App auth code.
 
 
 Example Flask App
@@ -139,7 +132,7 @@ If you want to keep browser handling separate from callback capture, use
 Headless and CI Workflows
 -------------------------
 
-In non-interactive environments (CI, scheduled jobs, or batch workers), avoid :meth:`~labapi.client.Client.default_authenticate` because it expects a browser and a local callback listener.
+:meth:`~labapi.client.Client.default_authenticate` needs a browser and a local callback listener, so it does not work in CI or scheduled jobs.
 
 For scheduled jobs, pass a short-lived ``auth_code`` to :meth:`~labapi.client.Client.login` directly:
 
@@ -167,16 +160,11 @@ For scheduled jobs, pass a short-lived ``auth_code`` to :meth:`~labapi.client.Cl
 
 .. note::
 
-   ``AUTH_EMAIL`` and ``AUTH_KEY`` here are application-level environment
-   variable names chosen by this example. Unlike ``API_URL``,
-   ``ACCESS_KEYID``, and ``ACCESS_PWD``, they are not auto-loaded by
-   :class:`~labapi.client.Client`.
+   ``AUTH_EMAIL`` and ``AUTH_KEY`` are names chosen for this example.
+   :class:`~labapi.client.Client` does not load them, as it does ``API_URL``,
+   ``ACCESS_KEYID``, and ``ACCESS_PWD``.
 
-Operational guidance for automation:
-
-- Treat ``auth_code`` values as secrets; keep them in your CI secret store rather than source control.
-- Prefer short-lived credentials, and define how the job obtains a new External App auth code before the current one expires.
-- Use least-privilege LabArchives users for automated jobs.
+The job needs a way to obtain a new External App auth code before the current one expires.
 
 Related Pages
 -------------

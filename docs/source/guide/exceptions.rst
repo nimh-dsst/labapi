@@ -3,8 +3,7 @@
 Exception Types
 ===============
 
-``labapi`` exports its public exception classes at the package top level so
-callers can reliably catch failures by category.
+The public exception classes can be imported from ``labapi``.
 
 Public Exception Hierarchy
 --------------------------
@@ -21,13 +20,14 @@ All custom exceptions inherit from
        |   `-- TransportError
        |-- NodeExistsError
        |-- PathError
-       `-- TraversalError
+       |-- TraversalError
+       |-- ExtractionError
+       |   `-- TreeChildParseError
+       `-- PartialEntryCreateError
 
-``ExtractionError`` (which also inherits from :class:`ValueError`) and its
-subclass ``TreeChildParseError`` also exist but are not exported at the
-package top level; import them from ``labapi.exceptions``.
+``ExtractionError`` also inherits from :class:`ValueError`.
 
-Import and catch these from ``labapi``:
+For example:
 
 .. code-block:: python
 
@@ -56,12 +56,22 @@ Common Operations and Raised Exceptions
    ``parents=False``, even if the intermediate directories exist.
 
 :meth:`~labapi.tree.mixins.AbstractBaseTreeNode.traverse`
-   Raises :class:`~labapi.exceptions.TraversalError` when an intermediate path
-   segment exists but is not a directory.
+   Raises :class:`~labapi.exceptions.TraversalError` when a path segment is not
+   found, or when an intermediate segment is not a directory.
+
+Any call that sends a request to LabArchives
+   Raises :class:`~labapi.exceptions.AuthenticationError` when LabArchives
+   rejects the credentials or session, and
+   :class:`~labapi.exceptions.ApiError` for any other non-2xx response. Both
+   carry the LabArchives code in ``error_code``.
+
+   Raises :class:`~labapi.exceptions.TransportError` when no HTTP response
+   arrives: DNS, connect, TLS, proxy, or timeout failures, or a stream broken
+   mid-read. It subclasses ``ApiError``, so ``except ApiError`` catches both.
 
 Related Pages
 -------------
 
 - :ref:`paths` for traversal rules and parent-navigation behavior.
 - :ref:`creating_pages` for duplicate-create behavior in practice.
-- :ref:`limitations` for limitations not represented as exception types.
+- :ref:`limitations` for known limitations.

@@ -3,8 +3,7 @@
 Writing Rich Text Entries
 =========================
 
-LabArchives rich-text entries use HTML for formatting. The examples below show
-common markup patterns you can pass to :class:`~labapi.entry.entries.text.TextEntry`.
+The content of a :class:`~labapi.entry.entries.text.TextEntry` is HTML.
 
 Create a Rich Text Entry
 ------------------------
@@ -25,8 +24,6 @@ Common HTML Patterns
 Paragraphs
 ~~~~~~~~~~
 
-Use ``<p>`` tags for basic paragraphs:
-
 .. code-block:: html
 
    <p>This is a paragraph.</p>
@@ -34,15 +31,6 @@ Use ``<p>`` tags for basic paragraphs:
 
 Text Formatting
 ~~~~~~~~~~~~~~~
-
-Use standard HTML tags for common inline formatting:
-
-- Bold: ``<b>bold text</b>``
-- Italic: ``<i>italic text</i>``
-- Underline: ``<u>underlined text</u>``
-- Strikethrough: ``<s>strikethrough text</s>``
-
-Example:
 
 .. code-block:: html
 
@@ -56,8 +44,6 @@ Example:
 Text Color
 ~~~~~~~~~~
 
-Use the ``style`` attribute with the ``color`` property:
-
 .. code-block:: html
 
    <p style="color:red;">This text is red.</p>
@@ -65,8 +51,6 @@ Use the ``style`` attribute with the ``color`` property:
 
 Tables
 ~~~~~~
-
-Create tables with ``<table>``, ``<tr>``, ``<th>``, and ``<td>``:
 
 .. code-block:: html
 
@@ -87,8 +71,6 @@ Create tables with ``<table>``, ``<tr>``, ``<th>``, and ``<td>``:
 
 Lists
 ~~~~~
-
-Use ``<ul>`` or ``<ol>`` with ``<li>`` items:
 
 .. code-block:: html
 
