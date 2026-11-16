@@ -20,6 +20,7 @@ details that affect development workflows.
 - `NotebookPage.copy_to()` and `NotebookDirectory.copy_to()` accept
   `strict=True`, which makes an entry that fails to copy abort the copy instead
   of being warned about and skipped.
+- A changelog page in the documentation, rendered from `CHANGELOG.md`.
 
 ### Changed
 
@@ -34,6 +35,12 @@ details that affect development workflows.
   `Content-Type` and size instead.
 - When `copy_to()` fails partway, the page or directory it created is moved to
   *API Deleted Items* instead of being left in the destination.
+- `User.get_max_upload_size()` returns at most 250 MiB, the largest file the
+  attachment upload endpoint accepts, even when the account reports a higher
+  limit.
+- `Attachment.from_file()` raises `TypeError` for a path-like object whose
+  path is `bytes`, where it used to fail an `assert`.
+- Unit tests now run on Windows and macOS as well as Linux.
 - Refreshed the locked dependencies and the development tools (`ruff` 0.17.5,
   `ty` 0.0.104, `pyright` 1.1.414, `pytest` 9.2.0). The only runtime
   requirements that changed are the ones listed under Security.
@@ -57,6 +64,40 @@ details that affect development workflows.
   type accepts: other sequence and mapping types (such as `range` or
   `MappingProxyType`) are converted to lists and dicts instead of raising
   `TypeError`. Bytes-like values are rejected with a clear `TypeError`.
+- Any 2xx HTTP status counts as success. A 201, 202 or 204 response used to
+  raise `ApiError`.
+- Query parameters with an empty value are kept when a request URL is signed,
+  instead of being dropped.
+- Browser login no longer hangs when another program connects to the local
+  callback port without sending a request, and no longer loses the
+  authentication code when the browser closes the connection early.
+- When `LA_AUTH_BROWSER` is set and listing the installed browsers fails,
+  `labapi` falls back to automatic browser detection instead of raising.
+- `Client.login()` keeps a notebook whose default-notebook flag is missing or
+  malformed. It used to leave that notebook out of `user.notebooks`.
+- `"name" in container` is `True` for an existing empty directory, and
+  `Index.Name: "name" in user.notebooks` is `False` when no notebook has that
+  name.
+- The `TraversalError` raised for a path that passes through a page names the
+  page, not the full requested path.
+- `Notebook.backup()` downloads to a temporary file and replaces the
+  destination only when the download completes, so an interrupted backup no
+  longer destroys an existing archive.
+- `Notebook.export()` shortens file and directory names to 240 UTF-8 bytes, so
+  long names in non-ASCII scripts no longer exceed the filesystem's limit, and
+  exports a backup attachment that has no stored filename as
+  `attachment_<id>` instead of failing with `TypeError`.
+- `copy.copy()` and `copy.deepcopy()` of an `Attachment` or a
+  `StreamingResponse` no longer raise `RecursionError`, and an `Attachment`
+  can be pickled.
+- The temporary file behind an attachment is closed when reading or
+  downloading it fails partway.
+- A failed streaming request reads at most 64 KiB of the error response
+  instead of the whole body.
+- Examples: `populate_notebook.py` no longer reports a false authentication
+  error on Windows consoles that cannot print `✓`; the `model_logging` and
+  `notebook_logging` loggers no longer raise `NodeExistsError` for two logs in
+  the same second; and `NotebookLogger` works without IPython installed.
 
 ### Security
 
