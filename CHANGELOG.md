@@ -8,7 +8,7 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
-## Unreleased
+## [Unreleased]
 
 ### Added
 
@@ -79,7 +79,7 @@ details that affect development workflows.
   CVE-2025-7424, CVE-2025-11731), and requests' `extract_zipped_paths` fix
   (CVE-2026-25645).
 
-## 1.2.0 - 2026-08-19
+## [1.2.0] - 2026-08-19
 
 ### Added
 
@@ -158,7 +158,7 @@ details that affect development workflows.
 - The built-in authentication callback uses an unguessable loopback path and
   a plain-text response.
 
-## 1.1.1 - 2026-07-05
+## [1.1.1] - 2026-07-05
 
 ### Fixed
 
@@ -185,7 +185,7 @@ details that affect development workflows.
   locked version, dropping wheels that bundle a vulnerable OpenSSL
   (Dependabot alert 15).
 
-## 1.1.0 - 2026-06-02
+## [1.1.0] - 2026-06-02
 
 ### Added
 
@@ -227,7 +227,7 @@ details that affect development workflows.
 - Fixed relative path resolution bugs when using the `/` operator with absolute
   and relative `NotebookPath` objects.
 
-## 1.0.3 - 2026-04-15
+## [1.0.3] - 2026-04-15
 
 ### Changed
 
@@ -245,13 +245,13 @@ details that affect development workflows.
 - Fixed test compatibility issues in the `1.0` maintenance branch.
 - Reduced tree creation complexity in the `v1.0.3` stabilization pass.
 
-## 1.0.2 - 2026-04-10
+## [1.0.2] - 2026-04-10
 
 ### Changed
 
 - Cleaned up the PyPI README and related package metadata.
 
-## 1.0.1 - 2026-04-10
+## [1.0.1] - 2026-04-10
 
 ### Added
 
@@ -265,7 +265,7 @@ details that affect development workflows.
 - Refreshed contributor and Sphinx configuration docs.
 - Updated `cryptography`, `pygments`, and `requests`.
 
-## 1.0.0 - 2026-04-01
+## [1.0.0] - 2026-04-01
 
 ### Added
 
@@ -274,3 +274,12 @@ details that affect development workflows.
   page and entry operations from Python.
 - Project documentation and example workflows for common notebook automation
   tasks.
+
+[Unreleased]: https://github.com/nimh-dsst/labapi/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/nimh-dsst/labapi/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/nimh-dsst/labapi/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/nimh-dsst/labapi/compare/v1.0.3...v1.1.0
+[1.0.3]: https://github.com/nimh-dsst/labapi/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/nimh-dsst/labapi/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/nimh-dsst/labapi/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/nimh-dsst/labapi/releases/tag/v1.0.0
