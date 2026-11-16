@@ -103,6 +103,42 @@ class Notebooks(Mapping[IdOrNameIndex, Notebook | Sequence[Notebook]]):
             return True
         return len(result) > 0
 
+    def get_by_id(self, notebook_id: str) -> Notebook:
+        """Return the notebook with the given ID.
+
+        This is a readable equivalent of ``notebooks[Index.Id:notebook_id]``.
+
+        :param notebook_id: The ID of the notebook to retrieve.
+        :returns: The single :class:`~labapi.tree.notebook.Notebook` with the
+                  matching ID.
+        :raises KeyError: If no notebook has the given ID.
+        """
+        return self[Index.Id : notebook_id]
+
+    def get_by_name(self, name: str) -> list[Notebook]:
+        """Return all notebooks with the given name.
+
+        This is a readable equivalent of ``notebooks[Index.Name:name]``. Names
+        are not unique, so several notebooks can match.
+
+        :param name: The name of the notebooks to retrieve.
+        :returns: A list of :class:`~labapi.tree.notebook.Notebook` objects with
+                  the matching name; empty if none match.
+        """
+        return self[Index.Name : name]
+
+    @property
+    def default(self) -> Notebook | None:
+        """Return the user's default notebook, if one is marked.
+
+        LabArchives marks at most one notebook as the user's default via its
+        ``is-default`` flag.
+
+        :returns: The default :class:`~labapi.tree.notebook.Notebook` (the first
+                  one, if several are marked), or ``None`` if none is marked.
+        """
+        return next((nb for nb in self._notebooks if nb.is_default), None)
+
     @override
     def __iter__(self) -> Iterator[str]:
         """Iterate over notebook names in collection order."""

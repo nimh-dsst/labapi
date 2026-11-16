@@ -31,6 +31,14 @@ class TestAttachmentEntryUnit:
 
         assert entry.caption == "My attachment caption"
 
+    def test_attachment_entry_filename_and_mime_default_none(self):
+        """Filename and mime_type are None before any listing metadata is set."""
+        mock_user = Mock(spec=User)
+        entry = AttachmentEntry("eid_att", "Caption", mock_user)
+
+        assert entry.filename is None
+        assert entry.mime_type is None
+
 
 class TestAttachmentEntryIntegration:
     """Integration tests with real objects and mocked API."""
