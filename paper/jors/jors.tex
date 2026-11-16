@@ -1,0 +1,438 @@
+%% labapi software metapaper for the Journal of Open Research Software.
+%% Built on the official JORS LaTeX template (version 0.2, class jors.cls).
+%%
+%% Build from this directory (CI: .github/workflows/draft-pdf.yml, job jors):
+%%   rsvg-convert -f pdf -o ../figures/object-model.pdf ../figures/object-model.svg
+%%   pdflatex jors && bibtex jors && pdflatex jors && pdflatex jors
+%%
+%% Open items are marked with \fillin{...}, which prints in red brackets.
+
+\documentclass{jors}
+
+% JORS uses numbered (Vancouver) citations; unsrtnat numbers references in
+% order of first citation.
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{graphicx}
+% Let long URLs break anywhere, and show links without coloured boxes.
+\usepackage{xurl}
+\hypersetup{hidelinks}
+
+% jors.cls sets \parindent to 0pt; separate paragraphs with space instead.
+\setlength{\parskip}{0.6em}
+% Allow extra interword stretch so unbreakable code names do not overflow.
+\setlength{\emergencystretch}{2em}
+
+% Visible placeholder for items awaiting author input. Remove every use
+% before submission.
+\newcommand{\fillin}[1]{\textcolor{red}{\textbf{[#1]}}}
+
+\pagestyle{fancy}
+\renewcommand\headrule{}
+\lhead{}
+\rhead{\textcolor{gray}{labapi: JORS software metapaper}}
+
+\begin{document}
+
+\rule{\textwidth}{1pt}
+
+\section*{(1) Overview}
+
+\vspace{0.5cm}
+
+\section*{Title}
+
+labapi: a Python object model for the LabArchives electronic lab notebook
+
+\section*{Paper Authors}
+
+1. Li, Christoph; \\
+2. Lawrimore, Josh; \\
+3. Moraczewski, Dustin; \\
+4. Thomas, Adam G.
+
+\section*{Paper Author Roles and Affiliations}
+
+1. Software; Writing -- original draft. Data Science and Sharing Team,
+National Institute of Mental Health, National Institutes of Health,
+Bethesda, MD, USA. ORCID 0009-0009-4624-2578. Corresponding author:
+christoph.li@nih.gov \\
+2. Conceptualization; Software; Writing -- review \& editing. Clinical
+Monitoring Research Program Directorate, Frederick National Laboratory for
+Cancer Research, Frederick, MD, USA. ORCID 0000-0003-2301-9073 \\
+3. Supervision; Writing -- review \& editing. Data Science and Sharing Team,
+National Institute of Mental Health, National Institutes of Health,
+Bethesda, MD, USA. ORCID 0000-0002-0422-3135 \\
+4. Supervision; Writing -- review \& editing. Data Science and Sharing Team,
+National Institute of Mental Health, National Institutes of Health,
+Bethesda, MD, USA. ORCID 0000-0002-2850-1419
+
+\section*{Abstract}
+
+labapi is a Python library that lets analysis pipelines read from and write
+to LabArchives electronic lab notebooks, reducing the need to upload
+pipeline outputs by hand. Pages are addressed using paths that match the
+notebook's folder structure, such as \texttt{QC/sub-01}. labapi resolves
+these paths through the API and can create missing folders and pages. The
+library is released under the MIT licence, archived on Zenodo and
+installable from PyPI. It requires API credentials, which LabArchives
+issues to the user's institution on request.
+
+\section*{Keywords}
+
+electronic lab notebook; LabArchives; research data management;
+laboratory record-keeping; reproducibility; Python
+
+\section*{Introduction}
+
+LabArchives is a commercial electronic lab notebook (ELN) and one of the
+notebooks approved for new research in the Intramural Research Program of
+the US National Institutes of Health (NIH)
+\citep{labarchives,nih_eln_policy}. It is also used by academic and other
+research organisations outside NIH \citep{labarchives}. A LabArchives
+notebook is a tree of folders and pages, and each page holds a list of
+entries: blocks of rich text, headings or file attachments. An output added
+to a page sits beside the notes and revision history that document the
+experiment, but getting it there from a pipeline means opening the web
+interface after each run and uploading by hand. The LabArchives web API can
+automate uploads, but it identifies each folder and page by an internal
+tree ID rather than by its name, and returns the notebook's contents one
+folder level at a time \citep{labarchives_api}.
+Writing to \texttt{QC/sub-01} therefore requires locating the \texttt{QC}
+folder, locating the page within it, and signing and sending the request
+that adds the entry.
+
+Other electronic lab notebooks, including Benchling, RSpace and eLabFTW,
+provide official Python clients for their APIs
+\citep{benchling_sdk,rspace_client,elabapi_python}. We found no official
+Python client for LabArchives, and none of the public clients in
+Table~\ref{tab:comparison} combines path navigation, entry handling and
+attachment transfer. We considered building on labarchives-py
+\citep{mcmero}, but it only signs GET requests and returns the raw
+responses, so we wrote a separate client. The ReDBox research data portal
+and a Model Context Protocol server also have LabArchives integrations,
+but neither offers a general Python interface to notebooks
+\citep{redbox_labarchives,labarchives_mcp}.
+
+\begin{table}[htbp]
+	\centering
+	\caption{Public standalone LabArchives clients, checked 2 November 2026.
+    ``Generic GET'' means the client signs a request, and the caller
+    chooses the endpoint and parses the response.}
+	\label{tab:comparison}
+	\small
+	\begin{tabular}{p{3.6cm}p{1.1cm}p{1.9cm}p{2.0cm}p{2.1cm}}
+		\hline
+		\textbf{Project} & \textbf{Auth.} & \textbf{Path navigation} & \textbf{Entry helpers} & \textbf{Attachments} \\
+		\hline
+		labapi & Yes & Yes & Read/write & Upload/download \\
+		labarchives-py \citep{mcmero} & Yes & No & Generic GET & Generic GET \\
+		labarchives-js \citep{marcellofuschi} & Yes & No & Image search & URLs only \\
+		provision-labarchives \citep{provision_labarchives} & Yes & No & Read/write & Download \\
+		\hline
+	\end{tabular}
+\end{table}
+
+labapi combines all three in one Python interface. It is intended for
+computational
+researchers and the research software engineers who support laboratories
+using LabArchives.
+
+\section*{Implementation and architecture}
+
+The lowest layer is a client that signs each request with HMAC-SHA512 and
+handles login. On top of it, a user session gives access to the notebooks
+the researcher can open. Folders and pages live in the tree layer, and the
+contents of a page (rich text, headers, plain text, widgets and file
+attachments) in the entry layer. LabArchives returns XML, which
+labapi parses with lxml.
+
+Each folder and page in the tree layer corresponds to one in the web
+interface (Figure~\ref{fig:model}). labapi calls folders directories, as in
+\texttt{NotebookDirectory} and \texttt{dir()}. The first time a folder's
+contents are read, labapi fetches them with a single request to the
+LabArchives \texttt{get\_tree\_level} endpoint and caches the result. Edits
+that someone makes in the browser
+during a session are not visible to labapi until \texttt{refresh()} reloads
+the folder.
+
+Notebooks and folders have three navigation methods. \texttt{dir()} and
+\texttt{page()} return the folder or page at a path, creating it and any
+missing parent folders if needed. \texttt{traverse()} follows only paths
+that already exist, and the caller says whether the result is a folder or
+a page with \texttt{as\_dir()} or \texttt{as\_page()}. A whole notebook can
+also be
+downloaded, either as the backup LabArchives uses for restoring it
+(\texttt{Notebook.backup()}) or as a plain copy with one file per entry
+(\texttt{Notebook.export()}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{../figures/object-model}
+    \caption{The LabArchives notebook hierarchy and the corresponding labapi
+    objects.}
+    \label{fig:model}
+\end{figure}
+
+Following Alexis King's ``parse, don't validate'' principle
+\citep{king2019parse}, labapi parses each path string once into a
+\texttt{NotebookPath} object that records its segments and whether it is
+absolute or relative. A slash
+inside a name is written as \texttt{\textbackslash/}, and a malformed path
+raises \texttt{PathError} when it is built, before any request is sent.
+Joining, resolving, containment checks and traversal all work on these
+objects.
+
+Requests are signed with an access key ID and password, which LabArchives
+issues to the user's institution; they are passed to the \texttt{Client}
+or read from environment variables or a \texttt{.env} file. Each
+researcher also logs in with their own LabArchives account:
+\texttt{default\_authenticate()} opens the login page in a browser, or
+prints its address, and listens on a local port for the redirect that
+carries the one-time authentication code. The access key stays in the
+\texttt{Client}, separate from the \texttt{User} sessions it creates, so a
+shared service can keep one copy of the key and open a session for each
+researcher who logs in.
+
+\texttt{create\_json\_entry()} stores structured results as a JSON
+attachment that code can read back, plus a formatted preview for people
+reviewing the page in the web interface. The attachment and the preview
+are ordinary LabArchives entries, so they display and export like any
+other entry and can be read without labapi.
+
+labapi raises typed exceptions, such as \texttt{ApiError} and
+\texttt{AuthenticationError}, when the API returns an error. It does not retry
+failed requests or handle rate limiting.
+
+\section*{Quality control}
+
+The unit tests run against a mocked network layer, so they need no
+credentials, and they cover request signing, path parsing, tree operations
+and notebook backup; each bundled example is tested too. An integration
+suite repeats the same operations against a real LabArchives account. It
+needs a LabArchives login, so we run it by hand. Both suites run under
+\texttt{pytest}; passing \texttt{--integration} enables the integration
+suite,
+which reads credentials from environment variables (see the contributing
+guide). For every push and pull request, GitHub Actions runs the unit
+tests on Python 3.11 to 3.14 on Ubuntu and macOS, and Python 3.11 to 3.13
+on Windows. Separate jobs run Ruff, type checking and a documentation build.
+
+For a new user, the quickest way to see whether an installation works is
+the JSON synchronisation example, one of five examples in the repository.
+It uploads the two files in its
+\texttt{sample\_data} folder to a notebook page; running its download
+command should then give back files holding the same data as the originals.
+
+The example below is a two-stage quality-control workflow for five
+subjects from the public OpenNeuro dataset ds000228 \citep{ds000228},
+whose participants watched the short film Partly Cloudy. For each subject,
+the first stage creates or reuses a page in a Partly Cloudy QC folder and
+writes the subject's group (child or adult) and mean DVARS, a measure of
+how much a functional MRI scan changes between successive time points
+\citep{power2012dvars}. In the listings, \texttt{subjects} stands for the
+five subject identifiers, and \texttt{compute\_qc()} and
+\texttt{summarize()} stand for the analysis. The same workflow, with fixed
+values in place of the analysis, runs as part of the integration suite.
+
+\medskip
+{\footnotesize\noindent\begin{minipage}{\linewidth}
+\begin{verbatim}
+user = labapi.Client().default_authenticate()
+qc = user.notebooks["Lab QC"].dir("Partly Cloudy QC")
+
+for subject in subjects:
+    qc.page(f"sub-{subject}").entries.create_json_entry(compute_qc(subject))
+\end{verbatim}
+\end{minipage}}
+\medskip
+
+The second stage opens the folder with \texttt{traverse()}, loads the JSON
+attachment from each subject page, produces a cohort summary and a figure,
+and writes both to a dashboard page:
+
+\medskip
+{\footnotesize\noindent\begin{minipage}{\linewidth}
+\begin{verbatim}
+notebook = user.notebooks["Lab QC"]
+qc = notebook.traverse("Partly Cloudy QC").as_dir()
+records = [
+    json.load(entry.content)
+    for page in qc.children
+    for entry in page.as_page().entries
+    if isinstance(entry, labapi.AttachmentEntry)
+]
+
+summary, figure_path = summarize(records)
+dashboard = notebook.page("Dashboards/Cohort QC")
+dashboard.entries.create_json_entry(summary)
+
+attachment = labapi.Attachment.from_file(figure_path)
+dashboard.entries.create(labapi.AttachmentEntry, attachment)
+\end{verbatim}
+\end{minipage}}
+\medskip
+
+The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{../figures/cohort-dashboard-example.png}
+    \caption{The LabArchives page produced by the second stage.
+    (A) Notebook interface and dashboard page title.
+    (B) Stored JSON attachment and its formatted preview.
+    (C) Uploaded cohort DVARS figure.}
+    \label{fig:dashboard}
+\end{figure}
+
+\section*{(2) Availability}
+\vspace{0.5cm}
+
+\section*{Operating system}
+
+Platform-independent (pure Python). The unit tests run on Ubuntu and macOS
+with Python 3.11 to 3.14, and on Windows with Python 3.11 to 3.13. The
+authors also use the library on Windows 11.
+
+\section*{Programming language}
+
+Python 3.11 or later; tested on Python 3.11 to 3.14.
+
+\section*{Additional system requirements}
+
+Network access to a LabArchives API endpoint, and an API access key ID and
+password issued by LabArchives through the user's institution. The optional
+browser-based login requires a local installation of Chrome, Firefox or
+Edge. On Windows it is limited to Python 3.11 to 3.13, because one of its
+dependencies has no Python 3.14 build yet.
+
+\section*{Dependencies}
+
+cryptography ($\geq$~50), lxml ($\geq$~6.1.1), requests ($\geq$~2.33) and
+typing-extensions ($\geq$~4.12.2). Optional extras: \texttt{builtin-auth}
+adds selenium ($\geq$~4.39) and installed-browsers ($\geq$~0.1.5) for
+browser-based login, \texttt{dotenv} adds python-dotenv ($\geq$~1.2.1) for
+loading credentials from a \texttt{.env} file, \texttt{export} adds
+py7zr ($\geq$~1.1.3) for unpacking notebook backups, and
+\texttt{truststore} adds truststore ($\geq$~0.10.5) for using the operating
+system's certificate store.
+
+\section*{List of contributors}
+
+All contributors to the software are authors of this paper; their roles and
+affiliations are given above.
+
+\section*{Software location:}
+
+{\bf Archive}
+
+% Values below are for 1.2.0; replace all three if a 1.2.x patch release is
+% cut for the submission.
+\begin{description}[noitemsep,topsep=0pt]
+	\item[Name:] Zenodo
+	\item[Persistent identifier:] \fillin{DOI; 1.2.0 is \url{https://doi.org/10.5281/zenodo.22021367}}
+	\item[Licence:] MIT
+	\item[Publisher:] Christoph Li
+	\item[Version published:] \fillin{1.2.0 or 1.2.x}
+	\item[Date published:] \fillin{date; 1.2.0 is 20/08/2026}
+\end{description}
+
+{\bf Code repository}
+
+\begin{description}[noitemsep,topsep=0pt]
+	\item[Name:] GitHub
+	\item[Identifier:] \url{https://github.com/nimh-dsst/labapi}
+	\item[Licence:] MIT
+	\item[Date published:] 15/12/2025
+\end{description}
+
+Documentation: \url{https://nimh-dsst.github.io/labapi/}. Package:
+\url{https://pypi.org/project/labapi/}.
+
+\section*{Language}
+
+English
+
+\section*{(3) Reuse potential}
+
+The Systems Neuroscience Imaging Resource, a core facility that provides
+imaging and image-analysis support to investigators at the National
+Institute of Mental Health (NIMH), uses labapi to schedule notebook
+backups, and the backup feature was developed in coordination with that
+core \citep{labapi_issue_264}. Two applications we
+maintain at NIMH are also built on labapi: muronto records the outputs of
+behavioural neuroscience experiments, and save-my-jupyter deposits Jupyter
+notebook snapshots \citep{muronto,save_my_jupyter}. Both are used by NIMH
+intramural laboratories outside the authors' team.
+
+Other laboratories could adapt the quality-control example to their own
+outputs; a biochemistry lab, for example, could file plate-reader exports
+on the page for each assay.
+
+The examples in the repository are meant to be copied and changed. One
+uploads CSV files as formatted tables and fetches them back; others
+download a folder, log machine-learning runs, or capture a Jupyter session.
+
+Supporting a new LabArchives entry type takes one subclass of
+\texttt{Entry} that names the type in its \texttt{part\_type} class
+argument; defining the subclass registers it.
+
+Questions and bug reports go to the GitHub issue tracker. The contributing
+guide explains how to set up a development environment and run both test
+suites, and the corresponding author can also be contacted directly.
+Releases follow semantic versioning; each one goes to PyPI and Zenodo,
+with its own documentation on GitHub Pages.
+
+% Ubiquity Press AI policy (https://ubiquitypress.com/ai-policy): use beyond
+% basic copyediting must be declared, ideally in a Methods section. JORS
+% metapapers have none, so the declaration has its own section here.
+\section*{Use of generative AI}
+
+Generative AI was used in developing the software and preparing this paper.
+The authors designed labapi's architecture and implemented its
+core. AI tools subsequently assisted with development, testing, maintenance,
+release work, documentation and manuscript preparation: they generated code,
+contributed to tests, opened pull requests and issues, and drafted and
+edited documentation and manuscript text. For the example workflow, AI
+wrote the analysis and plotting code. The DVARS values and the cohort
+figure were produced by running that code on the ds000228 data, and no AI
+tool generated or edited the data, measurements or figure content. An AI
+agent used ImageMagick to crop, arrange and label the panels of
+Figure~\ref{fig:dashboard} from unaltered screenshots. The authors
+reviewed and accepted all AI-assisted software changes through public pull
+requests, reviewed and revised all AI-assisted text, and take full
+responsibility for the software and this paper. The tools used were
+Anthropic's Claude (Opus 4.6, Opus 4.8, Opus 5, Opus 5.5, Sonnet 4.6,
+Sonnet 5, Fable 5, Fable 5.1 and Fable 5.2) and OpenAI's Codex (GPT-5.4, GPT-5.5, and
+GPT-5.6 Luna, Sol and Terra). Codex was accessed through the U.S.
+Department of Health and Human Services (HHS) Enterprise agreement.
+
+\section*{Acknowledgements}
+
+The contributions of the NIH authors were made as part of their official
+duties as NIH federal employees, are in compliance with agency policy
+requirements, and are considered Works of the United States Government. The
+findings and conclusions presented in this paper are those of the authors
+and do not necessarily reflect the views of the NIH or HHS. Mention of
+trade names, commercial products or organisations does not imply
+endorsement by the U.S. Government.
+
+\section*{Funding statement}
+
+This work was supported in part by the Intramural Research Program of the National
+Institutes of Health, under National Institute of Mental Health project
+ZICMH002960. This project has been funded in whole or in part with federal
+funds from the National Cancer Institute, National Institutes of Health,
+under Contract No.\ 75N91019D00024. The role of these funding sources was
+limited to supporting the researchers through the NIH Intramural Research
+Program and the listed NCI contract.
+
+\section*{Competing interests}
+
+The authors declare that they have no competing interests.
+
+\bibliographystyle{unsrtnat}
+{\raggedright
+\bibliography{../paper}
+}
+
+\end{document}
