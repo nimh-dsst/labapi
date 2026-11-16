@@ -12,7 +12,7 @@ details that affect development workflows.
 
 ### Added
 
-- Official support for Python 3.14; the CI matrix now tests against it.
+- Support for Python 3.14.
 - `Client(ssl_host_bundle=True)` verifies TLS certificates against the
   operating system's trust store via `truststore`, for networks behind a
   TLS-inspecting proxy whose root CA is installed only in the OS store. It
@@ -21,26 +21,8 @@ details that affect development workflows.
   `strict=True`, which makes an entry that fails to copy abort the copy instead
   of being warned about and skipped.
 
-### Deprecated
-
-- The `Client(strict_cert=...)` option. Passing it explicitly now emits a
-  `DeprecationWarning`; behavior is otherwise unchanged, and it has no effect
-  when `ssl_host_bundle=True`. Use `ssl_host_bundle=True` instead.
-
 ### Changed
 
-- Refreshed locked dependencies: `cryptography` from 50.0.0 to 50.0.1, `lxml`
-  from 6.1.0 to 6.1.3, `requests` from 2.33.0 to 2.34.2, `typing-extensions`
-  from 4.15.0 to 4.16.0, `python-dotenv` from 1.2.2 to 1.2.3, `selenium` from
-  4.39.0 to 4.48.0, and the indirect `certifi` from 2025.11.12 to 2026.7.22.
-- Refreshed the development toolchain and adopted ruff 0.16's expanded default
-  lint rules. Bumped the locked and floored versions of `ruff` (0.16.6), `ty`
-  (0.0.78), `pytest`, `pytest-cov`, `pyright`, and `pre-commit`, and updated the
-  pre-commit `ruff` hook to match. Internal timestamps are now timezone-aware
-  and intentional broad-exception fallbacks are annotated; runtime behavior is
-  unchanged.
-- The type-check CI job now installs the optional extras so the built-in-auth
-  and dotenv code paths are type-checked.
 - Network failures (DNS, connect, TLS, proxy, timeout, or a stream broken
   mid-read) now raise the new `labapi.TransportError`, a subclass of
   `ApiError`, instead of `requests` exceptions. Its message names only the
@@ -52,16 +34,22 @@ details that affect development workflows.
   `Content-Type` and size instead.
 - When `copy_to()` fails partway, the page or directory it created is moved to
   *API Deleted Items* instead of being left in the destination.
+- Refreshed the locked dependencies and the development tools (`ruff` 0.17.5,
+  `ty` 0.0.104, `pyright` 1.1.414, `pytest` 9.2.0). The only runtime
+  requirements that changed are the ones listed under Security.
+
+### Deprecated
+
+- The `Client(strict_cert=...)` option. Passing it explicitly now emits a
+  `DeprecationWarning`; behavior is otherwise unchanged, and it has no effect
+  when `ssl_host_bundle=True`. Use `ssl_host_bundle=True` instead.
 
 ### Removed
 
-- Support for Python 3.10, which reached end of life in October 2026.
-  `labapi` now requires Python 3.11 or newer. The security fixes for the
-  locked `pillow` (13.0.0) and `filelock` (4.2.9) dependencies are only
-  published for Python 3.11+.
-- Support for Python 3.11.0 through 3.11.4. `labapi` now requires Python
-  3.11.5 or newer, because the security fixes for the locked `soupsieve`
-  (4.1) are only published for 3.11.5+.
+- Support for Python 3.10, which reached end of life in October 2026, and for
+  Python 3.11.0 through 3.11.4. `labapi` now requires Python 3.11.5 or newer,
+  the oldest version the security fixes for the locked `pillow`, `filelock`
+  and `soupsieve` dependencies are published for.
 
 ### Fixed
 
