@@ -8,11 +8,11 @@ This changelog is written for package users and maintainers, so entries call
 out user-visible behavior, supported runtime changes, and release-engineering
 details that affect development workflows.
 
-## Unreleased
+## [Unreleased]
 
 ### Added
 
-- Official support for Python 3.14; the CI matrix now tests against it.
+- Support for Python 3.14.
 - `Client(ssl_host_bundle=True)` verifies TLS certificates against the
   operating system's trust store via `truststore`, for networks behind a
   TLS-inspecting proxy whose root CA is installed only in the OS store. It
@@ -20,27 +20,10 @@ details that affect development workflows.
 - `NotebookPage.copy_to()` and `NotebookDirectory.copy_to()` accept
   `strict=True`, which makes an entry that fails to copy abort the copy instead
   of being warned about and skipped.
-
-### Deprecated
-
-- The `Client(strict_cert=...)` option. Passing it explicitly now emits a
-  `DeprecationWarning`; behavior is otherwise unchanged, and it has no effect
-  when `ssl_host_bundle=True`. Use `ssl_host_bundle=True` instead.
+- A changelog page in the documentation, rendered from `CHANGELOG.md`.
 
 ### Changed
 
-- Refreshed locked dependencies: `cryptography` from 50.0.0 to 50.0.1, `lxml`
-  from 6.1.0 to 6.1.3, `requests` from 2.33.0 to 2.34.2, `typing-extensions`
-  from 4.15.0 to 4.16.0, `python-dotenv` from 1.2.2 to 1.2.3, `selenium` from
-  4.39.0 to 4.48.0, and the indirect `certifi` from 2025.11.12 to 2026.7.22.
-- Refreshed the development toolchain and adopted ruff 0.16's expanded default
-  lint rules. Bumped the locked and floored versions of `ruff` (0.16.6), `ty`
-  (0.0.78), `pytest`, `pytest-cov`, `pyright`, and `pre-commit`, and updated the
-  pre-commit `ruff` hook to match. Internal timestamps are now timezone-aware
-  and intentional broad-exception fallbacks are annotated; runtime behavior is
-  unchanged.
-- The type-check CI job now installs the optional extras so the built-in-auth
-  and dotenv code paths are type-checked.
 - Network failures (DNS, connect, TLS, proxy, timeout, or a stream broken
   mid-read) now raise the new `labapi.TransportError`, a subclass of
   `ApiError`, instead of `requests` exceptions. Its message names only the
@@ -52,16 +35,28 @@ details that affect development workflows.
   `Content-Type` and size instead.
 - When `copy_to()` fails partway, the page or directory it created is moved to
   *API Deleted Items* instead of being left in the destination.
+- `User.get_max_upload_size()` returns at most 250 MiB, the largest file the
+  attachment upload endpoint accepts, even when the account reports a higher
+  limit.
+- `Attachment.from_file()` raises `TypeError` for a path-like object whose
+  path is `bytes`, where it used to fail an `assert`.
+- Unit tests now run on Windows and macOS as well as Linux.
+- Refreshed the locked dependencies and the development tools (`ruff` 0.17.5,
+  `ty` 0.0.104, `pyright` 1.1.414, `pytest` 9.2.0). The only runtime
+  requirements that changed are the ones listed under Security.
+
+### Deprecated
+
+- The `Client(strict_cert=...)` option. Passing it explicitly now emits a
+  `DeprecationWarning`; behavior is otherwise unchanged, and it has no effect
+  when `ssl_host_bundle=True`. Use `ssl_host_bundle=True` instead.
 
 ### Removed
 
-- Support for Python 3.10, which reached end of life in October 2026.
-  `labapi` now requires Python 3.11 or newer. The security fixes for the
-  locked `pillow` (13.0.0) and `filelock` (4.2.9) dependencies are only
-  published for Python 3.11+.
-- Support for Python 3.11.0 through 3.11.4. `labapi` now requires Python
-  3.11.5 or newer, because the security fixes for the locked `soupsieve`
-  (4.1) are only published for 3.11.5+.
+- Support for Python 3.10, which reached end of life in October 2026, and for
+  Python 3.11.0 through 3.11.4. `labapi` now requires Python 3.11.5 or newer,
+  the oldest version the security fixes for the locked `pillow`, `filelock`
+  and `soupsieve` dependencies are published for.
 
 ### Fixed
 
@@ -69,6 +64,40 @@ details that affect development workflows.
   type accepts: other sequence and mapping types (such as `range` or
   `MappingProxyType`) are converted to lists and dicts instead of raising
   `TypeError`. Bytes-like values are rejected with a clear `TypeError`.
+- Any 2xx HTTP status counts as success. A 201, 202 or 204 response used to
+  raise `ApiError`.
+- Query parameters with an empty value are kept when a request URL is signed,
+  instead of being dropped.
+- Browser login no longer hangs when another program connects to the local
+  callback port without sending a request, and no longer loses the
+  authentication code when the browser closes the connection early.
+- When `LA_AUTH_BROWSER` is set and listing the installed browsers fails,
+  `labapi` falls back to automatic browser detection instead of raising.
+- `Client.login()` keeps a notebook whose default-notebook flag is missing or
+  malformed. It used to leave that notebook out of `user.notebooks`.
+- `"name" in container` is `True` for an existing empty directory, and
+  `Index.Name: "name" in user.notebooks` is `False` when no notebook has that
+  name.
+- The `TraversalError` raised for a path that passes through a page names the
+  page, not the full requested path.
+- `Notebook.backup()` downloads to a temporary file and replaces the
+  destination only when the download completes, so an interrupted backup no
+  longer destroys an existing archive.
+- `Notebook.export()` shortens file and directory names to 240 UTF-8 bytes, so
+  long names in non-ASCII scripts no longer exceed the filesystem's limit, and
+  exports a backup attachment that has no stored filename as
+  `attachment_<id>` instead of failing with `TypeError`.
+- `copy.copy()` and `copy.deepcopy()` of an `Attachment` or a
+  `StreamingResponse` no longer raise `RecursionError`, and an `Attachment`
+  can be pickled.
+- The temporary file behind an attachment is closed when reading or
+  downloading it fails partway.
+- A failed streaming request reads at most 64 KiB of the error response
+  instead of the whole body.
+- Examples: `populate_notebook.py` no longer reports a false authentication
+  error on Windows consoles that cannot print `✓`; the `model_logging` and
+  `notebook_logging` loggers no longer raise `NodeExistsError` for two logs in
+  the same second; and `NotebookLogger` works without IPython installed.
 
 ### Security
 
@@ -79,7 +108,7 @@ details that affect development workflows.
   CVE-2025-7424, CVE-2025-11731), and requests' `extract_zipped_paths` fix
   (CVE-2026-25645).
 
-## 1.2.0 - 2026-08-19
+## [1.2.0] - 2026-08-19
 
 ### Added
 
@@ -158,7 +187,7 @@ details that affect development workflows.
 - The built-in authentication callback uses an unguessable loopback path and
   a plain-text response.
 
-## 1.1.1 - 2026-07-05
+## [1.1.1] - 2026-07-05
 
 ### Fixed
 
@@ -185,7 +214,7 @@ details that affect development workflows.
   locked version, dropping wheels that bundle a vulnerable OpenSSL
   (Dependabot alert 15).
 
-## 1.1.0 - 2026-06-02
+## [1.1.0] - 2026-06-02
 
 ### Added
 
@@ -227,7 +256,7 @@ details that affect development workflows.
 - Fixed relative path resolution bugs when using the `/` operator with absolute
   and relative `NotebookPath` objects.
 
-## 1.0.3 - 2026-04-15
+## [1.0.3] - 2026-04-15
 
 ### Changed
 
@@ -245,13 +274,13 @@ details that affect development workflows.
 - Fixed test compatibility issues in the `1.0` maintenance branch.
 - Reduced tree creation complexity in the `v1.0.3` stabilization pass.
 
-## 1.0.2 - 2026-04-10
+## [1.0.2] - 2026-04-10
 
 ### Changed
 
 - Cleaned up the PyPI README and related package metadata.
 
-## 1.0.1 - 2026-04-10
+## [1.0.1] - 2026-04-10
 
 ### Added
 
@@ -265,7 +294,7 @@ details that affect development workflows.
 - Refreshed contributor and Sphinx configuration docs.
 - Updated `cryptography`, `pygments`, and `requests`.
 
-## 1.0.0 - 2026-04-01
+## [1.0.0] - 2026-04-01
 
 ### Added
 
@@ -274,3 +303,12 @@ details that affect development workflows.
   page and entry operations from Python.
 - Project documentation and example workflows for common notebook automation
   tasks.
+
+[Unreleased]: https://github.com/nimh-dsst/labapi/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/nimh-dsst/labapi/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/nimh-dsst/labapi/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/nimh-dsst/labapi/compare/v1.0.3...v1.1.0
+[1.0.3]: https://github.com/nimh-dsst/labapi/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/nimh-dsst/labapi/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/nimh-dsst/labapi/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/nimh-dsst/labapi/releases/tag/v1.0.0
