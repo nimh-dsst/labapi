@@ -10,6 +10,8 @@ details that affect development workflows.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-16
+
 ### Added
 
 - Support for Python 3.14.
@@ -304,7 +306,8 @@ details that affect development workflows.
 - Project documentation and example workflows for common notebook automation
   tasks.
 
-[Unreleased]: https://github.com/nimh-dsst/labapi/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/nimh-dsst/labapi/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/nimh-dsst/labapi/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nimh-dsst/labapi/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/nimh-dsst/labapi/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/nimh-dsst/labapi/compare/v1.0.3...v1.1.0
