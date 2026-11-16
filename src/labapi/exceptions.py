@@ -37,6 +37,14 @@ class ApiError(LabArchivesError):
         self.error_code = error_code
 
 
+class TransportError(ApiError):
+    """The request got no HTTP response.
+
+    Raised for DNS, connect, TLS, proxy, and timeout failures, and for a
+    stream broken mid-read. ``error_code`` is always ``None``.
+    """
+
+
 class NodeExistsError(LabArchivesError):
     """A tree node with the given name already exists (raised by InsertBehavior.Raise)."""
 

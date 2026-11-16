@@ -7,25 +7,16 @@ This example exports a notebook, folder, or page to local directories.
 LabArchives directories and pages become local directories, and individual
 entries are written out as separate files.
 
-When to Use It
---------------
-
-Use it to create local backup, offline review, archival, migration, or
-version-control copies of notebook content.
-
 Requirements
 ------------
 
-This example assumes the recommended local interactive profile,
-``labapi[dotenv,builtin-auth]``. See :ref:`installation`.
-
-No additional third-party packages are required.
+Install ``labapi[dotenv,builtin-auth]`` (see :ref:`installation`). No other
+packages are needed.
 
 Configuration
 -------------
 
-For the local interactive workflow, create a ``.env`` file in the repository
-root:
+Create a ``.env`` file in the repository root:
 
 .. code-block:: toml
 
@@ -62,7 +53,7 @@ How It Works
 
 ``examples/folder_download/folder_download.py`` exposes
 ``download_notebook_or_folder(user, options)``, which writes the export and
-returns a ``DownloadResult`` for callers.
+returns a ``DownloadResult``.
 
 The script mirrors the LabArchives structure:
 
@@ -95,25 +86,14 @@ Downloaded entries follow this naming pattern:
    003_caption.txt         # Caption for the attachment
    004_plaintext.txt       # Fourth entry (plain text)
 
-- Entries are numbered in the order they appear on the page.
-- Entry type is indicated in the filename.
-- Attachments preserve their original filename.
-- When an attachment has a caption, it is saved in a separate
-  ``*_caption.txt`` file.
+Entries are numbered in page order. Attachments keep their original filename,
+and a caption is saved in a separate ``*_caption.txt`` file.
 
 Output Layout
 -------------
 
-The exported tree uses these files and subdirectories:
-
-For pages:
-
-- ``_metadata.txt`` with page information such as name, ID, and entry count.
-- ``001_*``, ``002_*``, and similar files for each entry on the page.
-
-For directories:
-
-- A subdirectory for each child directory or page.
+Each page directory also contains ``_metadata.txt`` with page information such
+as name, ID, and entry count.
 
 Notes
 -----
@@ -121,13 +101,11 @@ Notes
 - Filenames are sanitized to be filesystem-safe.
 - Widget entries are exported as ``*_widget.txt`` placeholder notes; their
   content is not exported.
-- Download time grows with notebook size and attachment count.
 
 Reusable API
 ------------
 
-Reuse the exporter by constructing ``DownloadFolderOptions`` and passing it to
-``download_notebook_or_folder``:
+To call the exporter from your own script:
 
 .. code-block:: python
 
@@ -151,18 +129,6 @@ Reuse the exporter by constructing ``DownloadFolderOptions`` and passing it to
        )
 
    print(f"Downloaded {result.page_count} pages and {result.entry_count} entries")
-
-Ways to Extend It
------------------
-
-1. Add resume capability for interrupted downloads.
-2. Verify downloaded files with checksums.
-3. Create ZIP archives after export.
-4. Filter by entry type or date range.
-5. Add progress bars with ``tqdm``.
-6. Implement incremental backups for only new or changed content.
-7. Export metadata as JSON.
-8. Write detailed logs during long downloads.
 
 Source Code
 -----------

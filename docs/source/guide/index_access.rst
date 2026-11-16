@@ -3,14 +3,13 @@
 Accessing Items with Index
 ==========================
 
-Use ``Index`` when you want explicit, deterministic lookup behavior for
-notebooks, directories, and pages.
+Use ``get_by_id()`` and ``get_by_name()``, or ``Index`` slicing, to look up
+notebooks, directories, and pages by ID, or to get every item with a given
+name.
 
 .. warning::
-   Name-based lookup is ambiguous when duplicate names exist.
-   ``coll["name"]`` returns the first match and can silently select the wrong
-   item. For deterministic access in integration code, use
-   ``coll.get_by_id("...")``.
+   ``coll["name"]`` returns the first match when names are duplicated. Use
+   ``coll.get_by_id("...")`` to select one item by ID.
 
 Supported Collection Types
 --------------------------
@@ -33,14 +32,14 @@ Supported Collection Types
 Basic Access by Name
 --------------------
 
-By default, a string key looks up the first item with that name:
+A string key looks up by name:
 
 .. code-block:: python
 
    notebook = user.notebooks["My Research Notebook"]
    experiments = notebook["Experiments"]
 
-If you need duplicate-preserving results, call ``all_keys()``, ``all_items()``,
+To include duplicates, call ``all_keys()``, ``all_items()``,
 or ``all_values()`` instead of ``keys()``, ``items()``, or ``values()``.
 
 Lookup by ID or Name
@@ -129,4 +128,4 @@ Related Pages
 
 - :ref:`paths` for path traversal and duplicate-name caveats.
 - :ref:`limitations` for the broader capability summary.
-- :ref:`integration_design` for ID-first integration guidance.
+- :ref:`integration_design` for advice on storing IDs in integrations.

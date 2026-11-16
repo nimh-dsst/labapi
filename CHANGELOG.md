@@ -54,6 +54,15 @@ details that affect development workflows.
   unchanged.
 - The type-check CI job now installs the optional extras so the built-in-auth
   and dotenv code paths are type-checked.
+- Network failures (DNS, connect, TLS, proxy, timeout, or a stream broken
+  mid-read) now raise the new `labapi.TransportError`, a subclass of
+  `ApiError`, instead of `requests` exceptions. Its message names only the
+  exception type and the endpoint path, and it chains no original exception,
+  so the signed request URL no longer reaches tracebacks or logs.
+- HTTP error messages no longer include the request's query string or the
+  response body. They carry the status code, the endpoint path, and
+  LabArchives' error code and description; for a non-XML body, its
+  `Content-Type` and size instead.
 - When `copy_to()` fails partway, the page or directory it created is moved to
   *API Deleted Items* instead of being left in the destination.
 
@@ -63,6 +72,9 @@ details that affect development workflows.
   `labapi` now requires Python 3.11 or newer. The security fixes for the
   locked `pillow` (13.0.0) and `filelock` (4.2.9) dependencies are only
   published for Python 3.11+.
+- Support for Python 3.11.0 through 3.11.4. `labapi` now requires Python
+  3.11.5 or newer, because the security fixes for the locked `soupsieve`
+  (4.1) are only published for 3.11.5+.
 
 ### Fixed
 

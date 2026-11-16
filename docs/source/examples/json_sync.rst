@@ -6,25 +6,16 @@ JSON Folder Sync
 This example uploads local ``*.json`` files to a LabArchives page and downloads
 JSON attachment entries back to disk.
 
-When to Use It
---------------
-
-Use it to upload batches of JSON files, export JSON attachments for backup, or
-archive JSON API responses.
-
 Requirements
 ------------
 
-This example assumes the recommended local interactive profile,
-``labapi[dotenv,builtin-auth]``. See :ref:`installation`.
-
-No additional third-party packages are required.
+Install ``labapi[dotenv,builtin-auth]`` (see :ref:`installation`). No other
+packages are needed.
 
 Configuration
 -------------
 
-For the local interactive workflow, create a ``.env`` file in the repository
-root:
+Create a ``.env`` file in the repository root:
 
 .. code-block:: toml
 
@@ -65,8 +56,7 @@ How It Works
 Reusable API
 ------------
 
-When building your own script, import ``upload_json_files`` and call it
-directly:
+To upload from your own script:
 
 .. code-block:: python
 
@@ -91,19 +81,9 @@ Notes and Limitations
 ---------------------
 
 - Invalid JSON files are skipped with an error message.
-- The script creates the output folder if it does not exist during download.
+- Download creates the output folder if it is missing.
 - The reusable functions return a ``FileResult`` for each JSON file processed,
   including failures.
-- The CLI handles terminal output and process exit codes.
-
-Ways to Extend It
------------------
-
-1. Implement diff-based sync so only changed files are uploaded.
-2. Recurse through subdirectories instead of processing a single folder.
-3. Add filename filtering for larger datasets.
-4. Show progress bars with ``tqdm``.
-5. Add retry logic for failed uploads and downloads.
 
 Source Code
 -----------
@@ -115,5 +95,5 @@ Related Pages
 -------------
 
 - :doc:`index` for the full examples catalog.
-- :doc:`/guide/json_entries` for the JSON attachment + preview model.
+- :doc:`/guide/json_entries` for how JSON entries are stored.
 - :ref:`first_calls` for local authentication setup.

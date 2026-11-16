@@ -3,9 +3,6 @@
 Contributing
 ============
 
-This page covers the local development workflow for ``labapi``: running tests,
-enforcing code style, and following the project's type-system conventions.
-
 Setup
 -----
 
@@ -32,8 +29,7 @@ Unit Tests
 ~~~~~~~~~~
 
 Unit tests use a ``MockClient`` with synthetic XML responses constructed from
-the LabArchives API documentation. They contain no recorded production
-responses or user data and run entirely offline.
+the LabArchives API documentation, and run offline.
 
 .. code-block:: bash
 
@@ -86,7 +82,7 @@ After running ``pre-commit install --hook-type pre-commit --hook-type pre-push``
 - ``pyright-check`` runs ``uv run pyright`` on ``pre-commit``.
 - ``pytest-check`` runs ``uv run pytest --no-cov`` on ``pre-push``.
 
-Ruff also enforces the branch-complexity gate during ``ruff check``.
+``ruff check`` also enforces a branch-complexity limit.
 
 Run the checks manually with:
 
@@ -108,33 +104,30 @@ Or check without making changes:
 Type Checking
 ~~~~~~~~~~~~~
 
-``labapi`` uses `Pyright <https://github.com/microsoft/pyright>`_ for static
-type checking.
+``labapi`` uses `Pyright <https://github.com/microsoft/pyright>`_ and
+`ty <https://docs.astral.sh/ty/>`_ for static type checking. CI runs both.
 
 .. code-block:: bash
 
-   uv run pyright
+   uv run --all-extras pyright
+   uv run --all-extras ty check
 
 Continuous Integration
 ~~~~~~~~~~~~~~~~~~~~~~
 
-GitHub Actions split the main quality gates into separate workflows under
-``.github/workflows``:
+GitHub Actions runs these as separate workflows under ``.github/workflows``:
 
-- unit tests
+- unit tests (Linux, macOS, and Windows)
 - lint
 - format
 - typecheck
 - docs
 - manual integration tests
 
-Run the same commands locally before pushing to catch failures before CI.
-
 Type System
 -----------
 
-``labapi`` uses Python's type system as a first-class tool rather than optional
-documentation. All new code should be fully type-annotated.
+All new code should be fully type-annotated.
 
 Key conventions:
 
@@ -142,10 +135,8 @@ Key conventions:
   forward references.
 - Generics are used throughout the entry system so callers get concrete return
   types without extra casting.
-- ``TYPE_CHECKING`` guards prevent circular imports while keeping type
-  information available to static checkers.
-- ``override`` is applied to method overrides so missing base methods are
-  caught at check time.
+- Imports that would be circular go under a ``TYPE_CHECKING`` guard.
+- Method overrides are marked with ``override``.
 - ``overload`` is used on ``__getitem__`` to express the different return
   types produced by different index kinds.
 
@@ -158,5 +149,5 @@ Related Pages
 -------------
 
 - :ref:`architecture` for the current internal module and cache model.
-- :ref:`integration_design` for practical design guidance across the guide set.
+- :ref:`integration_design` for integration design guidance.
 - :ref:`reference` for generated API signatures.
