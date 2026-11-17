@@ -1204,31 +1204,45 @@ class TestClientUnit:
     def test_collect_auth_response_rejects_head_request(self):
         """Test auth callback collector rejects HEAD requests with 501."""
         client = Client("https://api.test.com", "test_akid", "test_password")
-        port = reserve_local_port()
         errors: list[BaseException] = []
 
-        def run_collect_auth_response() -> None:
-            try:
-                with client.collect_auth_response(port=port, timeout=1.0) as collector:
+        # Bind here, not in the worker thread, and on a port the OS picks: the
+        # listener is up before the request is sent, with no port to reserve,
+        # no probe connections, and a bind failure raised in the test itself.
+        with client.collect_auth_response(
+            port=0, callback_path="/expected/", timeout=10.0
+        ) as collector:
+            httpd = collector._httpd
+            assert httpd is not None
+            port = httpd.server_address[1]
+
+            def run_wait() -> None:
+                try:
                     collector.wait()
-            # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
-            except BaseException as exc:  # noqa: BLE001
-                errors.append(exc)
+                # TODO(BLE001): intentional broad catch — capture any error raised in the worker thread for later assertion; narrow if a specific type becomes known.
+                except BaseException as exc:  # noqa: BLE001
+                    errors.append(exc)
 
-        thread = Thread(target=run_collect_auth_response, daemon=True)
-        thread.start()
-        wait_for_local_listener(port)
+            thread = Thread(target=run_wait, daemon=True)
+            thread.start()
 
-        connection = HTTPConnection("127.0.0.1", port, timeout=2)
-        try:
-            connection.request("HEAD", "/pyproject.toml")
-            response = connection.getresponse()
-            assert response.status == 501
-            response.read()
-        finally:
-            connection.close()
+            connection = HTTPConnection("127.0.0.1", port, timeout=5)
+            try:
+                connection.request("HEAD", "/pyproject.toml")
+                response = connection.getresponse()
+                assert response.status == 501
+                response.read()
+            finally:
+                connection.close()
 
-        thread.join(timeout=2)
+            # End the wait with an error callback instead of running out its
+            # timeout, so the server cannot shut down while the HEAD is in flight.
+            status, _ = local_get(port, "/expected/?error=done")
+            assert status == 200
+            thread.join(timeout=5)
+
+        assert not thread.is_alive()
+        assert [type(error) for error in errors] == [AuthenticationError]
 
     def test_collect_auth_response_returns_text_plain_to_prevent_xss(self):
         """Test auth callback collector responds with text/plain to prevent XSS."""
