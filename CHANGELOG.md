@@ -10,7 +10,7 @@ details that affect development workflows.
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-11-16
+## [1.3.0] - 2026-11-18
 
 ### Added
 
