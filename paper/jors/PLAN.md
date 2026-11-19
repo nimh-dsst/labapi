@@ -14,10 +14,9 @@ its source so it can be re-checked before submission.
   was about scope, not quality.
 - The JOSS manuscript lives in `paper/paper.md` and still builds through
   `.github/workflows/draft-pdf.yml` (JOSS draft and bioRxiv preprint jobs).
-- Version 1.2.0 is archived on Zenodo (version DOI `10.5281/zenodo.22021367`;
-  concept DOI `10.5281/zenodo.19599400`, see #301) and published on PyPI.
-- `main` carries 39 commits of fixes since the `v1.2.0` tag, which sits on the
-  release line rather than on `main`.
+- Version 1.3.0 is archived on Zenodo (version DOI `10.5281/zenodo.24357456`,
+  19/11/2026; concept DOI `10.5281/zenodo.19599400`, see #301) and published on
+  PyPI. The paper describes 1.3.0.
 - A bioRxiv preprint of the JOSS-format paper is posted:
   [10.64898/2026.09.02.748406](https://doi.org/10.64898/2026.09.02.748406)
   (v1, 2026-09-07, CC0).
@@ -159,10 +158,9 @@ Ordered so decisions come first and nothing is written twice.
       acceptance). Decide whether to request a waiver or discount in the cover
       letter, and check whether NIH Library or NIMH holds a Ubiquity Press or
       JISC-style agreement.
-- [ ] Choose the version the paper describes: 1.2.0 as archived, or a 1.2.x
-      patch release that includes the fixes on `main` since the tag. The
-      Archive block must name one version and date; the paper text and the
-      Zenodo version DOI must agree with it.
+- [x] Choose the version the paper describes: 1.3.0, which includes the fixes
+      made on `main` after 1.2.0. The Archive block must name one version and
+      date; the paper text and the Zenodo version DOI must agree with it.
 - [x] bioRxiv preprint: posted as 10.64898/2026.09.02.748406. Mention it in
       the cover letter; JORS's preprint policy was not found on the site, so
       state the preprint rather than assume it is fine.
