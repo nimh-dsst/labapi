@@ -115,11 +115,7 @@ but neither offers a general Python interface to notebooks
 
 \begin{table}[htbp]
 	\centering
-	\caption{Public standalone LabArchives clients, checked 2 November 2026.
-    ``Generic GET'' means the client signs a request, and the caller
-    chooses the endpoint and parses the response.}
-	\label{tab:comparison}
-	\small
+	{\small
 	\begin{tabular}{p{3.6cm}p{1.1cm}p{1.9cm}p{2.0cm}p{2.1cm}}
 		\hline
 		\textbf{Project} & \textbf{Auth.} & \textbf{Path navigation} & \textbf{Entry helpers} & \textbf{Attachments} \\
@@ -129,7 +125,11 @@ but neither offers a general Python interface to notebooks
 		labarchives-js \citep{marcellofuschi} & Yes & No & Image search & URLs only \\
 		provision-labarchives \citep{provision_labarchives} & Yes & No & Read/write & Download \\
 		\hline
-	\end{tabular}
+	\end{tabular}}
+	\caption{Public standalone LabArchives clients, checked 2 November 2026.
+    ``Generic GET'' means the client signs a request, and the caller
+    chooses the endpoint and parses the response.}
+	\label{tab:comparison}
 \end{table}
 
 labapi combines all three in one Python interface. It is intended for
@@ -295,7 +295,7 @@ authors also use the library on Windows 11.
 
 \section*{Programming language}
 
-Python 3.11 or later; tested on Python 3.11 to 3.14.
+Python 3.11.5 or later; tested on Python 3.11 to 3.14.
 
 \section*{Additional system requirements}
 
