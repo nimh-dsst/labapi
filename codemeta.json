@@ -6,10 +6,10 @@
   "codeRepository": "https://github.com/nimh-dsst/labapi",
   "issueTracker": "https://github.com/nimh-dsst/labapi/issues",
   "license": "https://spdx.org/licenses/MIT",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "identifier": "https://doi.org/10.5281/zenodo.22021367",
   "dateCreated": "2025-12-15",
-  "datePublished": "2026-08-20",
+  "datePublished": "2026-11-18",
   "developmentStatus": "active",
   "programmingLanguage": "Python",
   "runtimePlatform": "Python 3.11.5 or later",
@@ -100,5 +100,5 @@
   "softwareHelp": "https://nimh-dsst.github.io/labapi/",
   "buildInstructions": "https://github.com/nimh-dsst/labapi/blob/main/CONTRIBUTING.md",
   "continuousIntegration": "https://github.com/nimh-dsst/labapi/actions",
-  "relatedLink": "https://pypi.org/project/labapi/1.2.0/"
+  "relatedLink": "https://pypi.org/project/labapi/1.3.0/"
 }
