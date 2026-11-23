@@ -205,15 +205,15 @@ failed requests or handle rate limiting.
 
 \section*{Quality control}
 
-The unit tests run against a mocked network layer, so they need no
-credentials, and they cover request signing, path parsing, tree operations
-and notebook backup; each bundled example is tested too. An integration
-suite repeats the same operations against a real LabArchives account. It
-needs a LabArchives login, so we run it by hand. Both suites run under
-\texttt{pytest}; passing \texttt{--integration} enables the integration
-suite,
-which reads credentials from environment variables (see the contributing
-guide). For every push and pull request, GitHub Actions runs the unit
+The unit tests run against a mocked network layer. No credentials are
+needed. Unit tests cover request signing, path parsing, tree operations
+and notebook backup. Each bundled example is unit tested. An integration
+suite repeats the same unit tests against a real LabArchives account. The
+integration suite is run manually as it requires a valid LabArchives
+login. Both suites run under \texttt{pytest}. Passing
+\texttt{--integration} enables the integration suite,
+which reads API credentials from environment variables (see the
+contributing guide). For every push and pull request, GitHub Actions runs the unit
 tests on Python 3.11 to 3.14 on Ubuntu and macOS, and Python 3.11 to 3.13
 on Windows. Separate jobs run Ruff, type checking and a documentation build.
 
