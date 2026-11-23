@@ -3,12 +3,13 @@
 Accessing Items with Index
 ==========================
 
-Use ``Index`` to look up notebooks, directories, and pages by ID, or to get
-every item with a given name.
+Use ``get_by_id()`` and ``get_by_name()``, or ``Index`` slicing, to look up
+notebooks, directories, and pages by ID, or to get every item with a given
+name.
 
 .. warning::
    ``coll["name"]`` returns the first match when names are duplicated. Use
-   ``coll[Index.Id: "..."]`` to select one item by ID.
+   ``coll.get_by_id("...")`` to select one item by ID.
 
 Supported Collection Types
 --------------------------
@@ -21,7 +22,8 @@ Supported Collection Types
 
 .. warning::
    Page ``Entries`` do not support ``Index`` slicing. Access entries by
-   integer index, iteration, or entry ID string.
+   integer index, iteration, or ``entries.get_by_id("...")``; see
+   :ref:`entries`.
 
 .. note::
    Iterating over ``user.notebooks`` or a tree container yields names. Use
@@ -40,43 +42,86 @@ A string key looks up by name:
 To include duplicates, call ``all_keys()``, ``all_items()``,
 or ``all_values()`` instead of ``keys()``, ``items()``, or ``values()``.
 
+Lookup by ID or Name
+--------------------
+
+``get_by_id()`` and ``get_by_name()`` are the recommended way to look items up
+explicitly. They work on ``user.notebooks`` and on tree containers.
+
+.. code-block:: python
+
+   notebook = user.notebooks.get_by_id("12345")
+   page = notebook.get_by_id("67890")
+
+   shared_notebooks = user.notebooks.get_by_name("Shared Data")
+   protocols = experiments.get_by_name("Protocol")
+
+- ``get_by_id(id)`` returns the single item with that ID and raises
+  :class:`KeyError` if there is none.
+- ``get_by_name(name)`` returns a list of every item with that name. Names are
+  not unique, so the list can hold several items, or none.
+
+Default Notebook
+~~~~~~~~~~~~~~~~
+
+``user.notebooks.default`` is the notebook LabArchives marks as the user's
+default, or ``None`` if none is marked:
+
+.. code-block:: python
+
+   notebook = user.notebooks.default
+   if notebook is None:
+       notebook = user.notebooks.get_by_name("My Research Notebook")[0]
+
+Snapshot by ID: ``children_by_id``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A tree container's ``children_by_id`` property returns a ``dict`` from child
+ID to child node. IDs are unique, so unlike name-keyed views no child is lost
+when two share a name.
+
+.. code-block:: python
+
+   by_id = notebook.children_by_id
+   for child_id, child in by_id.items():
+       print(child_id, child.name)
+
+The dict is a snapshot taken when you read the property. Changing it does not
+change the container, and it does not pick up later changes such as
+:meth:`~labapi.tree.mixins.AbstractTreeContainer.refresh` or newly created
+children. Read the property again for a current view.
+
 Explicit Indexing with ``Index``
 --------------------------------
 
-Slice with :class:`~labapi.util.types.Index` to look up by ID or by name.
-
-Access by ID
-~~~~~~~~~~~~
+:class:`~labapi.util.types.Index` slicing does the same lookups as
+``get_by_id()`` and ``get_by_name()`` and still works:
 
 .. code-block:: python
 
    from labapi import Index
 
-   notebook = user.notebooks[Index.Id:"12345"]
-   page = notebook[Index.Id:"67890"]
+   notebook = user.notebooks[Index.Id:"12345"]            # same as get_by_id
+   shared = user.notebooks[Index.Name:"Shared Data"]      # same as get_by_name
 
-Access by Name
-~~~~~~~~~~~~~~
+Summary of Lookup Methods
+-------------------------
 
-.. code-block:: python
-
-   from labapi import Index
-
-   shared_notebooks = user.notebooks[Index.Name:"Shared Data"]
-   protocols = experiments[Index.Name:"Protocol"]
-
-Summary of Indexing Methods
----------------------------
-
-+---------------------------+---------------------------+----------------------------------------+
-| Syntax                    | Method                    | Returns                                |
-+===========================+===========================+========================================+
-| ``coll["name"]``          | Implicit name lookup      | First item with matching name          |
-+---------------------------+---------------------------+----------------------------------------+
-| ``coll[Index.Id: "id"]``  | Explicit ID lookup        | The unique item with matching ID       |
-+---------------------------+---------------------------+----------------------------------------+
-| ``coll[Index.Name: "n"]`` | Explicit name list lookup | A list of all items with matching name |
-+---------------------------+---------------------------+----------------------------------------+
++------------------------------+---------------------------+----------------------------------------+
+| Syntax                       | Method                    | Returns                                |
++==============================+===========================+========================================+
+| ``coll["name"]``             | Implicit name lookup      | First item with matching name          |
++------------------------------+---------------------------+----------------------------------------+
+| ``coll.get_by_id("id")``     | ID lookup                 | The unique item with matching ID       |
+| ``coll[Index.Id: "id"]``     |                           | (``KeyError`` if none)                 |
++------------------------------+---------------------------+----------------------------------------+
+| ``coll.get_by_name("n")``    | Name list lookup          | A list of all items with matching name |
+| ``coll[Index.Name: "n"]``    |                           | (empty if none)                        |
++------------------------------+---------------------------+----------------------------------------+
+| ``container.children_by_id`` | ID snapshot               | A ``dict`` of child ID to child node   |
++------------------------------+---------------------------+----------------------------------------+
+| ``user.notebooks.default``   | Default notebook          | The default notebook, or ``None``      |
++------------------------------+---------------------------+----------------------------------------+
 
 Related Pages
 -------------
