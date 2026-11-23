@@ -68,9 +68,9 @@ Bethesda, MD, USA. ORCID 0000-0002-2850-1419
 
 \section*{Abstract}
 
-labapi is a Python library that lets analysis pipelines read from and write
-to LabArchives electronic lab notebooks, reducing the need to upload
-pipeline outputs by hand. Pages are addressed using paths that match the
+labapi is a Python library that supports reproducible research by letting
+analysis pipelines read from and write to LabArchives electronic lab
+notebooks, reducing the need to upload pipeline outputs by hand. Pages are addressed using paths that match the
 notebook's folder structure, such as \texttt{QC/sub-01}. labapi resolves
 these paths through the API and can create missing folders and pages. The
 library is released under the MIT licence, archived on Zenodo and
@@ -139,11 +139,13 @@ using LabArchives.
 
 \section*{Implementation and architecture}
 
-The lowest layer is a client that signs each request with HMAC-SHA512 and
-handles login. On top of it, a user session gives access to the notebooks
-the researcher can open. Folders and pages live in the tree layer, and the
-contents of a page (rich text, headers, plain text, widgets and file
-attachments) in the entry layer. LabArchives returns XML, which
+The lowest layer is a client that signs each request with HMAC-SHA512
+and automates the most complex parts of the LabArchives login and
+authentication protocol, allowing users to sign in through the standard
+LabArchives login page in their browser. On top of it, a user session gives access to the notebooks
+the researcher can open. Folders and pages are represented in the tree
+layer. The contents of a page (rich text, headers, plain text, widgets and
+file attachments) are in the entry layer. LabArchives returns XML, which
 labapi parses with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
@@ -205,20 +207,21 @@ failed requests or handle rate limiting.
 
 \section*{Quality control}
 
-The unit tests run against a mocked network layer, so they need no
-credentials, and they cover request signing, path parsing, tree operations
-and notebook backup; each bundled example is tested too. An integration
-suite repeats the same operations against a real LabArchives account. It
-needs a LabArchives login, so we run it by hand. Both suites run under
-\texttt{pytest}; passing \texttt{--integration} enables the integration
-suite,
-which reads credentials from environment variables (see the contributing
-guide). For every push and pull request, GitHub Actions runs the unit
+The unit tests run against a mocked network layer. No credentials are
+needed. Unit tests cover request signing, path parsing, tree operations
+and notebook backup. Each bundled example is unit tested. A separate
+integration suite runs end-to-end workflows against a real LabArchives
+account. The
+integration suite is run manually as it requires a valid LabArchives
+login. Both suites run under \texttt{pytest}. Passing
+\texttt{--integration} enables the integration suite,
+which reads API credentials from environment variables (see the
+contributing guide). For every push and pull request, GitHub Actions runs the unit
 tests on Python 3.11 to 3.14 on Ubuntu and macOS, and Python 3.11 to 3.13
 on Windows. Separate jobs run Ruff, type checking and a documentation build.
 
-For a new user, the quickest way to see whether an installation works is
-the JSON synchronisation example, one of five examples in the repository.
+The simplest method to verify installation is the JSON synchronisation
+example, one of five examples in the repository.
 It uploads the two files in its
 \texttt{sample\_data} folder to a notebook page; running its download
 command should then give back files holding the same data as the originals.
@@ -290,8 +293,8 @@ The resulting LabArchives page is shown in Figure~\ref{fig:dashboard}.
 \section*{Operating system}
 
 Platform-independent (pure Python). The unit tests run on Ubuntu and macOS
-with Python 3.11 to 3.14, and on Windows with Python 3.11 to 3.13. The
-authors also use the library on Windows 11.
+with Python 3.11 to 3.14, and on Windows with Python 3.11 to 3.13. Users
+have reported running the library on Windows 11 and macOS Tahoe 26.
 
 \section*{Programming language}
 
