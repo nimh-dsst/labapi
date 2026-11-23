@@ -141,9 +141,9 @@ using LabArchives.
 
 The lowest layer is a client that signs each request with HMAC-SHA512 and
 handles login. On top of it, a user session gives access to the notebooks
-the researcher can open. Folders and pages live in the tree layer, and the
-contents of a page (rich text, headers, plain text, widgets and file
-attachments) in the entry layer. LabArchives returns XML, which
+the researcher can open. Folders and pages are represented in the tree
+layer. The contents of a page (rich text, headers, plain text, widgets and
+file attachments) are in the entry layer. LabArchives returns XML, which
 labapi parses with lxml.
 
 Each folder and page in the tree layer corresponds to one in the web
