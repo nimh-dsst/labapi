@@ -139,8 +139,10 @@ using LabArchives.
 
 \section*{Implementation and architecture}
 
-The lowest layer is a client that signs each request with HMAC-SHA512 and
-handles login. On top of it, a user session gives access to the notebooks
+The lowest layer is a client that both signs each request with HMAC-SHA512
+and automates the most complex parts of the LabArchives login and
+authentication protocol, allowing users to sign in through the standard
+LabArchives login page in their browser. On top of it, a user session gives access to the notebooks
 the researcher can open. Folders and pages are represented in the tree
 layer. The contents of a page (rich text, headers, plain text, widgets and
 file attachments) are in the entry layer. LabArchives returns XML, which
